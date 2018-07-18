@@ -17,7 +17,7 @@ pre_post_events relation  # how do we "import" these
 
 run_end_times:
     run:
-    | result:
+    J result:
     > = :exit_status 0
     > bool :is_integrated_release
     > = :pack sniff_pack
@@ -25,19 +25,18 @@ run_end_times:
     ^ :duration make_interval :duration
     ^ :end_time + :timestamp :duration
     G :run_id
-        E :latest_end_time max :end_time
+        :latest_end_time max :end_time
     v :run_id :end_time :pointless_column
 
 run:
-|
+J
     run_end_times:
     v :run_id :end_time
 > > :end_time after
 > < :end_time before
-| result:
-| pre_post_events:
-| report:
-
+J result:
+J pre_post_events:
+J report:
 
 
 previous_to_release_id:
@@ -45,7 +44,7 @@ previous_to_release_id:
     v :run_id :release
     > = :release previous_to_release
     G :release
-        E :min_run_id min :run_id
+        :min_run_id min :run_id
     v :run_id
     > one
 
@@ -53,7 +52,7 @@ all_possible_groups:
     run:
     v groups
     > and
-        *map isnot groups NULL
+        map groups isnot $ NULL
 
 reverse_indexed_in_groups:
     run:
@@ -70,72 +69,91 @@ counts_seen:
         reverse_indexed_in_groups:
         > <= :n max_n_runs
         v :run_id
-    |
+    J
         result:
         v :run_id :result_id :duration
     G :run_id
-        E :number_of_results count :result_id
-        E :total_duration sum :duration
+        :number_of_results count :result_id
+        :total_duration sum :duration
 
 all_possible_groups:
-|| counts_seen:
+J counts_seen:  # TODO: outer
 G groups
-    E :median percentile 0.7 :number_of_results
-    E :duration percentile 0.7 :total_duration
+    :median percentile 0.7 :number_of_results
+    :duration percentile 0.7 :total_duration
 ^ :rank order groups
 
 
+# functions
 
-
-
-
-# composite ?
-
-let R(relation, old, new)  # rename
-    relation
+Rename relation: old new
+    relation:
     ^ old identity new
-    v relation* - old
+    v relation:* - old
+
+Outer relation: right:
+    joined:
+        relation:
+        J right:
+
+    relation:
+    -
+        joined:
+        v relation:*
+    X
+        right:
+        > one_null_row
+    | joined:
+
+Namespace relation: namespace ignore
+    to_rename
+        relation:* - ignore
+
+    relation:
+    map relation:* Rename $ namespace.$
 
 
-    df:
-        a | b | c | d
-        ---------------
-        1 | 2 | 3 | 4
-        1 | 2 | 6 | 7
-        8 | 9 | 0 | 7
 
-    S
-        a_s :a order :a
-            c_s :c :d order :c
 
-    {
-        a_s: [
-            {
-                a: 1,
-                c_s: [{c: 3, d: 4}, {c: 6, d: 7}]
-            },
-            {
-                a: 8,
-                c_s: [{c: 0, d: 7}]
-            }
-        ]
-    }
+df:
+    a | b | c | d
+    ---------------
+    1 | 2 | 3 | 4
+    1 | 2 | 6 | 7
+    8 | 9 | 0 | 7
 
-    S
-        d_s :d
-            a_s :b
-        c_s :c :d
+S
+    a_s :a order :a
+        c_s :c :d order :c
 
-    {
-        d_s: [
-            {
-                d: 4,
-                a_s: [{b: 2}]},
-            {
-                d: 7,
-                as: [{b: 2}, {b: 9}],
-            }
-        ]
-        c_s: [{c: 3, d: 4}, {c: 6, d: 7}, {c: 0, d: 7}]
-    }
+{
+    a_s: [
+        {
+            a: 1,
+            c_s: [{c: 3, d: 4}, {c: 6, d: 7}]
+        },
+        {
+            a: 8,
+            c_s: [{c: 0, d: 7}]
+        }
+    ]
+}
+
+S
+    d_s :d
+        a_s :b
+    c_s :c :d
+
+{
+    d_s: [
+        {
+            d: 4,
+            a_s: [{b: 2}]},
+        {
+            d: 7,
+            as: [{b: 2}, {b: 9}],
+        }
+    ]
+    c_s: [{c: 3, d: 4}, {c: 6, d: 7}, {c: 0, d: 7}]
+}
 
