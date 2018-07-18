@@ -1,0 +1,141 @@
+- columns out must be if not static, at least statically enumerable
+
+oem str
+release str
+
+jira_ticket:
+> like :ticket `INTEG%`
+> = :issuetype `Task`
+> ilike :summary `%${oem}%${release}%tracking ticket%`
+^ :rank order :created
+
+sniff_pack str
+all_success [str]
+after datetime
+before datetime
+pre_post_events relation  # how do we "import" these
+
+run_end_times:
+    run:
+    | result:
+    > = :exit_status 0
+    > bool :is_integrated_release
+    > = :pack sniff_pack
+    > in :jenkins_result all_success
+    ^ :duration make_interval :duration
+    ^ :end_time + :timestamp :duration
+    G :run_id
+        E :latest_end_time max :end_time
+    v :run_id :end_time :pointless_column
+
+run:
+|
+    run_end_times:
+    v :run_id :end_time
+> > :end_time after
+> < :end_time before
+| result:
+| pre_post_events:
+| report:
+
+
+
+previous_to_release_id:
+    run:
+    v :run_id :release
+    > = :release previous_to_release
+    G :release
+        E :min_run_id min :run_id
+    v :run_id
+    > one
+
+all_possible_groups:
+    run:
+    v groups
+    > and
+        *map isnot groups NULL
+
+reverse_indexed_in_groups:
+    run:
+    ^ :n order :run_id desc=True partition_by=groups
+    > bool :is_integrated_release
+    > not :building
+    > < :run_id previous_to_release_id:
+    v :run_id :n
+
+counts_seen:
+    run:
+    v :run_id groups
+    > in :run_id
+        reverse_indexed_in_groups:
+        > <= :n max_n_runs
+        v :run_id
+    |
+        result:
+        v :run_id :result_id :duration
+    G :run_id
+        E :number_of_results count :result_id
+        E :total_duration sum :duration
+
+all_possible_groups:
+|| counts_seen:
+G groups
+    E :median percentile 0.7 :number_of_results
+    E :duration percentile 0.7 :total_duration
+^ :rank order groups
+
+
+
+
+
+
+# composite ?
+
+let R(relation, old, new)  # rename
+    relation
+    ^ old identity new
+    v relation* - old
+
+
+    df:
+        a | b | c | d
+        ---------------
+        1 | 2 | 3 | 4
+        1 | 2 | 6 | 7
+        8 | 9 | 0 | 7
+
+    S
+        a_s :a order :a
+            c_s :c :d order :c
+
+    {
+        a_s: [
+            {
+                a: 1,
+                c_s: [{c: 3, d: 4}, {c: 6, d: 7}]
+            },
+            {
+                a: 8,
+                c_s: [{c: 0, d: 7}]
+            }
+        ]
+    }
+
+    S
+        d_s :d
+            a_s :b
+        c_s :c :d
+
+    {
+        d_s: [
+            {
+                d: 4,
+                a_s: [{b: 2}]},
+            {
+                d: 7,
+                as: [{b: 2}, {b: 9}],
+            }
+        ]
+        c_s: [{c: 3, d: 4}, {c: 6, d: 7}, {c: 0, d: 7}]
+    }
+
