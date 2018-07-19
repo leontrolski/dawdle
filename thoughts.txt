@@ -4,9 +4,9 @@ oem str
 release str
 
 jira_ticket:
-> like :ticket `INTEG%`
-> = :issuetype `Task`
-> ilike :summary `%${oem}%${release}%tracking ticket%`
+> like :ticket "INTEG%"
+> = :issuetype "Task"
+> ilike :summary "%{oem}%{release}%tracking ticket%"
 ^ :rank order :created
 
 sniff_pack str
@@ -77,7 +77,7 @@ counts_seen:
         :total_duration sum :duration
 
 all_possible_groups:
-J counts_seen:  # TODO: outer
+Outer counts_seen:
 G groups
     :median percentile 0.7 :number_of_results
     :duration percentile 0.7 :total_duration
