@@ -21,11 +21,11 @@ d = Dawdle(dict(
 ))
 
 
-@d.register(
+@d.register([dict(
     foo='whut',
     animal=animal,
-)
-def tester(
+)])
+def tester_1(
     foo=str,
     animal=Relation,
 ):
@@ -49,7 +49,8 @@ if __name__ == '__main__':
         print('d.env', d.env)
         for f in d.registered_functions:
             print('f.ast', f.ast)
-            print('f.env', f.env)
+            print('f.kwargs', f.kwargs)
+            print('f.tests', f.tests)
 
             lines, first_line_number = inspect.getsourcelines(f)
             offset = next(

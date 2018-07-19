@@ -1,4 +1,14 @@
 import functools
+import inspect
+
+
+def get_default_args(f):
+    signature = inspect.signature(f)
+    return {
+        k: v.default
+        for k, v in signature.parameters.items()
+        if v.default is not inspect.Parameter.empty
+    }
 
 
 def expander(ast):
@@ -10,11 +20,12 @@ class Dawdle(object):
         self.env = env
         self.registered_functions = set()
 
-    def register(self, **env):
+    def register(self, tests=()):
         def decorator(f):
             self.registered_functions.add(f)
-            f.env = env
-            f.ast = f(**env)
+            f.tests = tests
+            f.kwargs = get_default_args(f)
+            f.ast = f()
 
             @functools.wraps(f)
             def inner(**kwargs):
