@@ -21,7 +21,7 @@ d = Dawdle(dict(
 ))
 
 
-@d.register([dict(
+@d.register(tests=[dict(
     foo='whut',
     animal=animal,
 )])
