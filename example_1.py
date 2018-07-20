@@ -1,4 +1,5 @@
-# dsl: venv/python $THIS --dawdle
+# dsl: venv/python $FILE --dawdle
+# FILE=example_1.py eval 'venv/bin/python $FILE --dawdle'
 import datetime
 import inspect
 import types

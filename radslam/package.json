@@ -1,0 +1,19 @@
+{
+  "name": "radslam",
+  "version": "0.0.1",
+  "description": "ra",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "mocha"
+  },
+  "author": "ojhrussell@gmail.com",
+  "license": "MIT",
+  "dependencies": {
+    "chai": "^4.1.2",
+    "ebnf": "^1.6.2",
+    "js-yaml": "^3.12.0",
+    "mocha": "^5.2.0",
+    "ramda": "^0.25.0"
+  }
+}
