@@ -9,7 +9,7 @@ program              ::= NEWLINE* block+
 WS                   ::= #x20+   /* " "+  */
 NEWLINE              ::= #x0A    /* "\n" */
 indent               ::= #x20 #x20 #x20 #x20
-line                 ::= indent* (literal WS)* literal (NEWLINE | EOF)
+line                 ::= indent* operator (literal WS)* literal (NEWLINE | EOF)
 block                ::= line+ (NEWLINE+ | EOF)
 
 literal              ::= number | string | true | false | template
@@ -17,6 +17,8 @@ false                ::= "false"
 null                 ::= "null"
 true                 ::= "true"
 
+operator             ::= restrict | project | extend | cartesian | union | difference |
+                         join | group
 restrict             ::= ">"
 project              ::= "v"
 extend               ::= "^"
@@ -38,15 +40,15 @@ const parser = new ebnf.Grammars.W3C.Parser(grammar)
 
 const ast = parser.getAST(`
 
-5 \`bar\`
+v 5 \`bar\`
 
-4 "foo"
-5
-    6
-    9
+> 4 "foo"
+> 5
+    G 6
+    J 9
 
 
-7
+- 7
 `)
 
 const useful = o=>o.children.length?
