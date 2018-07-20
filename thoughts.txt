@@ -6,7 +6,7 @@ release str
 jira_ticket:
 > like :ticket "INTEG%"
 > = :issuetype "Task"
-> ilike :summary "%{oem}%{release}%tracking ticket%"
+> ilike :summary `%${oem}%${release}%tracking ticket%`
 ^ :rank order :created
 
 sniff_pack str
@@ -14,6 +14,7 @@ all_success [str]
 after datetime
 before datetime
 pre_post_events relation  # how do we "import" these
+groups [header]
 
 run_end_times:
     run:
@@ -52,7 +53,7 @@ all_possible_groups:
     run:
     v groups
     > and
-        map groups isnot $ NULL
+        *map groups isnot $ NULL
 
 reverse_indexed_in_groups:
     run:
@@ -84,12 +85,16 @@ G groups
 ^ :rank order groups
 
 
-# functions
+// functions
 
 Rename relation: old new
+    final_headers
+        relation:*
+        - old
+
     relation:
     ^ old identity new
-    v relation:* - old
+    v final_headers
 
 Outer relation: right:
     joined:
@@ -102,17 +107,32 @@ Outer relation: right:
         v relation:*
     X
         right:
-        > one_null_row
+        > first
+        *map right:* ^ $ make_null
     | joined:
+
 
 Namespace relation: namespace ignore
     to_rename
-        relation:* - ignore
+        relation:*
+        - ignore
 
     relation:
-    map relation:* Rename $ namespace.$
+    *map to_rename Rename $ namespace.$
 
 
+// JSON literals, but with additional:
+//
+// integers: (no trailing .)
+//    1
+//    2
+// decimals:
+//    %1.21
+//    %2.0
+// ISO 8601 dates, datetimes, intervals:
+//    ~2018-07-20T10:25:25+00:00
+//    ~P3Y6M4DT12H30M5S
+// lists are treated as sets
 
 
 df:

@@ -1,5 +1,6 @@
 import functools
 import inspect
+import sys
 
 
 def get_default_args(f):
@@ -13,6 +14,14 @@ def get_default_args(f):
 
 def expander(ast):
     return ast
+
+
+def kwargs_to_ast(kwargs):
+    return kwargs
+
+
+def tests_to_ast(tests):
+    return tests
 
 
 class Dawdle(object):
@@ -29,9 +38,28 @@ class Dawdle(object):
 
             @functools.wraps(f)
             def inner(**kwargs):
-                return f(**kwargs)
+                outcome = f(**kwargs)
+                outcome['kwarg_values'] = kwargs
+                return outcome
             return inner
         return decorator
+
+    def exec(self):
+        if '--dawdle' in sys.argv:
+            print('d.env', self.env)
+            for f in self.registered_functions:
+                print('f.ast', f.ast)
+                print('f.kwargs', f.kwargs)
+                print('f.tests', f.tests)
+
+                lines, first_line_number = inspect.getsourcelines(f)
+                offset = next(
+                    i for i, line in enumerate(lines)
+                    if line.strip().endswith('):'))
+                lines = lines[offset + 1:]
+                first_line_number = first_line_number + offset + 1
+
+                print('lines: ', first_line_number, 'to: ', first_line_number + len(lines) - 1)
 
 
 def run(ast):

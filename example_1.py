@@ -6,9 +6,9 @@ import types
 from dawdle import Dawdle, run, Relation
 
 
-vet = Relation(headers=[
-    'name', 'address',
-])
+vet = Relation(
+    headers=['name', 'address'],
+)
 # test data
 animal = Relation([
     {'animal': 'cat', 'age': 1},
@@ -40,27 +40,9 @@ def tester_1(
     }
 
 
-# print(run(tester(foo='bar')))
+print(run(tester_1(foo='bar', animal=animal)))
 
-
-if __name__ == '__main__':
-    import sys
-    if sys.argv == [__file__, '--dawdle']:
-        print('d.env', d.env)
-        for f in d.registered_functions:
-            print('f.ast', f.ast)
-            print('f.kwargs', f.kwargs)
-            print('f.tests', f.tests)
-
-            lines, first_line_number = inspect.getsourcelines(f)
-            offset = next(
-                i for i, line in enumerate(lines)
-                if line.strip().endswith('):'))
-            lines = lines[offset + 1:]
-            first_line_number = first_line_number + offset + 1
-
-            print('lines: ', first_line_number, 'to: ', first_line_number + len(lines) - 1)
-
+d.exec()
 
 
 
