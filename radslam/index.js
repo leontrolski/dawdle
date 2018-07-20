@@ -18,6 +18,7 @@ null                 ::= "null"
 true                 ::= "true"
 
 operator             ::= ">" | "v" | "^" | "X" | "|" | "-" | "J" | "G"
+var                  ::= [a-Z-_][a-9]+
 
 number               ::= "-"? ("0" | [1-9] [0-9]*) ("." [0-9]+)? (("e" | "E") ( "-" | "+" )? ("0" | [1-9] [0-9]*))?
 string               ::= '"'  (([#x20-#x21] | [#x23-#x5B] | [#x5D-#xFFFF]) | #x5C (#x22 | #x5C | #x2F | #x62 | #x66 | #x6E | #x72 | #x74 | #x75 HEXDIG HEXDIG HEXDIG HEXDIG))* '"'
