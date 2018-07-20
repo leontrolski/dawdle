@@ -11,7 +11,7 @@ indent               ::= #x20 #x20 #x20 #x20
 
 block                ::= (value_line | line)+ (NEWLINE+ | EOF)
 value_line           ::= indent* value (NEWLINE | EOF)
-line                 ::= indent* (operator WS (value WS)* value) | value (NEWLINE | EOF)
+line                 ::= indent* operator WS (value WS)* value (NEWLINE | EOF)
 value                ::= literal | relation | header | var | set
 
 set                  ::= "[" (value WS)* value "]"
