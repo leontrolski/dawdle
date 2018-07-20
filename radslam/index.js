@@ -9,7 +9,7 @@ program              ::= NEWLINE* block+
 WS                   ::= #x20+   /* " "+  */
 NEWLINE              ::= #x0A    /* "\n" */
 indent               ::= #x20 #x20 #x20 #x20
-line                 ::= indent* operator (literal WS)* literal (NEWLINE | EOF)
+line                 ::= indent* operator WS (literal WS)* literal (NEWLINE | EOF)
 block                ::= line+ (NEWLINE+ | EOF)
 
 literal              ::= number | string | true | false | template
@@ -17,16 +17,7 @@ false                ::= "false"
 null                 ::= "null"
 true                 ::= "true"
 
-operator             ::= restrict | project | extend | cartesian | union | difference |
-                         join | group
-restrict             ::= ">"
-project              ::= "v"
-extend               ::= "^"
-cartesian            ::= "X"
-union                ::= "|"
-difference           ::= "-"
-join                 ::= "J"
-group                ::= "G"
+operator             ::= ">" | "v" | "^" | "X" | "|" | "-" | "J" | "G"
 
 number               ::= "-"? ("0" | [1-9] [0-9]*) ("." [0-9]+)? (("e" | "E") ( "-" | "+" )? ("0" | [1-9] [0-9]*))?
 string               ::= '"'  (([#x20-#x21] | [#x23-#x5B] | [#x5D-#xFFFF]) | #x5C (#x22 | #x5C | #x2F | #x62 | #x66 | #x6E | #x72 | #x74 | #x75 HEXDIG HEXDIG HEXDIG HEXDIG))* '"'
