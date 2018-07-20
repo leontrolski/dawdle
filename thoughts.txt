@@ -121,23 +121,6 @@ Namespace relation: namespace ignore
     (map to_rename) `Rename ${} ${namespace}.${}`
 
 
-// JSON literals, but with additional:
-//
-// relations:
-//    some_table:
-// headers:
-//    :some_header
-// templates (interpolated statically):
-//    `hello ${worldy}`
-// integers: (no trailing .)
-//    1
-//    2
-// decimals:
-//    %1.21
-//    %2.0
-// ISO 8601 dates, datetimes, intervals:
-//    ~2018-07-20T10:25:25+00:00
-//    ~P3Y6M4DT12H30M5S
 // lists are treated as sets
 //    [:foo :bar]
 
@@ -200,8 +183,11 @@ Design choices:
 
 
 Other things to think about:
+- datetime type - ISO 8601 ~2018-07-20T10:25:25+00:00 ~P3Y6M4DT12H30M5S
 - table literals
 - nesting syntax
+- decimal type?
+- integer type?
 
 
 df:

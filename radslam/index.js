@@ -2,7 +2,6 @@ const ebnf = require('ebnf')
 const jsYaml = require('js-yaml')
 const R = require('ramda')
 
-console.log(8)
 const grammar = `
 program              ::= NEWLINE* block+
 
@@ -12,7 +11,8 @@ indent               ::= #x20 #x20 #x20 #x20
 line                 ::= indent* operator WS (value WS)* value (NEWLINE | EOF)
 block                ::= line+ (NEWLINE+ | EOF)
 
-value                ::= literal | table | header | var
+value                ::= literal | relation | header | var
+set                  ::= "[" (value WS)* value "]"
 
 literal              ::= number | string | true | false | template
 false                ::= "false"
@@ -20,7 +20,7 @@ null                 ::= "null"
 true                 ::= "true"
 
 var                  ::= [a-zA-Z_][a-zA-Z_0-9]*
-table                ::= [a-zA-Z_][a-zA-Z_0-9]* ":"
+relation             ::= [a-zA-Z_][a-zA-Z_0-9]* ":"
 header               ::= ":" [a-zA-Z_][a-zA-Z_0-9]*
 operator             ::= ">" | "v" | "^" | "X" | "|" | "-" | "J" | "G"
 
@@ -44,7 +44,7 @@ v 5 \`bar\`
     J 9
 
 
-- 7 :some_header some_table:
+- 7 :some_header some_relation:
     X "la"
         | "loo"
 `)
