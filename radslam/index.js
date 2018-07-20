@@ -9,16 +9,20 @@ program              ::= NEWLINE* block+
 WS                   ::= #x20+   /* " "+  */
 NEWLINE              ::= #x0A    /* "\n" */
 indent               ::= #x20 #x20 #x20 #x20
-line                 ::= indent* operator WS (literal WS)* literal (NEWLINE | EOF)
+line                 ::= indent* operator WS (value WS)* value (NEWLINE | EOF)
 block                ::= line+ (NEWLINE+ | EOF)
+
+value                ::= literal | table | header | var
 
 literal              ::= number | string | true | false | template
 false                ::= "false"
 null                 ::= "null"
 true                 ::= "true"
 
+var                  ::= [a-zA-Z_][a-zA-Z_0-9]*
+table                ::= [a-zA-Z_][a-zA-Z_0-9]* ":"
+header               ::= ":" [a-zA-Z_][a-zA-Z_0-9]*
 operator             ::= ">" | "v" | "^" | "X" | "|" | "-" | "J" | "G"
-var                  ::= [a-Z-_][a-9]+
 
 number               ::= "-"? ("0" | [1-9] [0-9]*) ("." [0-9]+)? (("e" | "E") ( "-" | "+" )? ("0" | [1-9] [0-9]*))?
 string               ::= '"'  (([#x20-#x21] | [#x23-#x5B] | [#x5D-#xFFFF]) | #x5C (#x22 | #x5C | #x2F | #x62 | #x66 | #x6E | #x72 | #x74 | #x75 HEXDIG HEXDIG HEXDIG HEXDIG))* '"'
@@ -36,16 +40,18 @@ v 5 \`bar\`
 
 > 4 "foo"
 > 5
-    G 6
+    G 6 x_fooooo1
     J 9
 
 
-- 7
+- 7 :some_header some_table:
+    X "la"
+        | "loo"
 `)
 
 const useful = o=>o.children.length?
     {t: o.type, c: o.children.map(useful)}
-    : o.text === '\n'?
+    : o.text.trim() === ''?
         {t: o.type}
         : {t: o.type, v: o.text}
 
