@@ -53,7 +53,7 @@ all_possible_groups:
     run:
     v groups
     > and
-        (map groups) `isnot ${} NULL`
+        (map groups) `isnot ${} null`
 
 reverse_indexed_in_groups:
     run:
