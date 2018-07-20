@@ -53,7 +53,7 @@ all_possible_groups:
     run:
     v groups
     > and
-        *map groups isnot $ NULL
+        (map groups) `isnot ${} NULL`
 
 reverse_indexed_in_groups:
     run:
@@ -108,7 +108,7 @@ Outer relation: right:
     X
         right:
         > first
-        *map right:* ^ $ make_null
+        (map right:*) `^ ${} make_null`
     | joined:
 
 
@@ -118,11 +118,17 @@ Namespace relation: namespace ignore
         - ignore
 
     relation:
-    *map to_rename Rename $ namespace.$
+    (map to_rename) `Rename ${} ${namespace}.${}`
 
 
 // JSON literals, but with additional:
 //
+// relations:
+//    some_table:
+// headers:
+//    :some_header
+// templates (interpolated statically):
+//    `hello ${worldy}`
 // integers: (no trailing .)
 //    1
 //    2
@@ -133,6 +139,69 @@ Namespace relation: namespace ignore
 //    ~2018-07-20T10:25:25+00:00
 //    ~P3Y6M4DT12H30M5S
 // lists are treated as sets
+//    [:foo :bar]
+
+
+Base operators:
+> v ^ X | - J G
+
+PROGRAM
+
+BLOCK
+
+BLOCK
+
+BLOCK
+
+Forms:
+
+Relation
+    BLOCK
+
+Var
+    BLOCK
+
+Def Arg Arg ...
+    BLOCK
+
+G Header Header ...
+    AGG_BLOCK
+
+LINE
+    BLOCK
+
+Operators:
+> Func Arg Arg ...
+v Header Header ...
+^ Header Func Arg Arg ...
+X Arg
+| Arg
+- Arg
+J Arg
+G _see above_
+
+
+
+Parse order:
+- expand macros
+- expand sets?
+- inline Gs
+- inline blocks
+- inline assignments?
+
+
+Design choices:
+- Each line of dawdle should map deterministically both ways to the JSON AST
+- Given an environment, it should always be possible to determine the schema at any line
+- Given test values, it should always be possible to determine the value at any line
+- Functions can only be composed of the base operators and other functions
+- Sets are always splatted in place
+- (map some_set) is a macro
+
+
+Other things to think about:
+- table literals
+- nesting syntax
 
 
 df:
