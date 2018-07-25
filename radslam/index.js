@@ -94,7 +94,7 @@ let addIndents = s=>{
 
 const grammar = `
 block                ::= INDENT (line | block)+ DEDENT
-line                 ::= [a-z]+ NEWLINE
+line                 ::= [a-z]* NEWLINE
 
 WS                   ::= #x20+   /* " "+  */
 NEWLINE              ::= #x0A    /* "\n" */
@@ -105,6 +105,8 @@ DEDENT               ::= "<DEDENT>" NEWLINE
 const s =`<INDENT>
 waa
 waa
+
+li
 <INDENT>
 woo
 <DEDENT>
