@@ -63,7 +63,8 @@ describe('parser.parser', ()=>{
         assert.deepEqual(parser.useful(parser.parser(in_)), expected)
     })
     it('should parse a relation with a couple of operations', ()=>{
-        const in_ = `some_rel:
+        const in_ = `
+some_rel:
 J other_rel:
 | some_var other_var`
         const expected = [{
