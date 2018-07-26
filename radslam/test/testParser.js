@@ -213,7 +213,7 @@ a:
                     ]}]}]},
             {block: [
                 {line: [{relation: 'a:'}]},
-                {line: [{operator: '-'}, {set: [{number: 3}, {string: 'foo'}]}]}]}
+                {line: [{operator: '-'}, {set: [{number: "3"}, {string: '"foo"'}]}]}]}
         ]
         assert.deepEqual(expected, parser.minimal(parser.parser(in_)).program)
     })
