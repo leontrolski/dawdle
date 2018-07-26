@@ -19,10 +19,9 @@ const R = require('ramda')
 // Def Arg Arg ...
 //     BLOCK
 
-// program              ::= NEWLINE* block+
-// line                 ::= [a-z]+ NEWLINE
-
-
+// backtick is #x60
+// quote is #x22
+// backslash is #x5C
 let grammar = `
 program              ::= NEWLINE* block+
 block                ::= (INDENT | SECTION) (line | block)+ (DE_INDENT | DE_SECTION)
@@ -51,9 +50,6 @@ string               ::= '"'  (([#x20-#x21] | [#x23-#x5B] | [#x5D-#xFFFF]) | #x5
 template             ::= '\`' (([#x20-#x5B] | [#x5D-#x5F] | [#x61-#xFFFF]) | #x5C (#x60 | #x5C | #x2F | #x62 | #x66 | #x6E | #x72 | #x74 | #x75 HEXDIG HEXDIG HEXDIG HEXDIG))* '\`'
 HEXDIG               ::= [a-fA-F0-9]
 `
-// backtick is #x60
-// quote is #x22
-// backslash is #x5C
 
 let addIndents = s=>{
     let lastIndent = 0
