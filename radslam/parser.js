@@ -49,6 +49,7 @@ const parser = s=>_parser.getAST(addIndents(s))
  */
 let addIndents = s=>{
     let lastIndent = 0
+    let totalDiff = 0
     let lines = ['<SECTION>']
     let addLineBreak = false
     s.replace(/^\n+/, '').split('\n').forEach((line, lineNumber)=>{
@@ -62,6 +63,7 @@ let addIndents = s=>{
             for (let i = 0; i < Math.abs(diff); i++){
                 lines.push(diff > 0? '<INDENT>' : '</INDENT>')
             }
+            totalDiff += diff
             lastIndent = lastIndent + diff
             if(addLineBreak){
                 lines.push('</SECTION>')
@@ -71,6 +73,10 @@ let addIndents = s=>{
             lines.push(line)
         }
     })
+    // dutty hack
+    for (let i = 0; i < totalDiff; i++){
+        lines.push('</INDENT>')
+    }
     lines.push('</SECTION>')
     return lines.join('\n') + '\n'
 }
@@ -96,7 +102,7 @@ const minimal = o=>
             : {[o.type]: o.text}
 
 const logAst = ast=>console.log(jsYaml.dump(minimal(ast), {
-    flowLevel: 5
+    flowKey: 'line',  // inline yaml at these points
 }))
 
 module.exports = {parser, logAst, addIndents, useful, minimal}

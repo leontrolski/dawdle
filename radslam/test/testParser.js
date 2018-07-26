@@ -20,7 +20,13 @@ a-2
 a-8
 a-9
 
-a-0`
+a-0
+    a-1
+        a-2
+
+    a-3
+        a-4
+`
         const expected = `<SECTION>
 a-1
 a-2
@@ -42,6 +48,18 @@ a-9
 </SECTION>
 <SECTION>
 a-0
+<INDENT>
+    a-1
+<INDENT>
+        a-2
+</INDENT>
+</SECTION>
+<SECTION>
+    a-3
+<INDENT>
+        a-4
+</INDENT>
+</INDENT>
 </SECTION>
 `
         assert.deepEqual(expected, parser.addIndents(in_))

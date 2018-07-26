@@ -109,6 +109,7 @@ function State(options) {
   this.indent       = Math.max(1, (options['indent'] || 2));
   this.skipInvalid  = options['skipInvalid'] || false;
   this.flowLevel    = (common.isNothing(options['flowLevel']) ? -1 : options['flowLevel']);
+  this.flowKey      = options['flowKey'] || null;
   this.styleMap     = compileStyleMap(this.schema, options['styles'] || null);
   this.sortKeys     = options['sortKeys'] || false;
   this.lineWidth    = options['lineWidth'] || 80;
@@ -699,7 +700,7 @@ function writeNode(state, level, object, block, compact, iskey) {
   var type = _toString.call(state.dump);
 
   if (block) {
-    block = (state.flowLevel < 0 || state.flowLevel > level);
+    block = !Object.keys(object).includes(state.flowKey) //(state.flowLevel < 0 || state.flowLevel > level);
   }
 
   var objectOrArray = type === '[object Object]' || type === '[object Array]',
