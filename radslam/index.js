@@ -25,21 +25,23 @@ const R = require('ramda')
 let grammar = `
 program              ::= NEWLINE* block+
 block                ::= (INDENT | SECTION) (line | block)+ (DE_INDENT | DE_SECTION)
-line                 ::= WS* (relation | (operator (WS value)*) | var) NEWLINE
+line                 ::= SPACE* (relation | (operator (SPACE value)*) | var) NEWLINE
 value                ::= literal | relation | header | var | set
 
-WS                   ::= #x20+   /* " "+  */
-NEWLINE              ::= #x0A    /* "\n" */
-INDENT               ::= "<INDENT>" (NEWLINE | EOF)
-DE_INDENT            ::= "</INDENT>" (NEWLINE | EOF)
-SECTION              ::= "<SECTION>" (NEWLINE | EOF)
-DE_SECTION           ::= "</SECTION>" (NEWLINE | EOF)
+SPACE                ::= #x20
+NEWLINE              ::= #x0A
+INDENT               ::= "<INDENT>" NEWLINE
+DE_INDENT            ::= "</INDENT>" NEWLINE
+SECTION              ::= "<SECTION>" NEWLINE
+DE_SECTION           ::= "</SECTION>" NEWLINE
+NAME                 ::= [a-z_][a-zA-Z_0-9]*
+CAPITALISED_NAME     ::= [A-Z][a-zA-Z_0-9]*
 
-set                  ::= "[" (value WS)* value "]"
-var                  ::= [a-zA-Z_][a-zA-Z_0-9]*
-relation             ::= [a-zA-Z_][a-zA-Z_0-9]* ":"
-header               ::= ":" [a-zA-Z_][a-zA-Z_0-9]*
-operator             ::= ">" | "v" | "^" | "X" | "|" | "-" | "J" | "G" | "let" | [A-Z][a-zA-Z_0-9]*
+set                  ::= "[" value (SPACE value)* "]"
+var                  ::= NAME
+relation             ::= NAME ":"
+header               ::= ":" NAME
+operator             ::= ">" | "v" | "^" | "X" | "|" | "-" | "J" | "G" | "let" | CAPITALISED_NAME
 
 literal              ::= number | string | bool | template
 bool                 ::= "true" | "false"
@@ -76,7 +78,6 @@ let addIndents = s=>{
     })
     lines.push('</SECTION>')
     return lines.join('\n') + '\n'
-
 }
 
 let s = `a_relation:
