@@ -40,7 +40,7 @@ set                  ::= "[" (value WS)* value "]"
 var                  ::= [a-zA-Z_][a-zA-Z_0-9]*
 relation             ::= [a-zA-Z_][a-zA-Z_0-9]* ":"
 header               ::= ":" [a-zA-Z_][a-zA-Z_0-9]*
-operator             ::= ">" | "v" | "^" | "X" | "|" | "-" | "J" | "G" | [A-Z][a-zA-Z_0-9]*
+operator             ::= ">" | "v" | "^" | "X" | "|" | "-" | "J" | "G" | "let" | [A-Z][a-zA-Z_0-9]*
 
 literal              ::= number | string | bool | template
 bool                 ::= "true" | "false"
@@ -91,6 +91,9 @@ v 5 \`bar\`
     J 9
 f
 - 7 :some_header some_relation:
+    let barr:
+        tr:
+
     X "la"
         | "loo" [4 5 :other_table]
 
@@ -98,17 +101,12 @@ some_set
 - other_set
 `
 
-//  [#x20-#x21]
-s = `<INDENT>
-asd:
-</INDENT>
-`
 console.log([s])
 console.log([addIndents(s)])
 
 const parser = new ebnf.Grammars.W3C.Parser(grammar)
-// const ast = parser.getAST(addIndents(s))
-const ast = parser.getAST(s)
+const ast = parser.getAST(addIndents(s))
+// const ast = parser.getAST(s)
 
 const alwaysSingular = ['value', 'literal']
 const useful = o=>o.children.length?
@@ -121,45 +119,3 @@ const useful = o=>o.children.length?
 
 
 console.log(jsYaml.dump(useful(ast)))
-// let s = `
-
-// block-1
-// block-1
-
-// block-2
-// block-2
-//     block-3
-
-//     block-3
-//         block-4
-//     block-5
-//     block-5
-
-
-// block-7
-// `
-
-// expected = `
-// INDENT
-
-// block-1
-// block-1
-
-// block-2
-// block-2
-// INDENT
-// block-3
-
-// block-3
-// INDENT
-// block-4
-// DEDENT
-// DEDENT
-// block-5
-// block-5
-// DEDENT
-
-
-// block-7
-// DEDENT
-// `
