@@ -108,7 +108,7 @@ def Outer relation: right:
     X
         right:
         > first
-        (map right:*) `^ ${} make_null`
+        (map right:*) `^ ${_} make_null`
     | joined:
 
 

@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "mocha"
+    "test": "mocha",
+    "parse": "node index.js"
   },
   "author": "ojhrussell@gmail.com",
   "license": "MIT",
