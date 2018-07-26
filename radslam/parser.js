@@ -1,6 +1,10 @@
 const ebnf = require('ebnf')
 const jsYaml = require('js-yaml')
+const R = require('ramda')
 
+// backtick is #x60
+// quote is #x22
+// backslash is #x5C
 
 const grammar = `
 program              ::= NEWLINE* block+
@@ -17,13 +21,13 @@ DE_SECTION           ::= "</SECTION>" NEWLINE
 NAME                 ::= [a-z_][a-zA-Z_0-9]*
 CAPITALISED_NAME     ::= [A-Z][a-zA-Z_0-9]*
 
-set                  ::= "[" value (SPACE value)* "]"
+set                  ::= "[" (value (SPACE value)*)* "]"
 var                  ::= NAME
 relation             ::= NAME ":"
 header               ::= ":" NAME
 operator             ::= ">" | "v" | "^" | "X" | "|" | "-" | "J" | "G" | "let" | "def" | CAPITALISED_NAME
 
-literal              ::= number | string | bool | template
+literal              ::= number | string | bool | template | null
 bool                 ::= "true" | "false"
 null                 ::= "null"
 number               ::= "-"? ("0" | [1-9] [0-9]*) ("." [0-9]+)? (("e" | "E") ( "-" | "+" )? ("0" | [1-9] [0-9]*))?
@@ -35,11 +39,19 @@ HEXDIG               ::= [a-fA-F0-9]
 const _parser = new ebnf.Grammars.W3C.Parser(grammar)
 const parser = s=>_parser.getAST(addIndents(s))
 
+/**
+ * Strip leading newlines
+ * Add <SECTION> tags around newline separated sections
+ * Add <INDENT> tags to indented sections
+ *
+ * TODO: refactor, it's pretty ugly
+ * @param {string}  source string
+ */
 let addIndents = s=>{
     let lastIndent = 0
     let lines = ['<SECTION>']
     let addLineBreak = false
-    s.split('\n').forEach((line, lineNumber)=>{
+    s.replace(/^\n+/, '').split('\n').forEach((line, lineNumber)=>{
         if(line.trim() === ''){
             addLineBreak = true
         }
@@ -63,16 +75,31 @@ let addIndents = s=>{
     return lines.join('\n') + '\n'
 }
 
-const alwaysSingular = ['value', 'literal']
-const useful = o=>o.children.length?
-    alwaysSingular.includes(o.type)?
-        {t: o.type, c:  useful(o.children[0])}
-        : {t: o.type, c: o.children.map(useful)}
-    : o.text.trim() === ''?
-        {t: o.type}
-        : {t: o.type, v: o.text}
+const passThrough = ['value', 'literal']
+const multiple = ['program', 'block', 'line', 'set']
+const jsonable = ['string', 'template', 'number', 'null', 'bool']
 
+const useful = o=>R.merge(
+    {t: o.type},
+    o.children.length?
+        passThrough.includes(o.type)?
+            {c:  useful(o.children[0])}
+            : {c: o.children.map(useful)}
+        : o.text.trim() === ''?
+            {}
+            : {v: o.text}
+)
+
+const minimal = o=>
+    passThrough.includes(o.type)?
+        minimal(o.children[0])
+        :multiple.includes(o.type)?
+            {[o.type]: o.children.map(minimal)}
+            : {[o.type]: jsonable.includes(o.type)?
+                JSON.parse(o.text)
+                : o.text
+            }
 
 const logAst = ast=>console.log(jsYaml.dump(useful(ast)))
 
-module.exports = {parser, logAst, addIndents, useful}
+module.exports = {parser, logAst, addIndents, useful, minimal}

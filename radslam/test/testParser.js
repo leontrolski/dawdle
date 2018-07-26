@@ -8,7 +8,8 @@ chai.config.truncateThreshold = 1000
 
 describe('parser.addIndents', ()=>{
     it('should add sections and indents', ()=>{
-        const in_ = `a-1
+        const in_ = `
+a-1
 a-2
     a-3
     a-4
@@ -43,7 +44,7 @@ a-9
 a-0
 </SECTION>
 `
-        assert.deepEqual(parser.addIndents(in_), expected)
+        assert.deepEqual(expected, parser.addIndents(in_))
     })
 })
 
@@ -60,7 +61,7 @@ describe('parser.parser', ()=>{
                 }]
             }],
         }
-        assert.deepEqual(parser.useful(parser.parser(in_)), expected)
+        assert.deepEqual(expected, parser.useful(parser.parser(in_)))
     })
     it('should parse a relation with a couple of operations', ()=>{
         const in_ = `
@@ -93,6 +94,110 @@ J other_rel:
                 },
             ]
         }]
-        assert.deepEqual(parser.useful(parser.parser(in_)).c, expected)
+        assert.deepEqual(expected, parser.useful(parser.parser(in_)).c)
+    })
+    it('should parse JSON literals | [templates set]', ()=>{
+        const in_ = '| 1 -2 3.0 true null ["string" `template` ["sub_set"]] []'
+        const expected = [{
+            t: 'block',
+            c: [
+                {
+                    t: 'line',
+                    c: [
+                        {t: 'operator', v: '|'},
+                        {t: 'value', c: {t: 'literal', c: {t: 'number', v: '1'}}},
+                        {t: 'value', c: {t: 'literal', c: {t: 'number', v: '-2'}}},
+                        {t: 'value', c: {t: 'literal', c: {t: 'number', v: '3.0'}}},
+                        {t: 'value', c: {t: 'literal', c: {t: 'bool', v: 'true'}}},
+                        {t: 'value', c: {t: 'literal', c: {t: 'null', v: 'null'}}},
+                        {t: 'value', c: {t: 'set', c: [
+                            {t: 'value', c: {t: 'literal', c: {t: 'string', v: '"string"'}}},
+                            {t: 'value', c: {t: 'literal', c: {t: 'template', v: '`template`'}}},
+                            {t: 'value', c: {t: 'set', c: [
+                                {t: 'value', c: {t: 'literal', c: {t: 'string', v: '"sub_set"'}}},
+                            ]}},
+                        ]}},
+                        {t: 'value', c: {t: 'set', v: "[]"}},
+                    ]
+                },
+            ]
+        }]
+        assert.deepEqual(expected, parser.useful(parser.parser(in_)).c)
+    })
+    it('should parse blocks', ()=>{
+        const in_ = `
+a:
+|
+    a:
+    J a:
+X
+    a:
+    -
+        a:
+
+a:
+`
+        const a = {t: 'relation', v: 'a:'}
+        const expected = [
+            {t: 'block', c: [
+                {t: 'line', c: [a]},
+                {t: 'line', c: [{t: 'operator', v: '|'}]},
+                {t: 'block', c: [
+                    {t: 'line', c: [a]},
+                    {t: 'line', c: [{t: 'operator', v: 'J'}, {t: 'value', c: a}]},
+                ]},
+                {t: 'line', c: [{t: 'operator', v: 'X'}]},
+                {t: 'block', c: [
+                    {t: 'line', c: [a]},
+                    {t: 'line', c: [{t: 'operator', v: '-'}]},
+                    {t: 'block', c: [
+                        {t: 'line', c: [a]},
+                    ]},
+                ]},
+            ]},
+            {t: 'block', c: [
+                {t: 'line', c: [a]},
+            ]},
+        ]
+        assert.deepEqual(expected, parser.useful(parser.parser(in_)).c)
+    })
+})
+
+describe('parser.minimal', ()=>{
+    it('should turn a raw AST into minimal form', ()=>{
+        const in_ = `
+a:
+|
+    a:
+    J a:
+X
+    a:
+    -
+        a:
+
+a:
+- [3 "foo"]
+`
+        const expected = [
+            {block: [
+                {line: [{relation: 'a:'}]},
+                {line: [{operator: '|'}]},
+                {block: [
+                    {line: [{relation: 'a:'}]},
+                    {line: [{operator: 'J'}, {relation: 'a:'}]},
+                ]},
+                {line: [{operator: 'X'}]},
+                {block: [
+                    {line: [{relation: 'a:'}]},
+                    {line: [{operator: '-'}]},
+                    {block: [
+                        {line: [{relation: 'a:'}]},
+                    ]},
+                ]}]},
+            {block: [
+                {line: [{relation: 'a:'}]},
+                {line: [{operator: '-'}, {set: [{number: 3}, {string: 'foo'}]}]}]}
+        ]
+        assert.deepEqual(expected, parser.minimal(parser.parser(in_)).program)
     })
 })

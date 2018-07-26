@@ -19,10 +19,6 @@ const parser = require('./parser')
 // Def Arg Arg ...
 //     BLOCK
 
-// backtick is #x60
-// quote is #x22
-// backslash is #x5C
-
 let s = `a_relation:
 
 J
