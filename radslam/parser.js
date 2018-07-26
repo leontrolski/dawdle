@@ -75,4 +75,4 @@ const useful = o=>o.children.length?
 
 const logAst = ast=>console.log(jsYaml.dump(useful(ast)))
 
-module.exports = {parser, logAst, addIndents}
+module.exports = {parser, logAst, addIndents, useful}
