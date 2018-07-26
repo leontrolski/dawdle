@@ -81,15 +81,15 @@ J other_rel:
                     t: 'line',
                     c: [
                         {t: 'operator', v: 'J'},
-                        {t: 'value', c: {t: 'relation', v: 'other_rel:'}},
+                        {t: 'Value', c: {t: 'relation', v: 'other_rel:'}},
                     ]
                 },
                 {
                     t: 'line',
                     c: [
                         {t: 'operator', v: '|'},
-                        {t: 'value', c: {t: 'var', v: 'some_var'}},
-                        {t: 'value', c: {t: 'var', v: 'other_var'}},
+                        {t: 'Value', c: {t: 'var', v: 'some_var'}},
+                        {t: 'Value', c: {t: 'var', v: 'other_var'}},
                     ]
                 },
             ]
@@ -105,19 +105,19 @@ J other_rel:
                     t: 'line',
                     c: [
                         {t: 'operator', v: '|'},
-                        {t: 'value', c: {t: 'literal', c: {t: 'number', v: '1'}}},
-                        {t: 'value', c: {t: 'literal', c: {t: 'number', v: '-2'}}},
-                        {t: 'value', c: {t: 'literal', c: {t: 'number', v: '3.0'}}},
-                        {t: 'value', c: {t: 'literal', c: {t: 'bool', v: 'true'}}},
-                        {t: 'value', c: {t: 'literal', c: {t: 'null', v: 'null'}}},
-                        {t: 'value', c: {t: 'set', c: [
-                            {t: 'value', c: {t: 'literal', c: {t: 'string', v: '"string"'}}},
-                            {t: 'value', c: {t: 'literal', c: {t: 'template', v: '`template`'}}},
-                            {t: 'value', c: {t: 'set', c: [
-                                {t: 'value', c: {t: 'literal', c: {t: 'string', v: '"sub_set"'}}},
+                        {t: 'Value', c: {t: 'Literal', c: {t: 'number', v: '1'}}},
+                        {t: 'Value', c: {t: 'Literal', c: {t: 'number', v: '-2'}}},
+                        {t: 'Value', c: {t: 'Literal', c: {t: 'number', v: '3.0'}}},
+                        {t: 'Value', c: {t: 'Literal', c: {t: 'bool', v: 'true'}}},
+                        {t: 'Value', c: {t: 'Literal', c: {t: 'null', v: 'null'}}},
+                        {t: 'Value', c: {t: 'set', c: [
+                            {t: 'Value', c: {t: 'Literal', c: {t: 'string', v: '"string"'}}},
+                            {t: 'Value', c: {t: 'Literal', c: {t: 'template', v: '`template`'}}},
+                            {t: 'Value', c: {t: 'set', c: [
+                                {t: 'Value', c: {t: 'Literal', c: {t: 'string', v: '"sub_set"'}}},
                             ]}},
                         ]}},
-                        {t: 'value', c: {t: 'set', v: "[]"}},
+                        {t: 'Value', c: {t: 'set', v: "[]"}},
                     ]
                 },
             ]
@@ -144,7 +144,7 @@ a:
                 {t: 'line', c: [{t: 'operator', v: '|'}]},
                 {t: 'block', c: [
                     {t: 'line', c: [a]},
-                    {t: 'line', c: [{t: 'operator', v: 'J'}, {t: 'value', c: a}]},
+                    {t: 'line', c: [{t: 'operator', v: 'J'}, {t: 'Value', c: a}]},
                 ]},
                 {t: 'line', c: [{t: 'operator', v: 'X'}]},
                 {t: 'block', c: [
@@ -192,8 +192,7 @@ a:
                     {line: [{operator: '-'}]},
                     {block: [
                         {line: [{relation: 'a:'}]},
-                    ]},
-                ]}]},
+                    ]}]}]},
             {block: [
                 {line: [{relation: 'a:'}]},
                 {line: [{operator: '-'}, {set: [{number: 3}, {string: 'foo'}]}]}]}

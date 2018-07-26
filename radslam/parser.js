@@ -1,16 +1,16 @@
 const ebnf = require('ebnf')
-const jsYaml = require('js-yaml')
+const jsYaml = require('./js-yaml-fork')
 const R = require('ramda')
 
 // backtick is #x60
 // quote is #x22
 // backslash is #x5C
-
+// Capital words are kept but passed through, must resolve to one named token
 const grammar = `
 program              ::= NEWLINE* block+
 block                ::= (INDENT | SECTION) (line | block)+ (DE_INDENT | DE_SECTION)
-line                 ::= SPACE* (relation | (operator (SPACE value)*) | var) NEWLINE
-value                ::= literal | relation | header | var | set
+line                 ::= SPACE* (relation | (operator (SPACE Value)*) | var) NEWLINE
+Value                ::= Literal | relation | header | var | set
 
 SPACE                ::= #x20
 NEWLINE              ::= #x0A
@@ -21,13 +21,13 @@ DE_SECTION           ::= "</SECTION>" NEWLINE
 NAME                 ::= [a-z_][a-zA-Z_0-9]*
 CAPITALISED_NAME     ::= [A-Z][a-zA-Z_0-9]*
 
-set                  ::= "[" (value (SPACE value)*)* "]"
+set                  ::= "[" (Value (SPACE Value)*)* "]"
 var                  ::= NAME
 relation             ::= NAME ":"
 header               ::= ":" NAME
 operator             ::= ">" | "v" | "^" | "X" | "|" | "-" | "J" | "G" | "let" | "def" | CAPITALISED_NAME
 
-literal              ::= number | string | bool | template | null
+Literal              ::= number | string | bool | template | null
 bool                 ::= "true" | "false"
 null                 ::= "null"
 number               ::= "-"? ("0" | [1-9] [0-9]*) ("." [0-9]+)? (("e" | "E") ( "-" | "+" )? ("0" | [1-9] [0-9]*))?
@@ -75,14 +75,12 @@ let addIndents = s=>{
     return lines.join('\n') + '\n'
 }
 
-const passThrough = ['value', 'literal']
 const multiple = ['program', 'block', 'line', 'set']
-const jsonable = ['string', 'template', 'number', 'null', 'bool']
 
 const useful = o=>R.merge(
     {t: o.type},
     o.children.length?
-        passThrough.includes(o.type)?
+        o.type.search(/^[A-Z]/) > -1?
             {c:  useful(o.children[0])}
             : {c: o.children.map(useful)}
         : o.text.trim() === ''?
@@ -91,15 +89,14 @@ const useful = o=>R.merge(
 )
 
 const minimal = o=>
-    passThrough.includes(o.type)?
+    o.type.search(/^[A-Z]/) > -1?
         minimal(o.children[0])
         :multiple.includes(o.type)?
             {[o.type]: o.children.map(minimal)}
-            : {[o.type]: jsonable.includes(o.type)?
-                JSON.parse(o.text)
-                : o.text
-            }
+            : {[o.type]: o.text}
 
-const logAst = ast=>console.log(jsYaml.dump(useful(ast)))
+const logAst = ast=>console.log(jsYaml.dump(minimal(ast), {
+    flowLevel: 5
+}))
 
 module.exports = {parser, logAst, addIndents, useful, minimal}
