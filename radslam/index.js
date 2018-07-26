@@ -29,10 +29,10 @@ block                ::= (INDENT | SECTION) (line | block)+ (DE_INDENT | DE_SECT
 
 WS                   ::= #x20+   /* " "+  */
 NEWLINE              ::= #x0A    /* "\n" */
-INDENT               ::= "<INDENT>" NEWLINE
-DE_INDENT            ::= "</INDENT>" NEWLINE
-SECTION              ::= "<SECTION>" NEWLINE
-DE_SECTION           ::= "</SECTION>" NEWLINE
+INDENT               ::= "<INDENT>" (NEWLINE | EOF)
+DE_INDENT            ::= "</INDENT>" (NEWLINE | EOF)
+SECTION              ::= "<SECTION>" (NEWLINE | EOF)
+DE_SECTION           ::= "</SECTION>" (NEWLINE | EOF)
 
 line                 ::= WS* (relation | (operator (WS value)*) | var) NEWLINE
 value                ::= literal | relation | header | var | set
