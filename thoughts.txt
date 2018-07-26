@@ -16,7 +16,7 @@ before datetime
 pre_post_events relation  # how do we "import" these
 groups [header]
 
-run_end_times:
+let run_end_times:
     run:
     J result:
     > = :exit_status 0
@@ -40,7 +40,7 @@ J pre_post_events:
 J report:
 
 
-previous_to_release_id:
+let previous_to_release_id:
     run:
     v :run_id :release
     > = :release previous_to_release
@@ -49,13 +49,13 @@ previous_to_release_id:
     v :run_id
     > one
 
-all_possible_groups:
+let all_possible_groups:
     run:
     v groups
     > and
         (map groups) `isnot ${} null`
 
-reverse_indexed_in_groups:
+let reverse_indexed_in_groups:
     run:
     ^ :n order :run_id desc=True partition_by=groups
     > bool :is_integrated_release
@@ -63,7 +63,7 @@ reverse_indexed_in_groups:
     > < :run_id previous_to_release_id:
     v :run_id :n
 
-counts_seen:
+let counts_seen:
     run:
     v :run_id groups
     > in :run_id
@@ -87,8 +87,8 @@ G groups
 
 // functions
 
-Rename relation: old new
-    final_headers
+def Rename relation: old new
+    let final_headers
         relation:*
         - old
 
@@ -96,8 +96,8 @@ Rename relation: old new
     ^ old identity new
     v final_headers
 
-Outer relation: right:
-    joined:
+def Outer relation: right:
+    let joined:
         relation:
         J right:
 
@@ -112,8 +112,8 @@ Outer relation: right:
     | joined:
 
 
-Namespace relation: namespace ignore
-    to_rename
+def Namespace relation: namespace ignore
+    let to_rename
         relation:*
         - ignore
 

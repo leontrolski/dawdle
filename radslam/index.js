@@ -19,9 +19,6 @@ const R = require('ramda')
 // Def Arg Arg ...
 //     BLOCK
 
-// do
-// INDENT DEDENT as tokens in the lexer like python, see python ebnf
-
 // const grammar = `
 // program              ::= NEWLINE* block+
 
@@ -48,73 +45,83 @@ const R = require('ramda')
 // template             ::= '\`' (([#x20-#x5B] | [#x5D-#x5F] | [#x61-#xFFFF]) | #x5C (#x60 | #x5C | #x2F | #x62 | #x66 | #x6E | #x72 | #x74 | #x75 HEXDIG HEXDIG HEXDIG HEXDIG))* '\`'
 // HEXDIG               ::= [a-fA-F0-9]
 // `
-// // backtick is #x60
-// // quote is #x22
-// // backslash is #x5C
-// const parser = new ebnf.Grammars.W3C.Parser(grammar)
+// backtick is #x60
+// quote is #x22
+// backslash is #x5C
 
 let addIndents = s=>{
     let lastIndent = 0
-    let lines = ['<INDENT>']
+    let lines = ['<SECTION>']
+    let addLineBreak = false
     s.split('\n').forEach((line, lineNumber)=>{
-        if(line.trim() === ''){}
+        if(line.trim() === ''){
+            addLineBreak = true
+        }
         else{
             let match = line.match(/^(    )*[^ ]/g)
             if(!match) throw `line: ${lineNumber + 1} incorrectly indented`
-            thisIndent = (match[0].length - 1) / 4
-            if(thisIndent > lastIndent) lines.push('<INDENT>')
-            if(thisIndent < lastIndent) lines.push('<DEDENT>')
-            lastIndent = thisIndent
+            let diff = ((match[0].length - 1) / 4) - lastIndent
+            for (let i = 0; i < Math.abs(diff); i++){
+                lines.push(diff > 0? '<INDENT>' : '</INDENT>')
+            }
+            lastIndent = lastIndent + diff
+            if(addLineBreak){
+                lines.push('</SECTION>')
+                lines.push('<SECTION>')
+                addLineBreak = false
+            }
+            lines.push(line)
         }
-        lines.push(line)
     })
-    lines.push('<DEDENT>')
+    lines.push('</SECTION>')
     return lines.join('\n')
+
 }
 
-// const s = `a_relation:
+let s = `a_relation:
 
-// J
-// v 5 \`bar\`
+J
+v 5 \`bar\`
 
-// > 4 "foo"
-// > 5
-//     Custom 6 x_fooooo1
-//     J 9
-// f
-// - 7 :some_header some_relation:
-//     X "la"
-//         | "loo" [4 5 :other_table]
+> 4 "foo"
+> 5
+    Custom 6 x_fooooo1
+    J 9
+f
+- 7 :some_header some_relation:
+    X "la"
+        | "loo" [4 5 :other_table]
 
-// some_set
-// - other_set
-// `
+some_set
+- other_set
+`
+console.log(addIndents(s))
 
-
+//  [#x20-#x21]
+s = `<SECTION>
+asd
+<INDENT>
+asd
+</INDENT>
+</SECTION>
+`
 
 const grammar = `
-block                ::= INDENT (line | block)+ DEDENT
-line                 ::= [a-z]* NEWLINE
+block                ::= (INDENT | SECTION) (line | block)+ (DE_INDENT | DE_SECTION)
+line                 ::= [a-z]+ NEWLINE
 
 WS                   ::= #x20+   /* " "+  */
 NEWLINE              ::= #x0A    /* "\n" */
 INDENT               ::= "<INDENT>" NEWLINE
-DEDENT               ::= "<DEDENT>" NEWLINE
+DE_INDENT            ::= "</INDENT>" NEWLINE
+SECTION              ::= "<SECTION>" NEWLINE
+DE_SECTION           ::= "</SECTION>" NEWLINE
 `
 
-const s =`<INDENT>
-waa
-waa
 
-li
-<INDENT>
-woo
-<DEDENT>
-<DEDENT>
-`
 const parser = new ebnf.Grammars.W3C.Parser(grammar)
+// const ast = parser.getAST(addIndents(s))
 const ast = parser.getAST(s)
-
 
 const alwaysSingular = ['value', 'literal']
 const useful = o=>o.children.length?
