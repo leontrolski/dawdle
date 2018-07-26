@@ -118,7 +118,7 @@ def Namespace relation: namespace ignore
         - ignore
 
     relation:
-    (map to_rename) `Rename ${} ${namespace}.${}`
+    (map to_rename) `Rename ${_} ${namespace}.${_}`
 
 
 // lists are treated as sets

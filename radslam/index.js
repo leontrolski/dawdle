@@ -25,6 +25,8 @@ const R = require('ramda')
 let grammar = `
 program              ::= NEWLINE* block+
 block                ::= (INDENT | SECTION) (line | block)+ (DE_INDENT | DE_SECTION)
+line                 ::= WS* (relation | (operator (WS value)*) | var) NEWLINE
+value                ::= literal | relation | header | var | set
 
 WS                   ::= #x20+   /* " "+  */
 NEWLINE              ::= #x0A    /* "\n" */
@@ -32,9 +34,6 @@ INDENT               ::= "<INDENT>" (NEWLINE | EOF)
 DE_INDENT            ::= "</INDENT>" (NEWLINE | EOF)
 SECTION              ::= "<SECTION>" (NEWLINE | EOF)
 DE_SECTION           ::= "</SECTION>" (NEWLINE | EOF)
-
-line                 ::= WS* (relation | (operator (WS value)*) | var) NEWLINE
-value                ::= literal | relation | header | var | set
 
 set                  ::= "[" (value WS)* value "]"
 var                  ::= [a-zA-Z_][a-zA-Z_0-9]*
