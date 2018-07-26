@@ -19,32 +19,35 @@ const R = require('ramda')
 // Def Arg Arg ...
 //     BLOCK
 
-// const grammar = `
-// program              ::= NEWLINE* block+
+const grammar = `
+program              ::= NEWLINE* block+
 
-// WS                   ::= #x20+   /* " "+  */
-// NEWLINE              ::= #x0A    /* "\n" */
-// INDENT               ::= "<INDENT>" NEWLINE
-// DEDENT               ::= "<DEDENT>" NEWLINE
+block                ::= (INDENT | SECTION) (line | block)+ (DE_INDENT | DE_SECTION)
 
-// block                ::= INDENT (line+ | block+) NEWLINE* DEDENT
-// line                 ::= WS (relation | (operator (WS value)*) | var) (NEWLINE | EOF)
-// value                ::= literal | relation | header | var | set
+WS                   ::= #x20+   /* " "+  */
+NEWLINE              ::= #x0A    /* "\n" */
+INDENT               ::= "<INDENT>" NEWLINE
+DE_INDENT            ::= "</INDENT>" NEWLINE
+SECTION              ::= "<SECTION>" NEWLINE
+DE_SECTION           ::= "</SECTION>" NEWLINE
 
-// set                  ::= "[" (value WS)* value "]"
-// var                  ::= [a-zA-Z_][a-zA-Z_0-9]*
-// relation             ::= [a-zA-Z_][a-zA-Z_0-9]* ":"
-// header               ::= ":" [a-zA-Z_][a-zA-Z_0-9]*
-// operator             ::= ">" | "v" | "^" | "X" | "|" | "-" | "J" | "G" | [A-Z][a-zA-Z_0-9]*
+line                 ::= WS (relation | (operator (WS value)*) | var) (NEWLINE | EOF)
+value                ::= literal | relation | header | var | set
 
-// literal              ::= number | string | bool | template
-// bool                 ::= "true" | "false"
-// null                 ::= "null"
-// number               ::= "-"? ("0" | [1-9] [0-9]*) ("." [0-9]+)? (("e" | "E") ( "-" | "+" )? ("0" | [1-9] [0-9]*))?
-// string               ::= '"'  (([#x20-#x21] | [#x23-#x5B] | [#x5D-#xFFFF]) | #x5C (#x22 | #x5C | #x2F | #x62 | #x66 | #x6E | #x72 | #x74 | #x75 HEXDIG HEXDIG HEXDIG HEXDIG))* '"'
-// template             ::= '\`' (([#x20-#x5B] | [#x5D-#x5F] | [#x61-#xFFFF]) | #x5C (#x60 | #x5C | #x2F | #x62 | #x66 | #x6E | #x72 | #x74 | #x75 HEXDIG HEXDIG HEXDIG HEXDIG))* '\`'
-// HEXDIG               ::= [a-fA-F0-9]
-// `
+set                  ::= "[" (value WS)* value "]"
+var                  ::= [a-zA-Z_][a-zA-Z_0-9]*
+relation             ::= [a-zA-Z_][a-zA-Z_0-9]* ":"
+header               ::= ":" [a-zA-Z_][a-zA-Z_0-9]*
+operator             ::= ">" | "v" | "^" | "X" | "|" | "-" | "J" | "G" | [A-Z][a-zA-Z_0-9]*
+
+literal              ::= number | string | bool | template
+bool                 ::= "true" | "false"
+null                 ::= "null"
+number               ::= "-"? ("0" | [1-9] [0-9]*) ("." [0-9]+)? (("e" | "E") ( "-" | "+" )? ("0" | [1-9] [0-9]*))?
+string               ::= '"'  (([#x20-#x21] | [#x23-#x5B] | [#x5D-#xFFFF]) | #x5C (#x22 | #x5C | #x2F | #x62 | #x66 | #x6E | #x72 | #x74 | #x75 HEXDIG HEXDIG HEXDIG HEXDIG))* '"'
+template             ::= '\`' (([#x20-#x5B] | [#x5D-#x5F] | [#x61-#xFFFF]) | #x5C (#x60 | #x5C | #x2F | #x62 | #x66 | #x6E | #x72 | #x74 | #x75 HEXDIG HEXDIG HEXDIG HEXDIG))* '\`'
+HEXDIG               ::= [a-fA-F0-9]
+`
 // backtick is #x60
 // quote is #x22
 // backslash is #x5C
@@ -98,30 +101,30 @@ some_set
 console.log(addIndents(s))
 
 //  [#x20-#x21]
-s = `<SECTION>
-asd
-<INDENT>
-asd
-</INDENT>
-</SECTION>
-`
+// s = `<SECTION>
+// asd
+// <INDENT>
+// asd
+// </INDENT>
+// </SECTION>
+// `
 
-const grammar = `
-block                ::= (INDENT | SECTION) (line | block)+ (DE_INDENT | DE_SECTION)
-line                 ::= [a-z]+ NEWLINE
+// const grammar = `
+// block                ::= (INDENT | SECTION) (line | block)+ (DE_INDENT | DE_SECTION)
+// line                 ::= [a-z]+ NEWLINE
 
-WS                   ::= #x20+   /* " "+  */
-NEWLINE              ::= #x0A    /* "\n" */
-INDENT               ::= "<INDENT>" NEWLINE
-DE_INDENT            ::= "</INDENT>" NEWLINE
-SECTION              ::= "<SECTION>" NEWLINE
-DE_SECTION           ::= "</SECTION>" NEWLINE
-`
+// WS                   ::= #x20+   /* " "+  */
+// NEWLINE              ::= #x0A    /* "\n" */
+// INDENT               ::= "<INDENT>" NEWLINE
+// DE_INDENT            ::= "</INDENT>" NEWLINE
+// SECTION              ::= "<SECTION>" NEWLINE
+// DE_SECTION           ::= "</SECTION>" NEWLINE
+// `
 
 
 const parser = new ebnf.Grammars.W3C.Parser(grammar)
-// const ast = parser.getAST(addIndents(s))
-const ast = parser.getAST(s)
+const ast = parser.getAST(addIndents(s))
+// const ast = parser.getAST(s)
 
 const alwaysSingular = ['value', 'literal']
 const useful = o=>o.children.length?
