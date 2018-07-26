@@ -19,9 +19,12 @@ const R = require('ramda')
 // Def Arg Arg ...
 //     BLOCK
 
-const grammar = `
-program              ::= NEWLINE* block+
+// program              ::= NEWLINE* block+
+// line                 ::= [a-z]+ NEWLINE
 
+
+let grammar = `
+program              ::= NEWLINE* block+
 block                ::= (INDENT | SECTION) (line | block)+ (DE_INDENT | DE_SECTION)
 
 WS                   ::= #x20+   /* " "+  */
@@ -31,7 +34,7 @@ DE_INDENT            ::= "</INDENT>" NEWLINE
 SECTION              ::= "<SECTION>" NEWLINE
 DE_SECTION           ::= "</SECTION>" NEWLINE
 
-line                 ::= WS (relation | (operator (WS value)*) | var) (NEWLINE | EOF)
+line                 ::= WS* (relation | (operator (WS value)*) | var) NEWLINE
 value                ::= literal | relation | header | var | set
 
 set                  ::= "[" (value WS)* value "]"
@@ -77,7 +80,7 @@ let addIndents = s=>{
         }
     })
     lines.push('</SECTION>')
-    return lines.join('\n')
+    return lines.join('\n') + '\n'
 
 }
 
@@ -98,33 +101,18 @@ f
 some_set
 - other_set
 `
-console.log(addIndents(s))
 
 //  [#x20-#x21]
-// s = `<SECTION>
-// asd
-// <INDENT>
-// asd
-// </INDENT>
-// </SECTION>
-// `
-
-// const grammar = `
-// block                ::= (INDENT | SECTION) (line | block)+ (DE_INDENT | DE_SECTION)
-// line                 ::= [a-z]+ NEWLINE
-
-// WS                   ::= #x20+   /* " "+  */
-// NEWLINE              ::= #x0A    /* "\n" */
-// INDENT               ::= "<INDENT>" NEWLINE
-// DE_INDENT            ::= "</INDENT>" NEWLINE
-// SECTION              ::= "<SECTION>" NEWLINE
-// DE_SECTION           ::= "</SECTION>" NEWLINE
-// `
-
+s = `<INDENT>
+asd:
+</INDENT>
+`
+console.log([s])
+console.log([addIndents(s)])
 
 const parser = new ebnf.Grammars.W3C.Parser(grammar)
-const ast = parser.getAST(addIndents(s))
-// const ast = parser.getAST(s)
+// const ast = parser.getAST(addIndents(s))
+const ast = parser.getAST(s)
 
 const alwaysSingular = ['value', 'literal']
 const useful = o=>o.children.length?
