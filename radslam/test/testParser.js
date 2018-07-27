@@ -9,11 +9,13 @@ chai.config.truncateThreshold = 1000
 describe('parser.addIndents', ()=>{
     it('should add sections and indents', ()=>{
         const in_ = `
+
 a-1
 a-2
     a-3
     a-4
         a-5
+
     a-6
         a-7
 
@@ -27,8 +29,7 @@ a-0
     a-3
         a-4
 `
-        const expected = `<SECTION>
-a-1
+        const expected = `a-1
 a-2
 <INDENT>
     a-3
@@ -36,31 +37,28 @@ a-2
 <INDENT>
         a-5
 </INDENT>
+
     a-6
 <INDENT>
         a-7
 </INDENT>
 </INDENT>
-</SECTION>
-<SECTION>
+
 a-8
 a-9
-</SECTION>
-<SECTION>
+
 a-0
 <INDENT>
     a-1
 <INDENT>
         a-2
 </INDENT>
-</SECTION>
-<SECTION>
+
     a-3
 <INDENT>
         a-4
 </INDENT>
 </INDENT>
-</SECTION>
 `
         assert.deepEqual(expected, parser.addIndents(in_))
     })

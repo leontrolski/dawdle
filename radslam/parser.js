@@ -50,11 +50,11 @@ const parser = s=>_parser.getAST(addIndents(s))
 let addIndents = s=>{
     let lastIndent = 0
     let totalDiff = 0
-    let lines = ['<SECTION>']
-    let addLineBreak = false
+    let insertBreak = false
+    let lines = []
     s.replace(/^\n+/, '').split('\n').forEach((line, lineNumber)=>{
         if(line.trim() === ''){
-            addLineBreak = true
+            insertBreak = true
         }
         else{
             let match = line.match(/^(    )*[^ ]/g)
@@ -65,10 +65,9 @@ let addIndents = s=>{
             }
             totalDiff += diff
             lastIndent = lastIndent + diff
-            if(addLineBreak){
-                lines.push('</SECTION>')
-                lines.push('<SECTION>')
-                addLineBreak = false
+            if(insertBreak){
+                insertBreak = false
+                lines.push('')
             }
             lines.push(line)
         }
@@ -77,7 +76,6 @@ let addIndents = s=>{
     for (let i = 0; i < totalDiff; i++){
         lines.push('</INDENT>')
     }
-    lines.push('</SECTION>')
     return lines.join('\n') + '\n'
 }
 
