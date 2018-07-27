@@ -6,13 +6,19 @@ const R = require('ramda')
 // quote is #x22
 // backslash is #x5C
 // Capital words are kept but passed through, must resolve to one named token
+
+// program              ::= definition* (line | block)+ EOF
+// definition           ::= let NEWLINE*
+// block                ::= INDENT line+ DE_INDENT
+// def                  ::= SPACE* DEF SPACE custom_operator (SPACE Value)* NEWLINE
+// line                 ::= SPACE* (relation | (operator (SPACE Value)*) | var) NEWLINE
+
+// add Value to line
 const grammar = `
-program              ::= definition* (line | block)+ EOF
-definition           ::= (def | let) (line | block)+ NEWLINE
-block                ::= INDENT definition* (line | block)+ DE_INDENT
-def                  ::= SPACE* DEF SPACE custom_operator (SPACE Value)* NEWLINE
-let                  ::= SPACE* LET SPACE (var | relation) NEWLINE
-line                 ::= SPACE* (relation | (operator (SPACE Value)*) | var) NEWLINE
+program              ::= let*
+let                  ::= SPACE* LET SPACE (relation | var) NEWLINE block (NEWLINE | EOF)
+block                ::= INDENT let* (line | block)+ DE_INDENT
+line                 ::= SPACE* (relation | (operator (SPACE Value)*) | var | Value) NEWLINE
 Value                ::= Literal | relation | header | var | set
 
 SPACE                ::= #x20
@@ -74,7 +80,7 @@ let addIndents = s=>{
     return lines.join('\n')
 }
 
-const multiple = ['program', 'definition', 'block', 'line', 'set']
+const multiple = ['program', 'definition', 'block', 'let', 'def', 'line', 'set']
 
 const useful = o=>R.merge(
     {t: o.type},

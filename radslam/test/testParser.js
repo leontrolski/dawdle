@@ -141,10 +141,15 @@ J other_rel:
     it('should parse blocks', ()=>{
         const in_ = `
 let a:
-|
-    b:
+    let b:
+        5
 
-c:
+    c:
+    | d:
+        e:
+
+let e:
+    f:
 `
 
 // |
