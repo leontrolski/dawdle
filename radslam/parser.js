@@ -103,6 +103,7 @@ const minimal = o=>
 
 const logAst = ast=>console.log(jsYaml.dump(minimal(ast), {
     flowKey: 'line',  // inline yaml at these points
+    lineWidth: 800,
 }))
 
 module.exports = {parser, logAst, addIndents, useful, minimal}
