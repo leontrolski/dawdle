@@ -15,7 +15,6 @@ a-2
     a-3
     a-4
         a-5
-
     a-6
         a-7
 
@@ -37,7 +36,6 @@ a-2
 <INDENT>
         a-5
 </INDENT>
-
     a-6
 <INDENT>
         a-7
@@ -145,37 +143,32 @@ J other_rel:
 a:
 |
     a:
-    J a:
-X
-    a:
-    -
-        a:
+        b:
 
-a:
+        c:
+    J d:
+        f
+
+X
+|
+
+e:
 `
-        const a = {t: 'relation', v: 'a:'}
-        const expected = [
-            {t: 'block', c: [
-                {t: 'line', c: [a]},
-                {t: 'line', c: [{t: 'operator', v: '|'}]},
-                {t: 'block', c: [
-                    {t: 'line', c: [a]},
-                    {t: 'line', c: [{t: 'operator', v: 'J'}, {t: 'Value', c: a}]},
-                ]},
-                {t: 'line', c: [{t: 'operator', v: 'X'}]},
-                {t: 'block', c: [
-                    {t: 'line', c: [a]},
-                    {t: 'line', c: [{t: 'operator', v: '-'}]},
-                    {t: 'block', c: [
-                        {t: 'line', c: [a]},
-                    ]},
-                ]},
-            ]},
-            {t: 'block', c: [
-                {t: 'line', c: [a]},
-            ]},
-        ]
-        assert.deepEqual(expected, parser.useful(parser.parser(in_)).c)
+
+// |
+//     a:
+//     J a:
+// X
+//     a:
+//     -
+//         a:
+
+// a:
+        const expected = {}
+        const ast = parser.parser(in_)
+        console.log(parser.addIndents(in_))
+        console.log(ast)
+        assert.deepEqual(expected, parser.minimal(ast))
     })
 })
 

@@ -7,8 +7,9 @@ const R = require('ramda')
 // backslash is #x5C
 // Capital words are kept but passed through, must resolve to one named token
 const grammar = `
-program              ::= NEWLINE* block+
-block                ::= (INDENT | SECTION) (line | block)+ (DE_INDENT | DE_SECTION)
+program              ::= definition* (line | block)+ EOF
+definition           ::= (line | block)+ NEWLINE
+block                ::= INDENT definition* (line | block)+ DE_INDENT
 line                 ::= SPACE* (relation | (operator (SPACE Value)*) | var) NEWLINE
 Value                ::= Literal | relation | header | var | set
 
@@ -16,8 +17,6 @@ SPACE                ::= #x20
 NEWLINE              ::= #x0A
 INDENT               ::= "<INDENT>" NEWLINE
 DE_INDENT            ::= "</INDENT>" NEWLINE
-SECTION              ::= "<SECTION>" NEWLINE
-DE_SECTION           ::= "</SECTION>" NEWLINE
 NAME                 ::= [a-z_][a-zA-Z_0-9]*
 CAPITALISED_NAME     ::= [A-Z][a-zA-Z_0-9]*
 
@@ -70,7 +69,7 @@ let addIndents = s=>{
     return lines.join('\n')
 }
 
-const multiple = ['program', 'block', 'line', 'set']
+const multiple = ['program', 'definition', 'block', 'line', 'set']
 
 const useful = o=>R.merge(
     {t: o.type},
