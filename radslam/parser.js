@@ -8,8 +8,10 @@ const R = require('ramda')
 // Capital words are kept but passed through, must resolve to one named token
 const grammar = `
 program              ::= definition* (line | block)+ EOF
-definition           ::= (line | block)+ NEWLINE
+definition           ::= (def | let) (line | block)+ NEWLINE
 block                ::= INDENT definition* (line | block)+ DE_INDENT
+def                  ::= SPACE* DEF SPACE custom_operator (SPACE Value)* NEWLINE
+let                  ::= SPACE* LET SPACE (var | relation) NEWLINE
 line                 ::= SPACE* (relation | (operator (SPACE Value)*) | var) NEWLINE
 Value                ::= Literal | relation | header | var | set
 
@@ -19,12 +21,15 @@ INDENT               ::= "<INDENT>" NEWLINE
 DE_INDENT            ::= "</INDENT>" NEWLINE
 NAME                 ::= [a-z_][a-zA-Z_0-9]*
 CAPITALISED_NAME     ::= [A-Z][a-zA-Z_0-9]*
+DEF                  ::= "def"
+LET                  ::= "let"
 
 set                  ::= "[" (Value (SPACE Value)*)* "]"
 var                  ::= NAME
 relation             ::= NAME ":"
 header               ::= ":" NAME
-operator             ::= ">" | "v" | "^" | "X" | "|" | "-" | "J" | "G" | "let" | "def" | CAPITALISED_NAME
+custom_operator      ::= CAPITALISED_NAME
+operator             ::= ">" | "v" | "^" | "X" | "|" | "-" | "J" | "G" | custom_operator
 
 Literal              ::= number | string | bool | template | null
 bool                 ::= "true" | "false"

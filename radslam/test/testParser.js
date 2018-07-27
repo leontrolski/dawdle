@@ -140,19 +140,11 @@ J other_rel:
     })
     it('should parse blocks', ()=>{
         const in_ = `
-a:
+let a:
 |
-    a:
-        b:
+    b:
 
-        c:
-    J d:
-        f
-
-X
-|
-
-e:
+c:
 `
 
 // |
