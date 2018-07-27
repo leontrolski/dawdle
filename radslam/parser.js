@@ -41,42 +41,33 @@ const parser = s=>_parser.getAST(addIndents(s))
 
 /**
  * Strip leading newlines
- * Add <SECTION> tags around newline separated sections
  * Add <INDENT> tags to indented sections
- *
- * TODO: refactor, it's pretty ugly
  * @param {string}  source string
  */
 let addIndents = s=>{
-    let lastIndent = 0
-    let totalDiff = 0
-    let insertBreak = false
+    let getIndent = (line, lineNo)=>{
+        if(line.trim() === '') return null
+        let match = line.match(/^(    )*[^ ]/g)
+        if(!match) throw `line: ${lineNo + 1} incorrectly indented`
+        return (match[0].length - 1) / 4
+    }
+    let split = s.replace(/^\n+/, '').split('\n')  // replace leading whitespace
+    lineNosIndents = split
+        .map(getIndent)
+        .map((indent, lineNo)=>[lineNo, indent])
+        .filter(([lineNo, indent])=>indent != null)
+    let diffs = R.fromPairs(lineNosIndents
+        .map(([lineNo, indent], i)=>[lineNo, (lineNosIndents[i + 1] || [0, 0])[1] - indent]))
+
     let lines = []
-    s.replace(/^\n+/, '').split('\n').forEach((line, lineNumber)=>{
-        if(line.trim() === ''){
-            insertBreak = true
-        }
-        else{
-            let match = line.match(/^(    )*[^ ]/g)
-            if(!match) throw `line: ${lineNumber + 1} incorrectly indented`
-            let diff = ((match[0].length - 1) / 4) - lastIndent
-            for (let i = 0; i < Math.abs(diff); i++){
-                lines.push(diff > 0? '<INDENT>' : '</INDENT>')
-            }
-            totalDiff += diff
-            lastIndent = lastIndent + diff
-            if(insertBreak){
-                insertBreak = false
-                lines.push('')
-            }
-            lines.push(line)
+    split.forEach((line, lineNo)=>{
+        lines.push(line)
+        let diff = diffs[lineNo] || 0
+        for (let i = 0; i < Math.abs(diff); i++){
+            lines.push(diff > 0? '<INDENT>' : '</INDENT>')
         }
     })
-    // dutty hack
-    for (let i = 0; i < totalDiff; i++){
-        lines.push('</INDENT>')
-    }
-    return lines.join('\n') + '\n'
+    return lines.join('\n')
 }
 
 const multiple = ['program', 'block', 'line', 'set']
