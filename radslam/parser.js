@@ -11,7 +11,6 @@ Block                ::= INDENT section DE_INDENT
 line                 ::= SPACE* ((operator (SPACE Value)*) | Value) END
 group_line           ::= SPACE* header SPACE var (SPACE Value)* END
 
-
 Value                ::= Literal | all_headers | relation | header | named_var | var | set
 all_headers          ::= NAME ":*"
 relation             ::= NAME ":"
@@ -25,12 +24,14 @@ relation_literal     ::= headers (SPACE* RULE END row+)?
 headers              ::= SPACE* SEP ((SPACE* header SPACE* SEP)+ | (SPACE* SEP)) END
 row                  ::= SPACE* SEP ((SPACE* Value  SPACE* SEP)+ | (SPACE* SEP)) END
 
-Literal              ::= number | string | bool | template | null
+Literal              ::= number | string | bool | template | null | decimal | datetime
 bool                 ::= "true" | "false"
 null                 ::= "null"
 number               ::= "-"? ("0" | [1-9] [0-9]*) ("." [0-9]+)? (("e" | "E") ( "-" | "+" )? ("0" | [1-9] [0-9]*))?
 string               ::= '"'  (([#x20-#x21] | [#x23-#x5B] | [#x5D-#xFFFF]) | #x5C (#x22 | #x5C | #x2F | #x62 | #x66 | #x6E | #x72 | #x74 | #x75 HEXDIG HEXDIG HEXDIG HEXDIG))* '"'
 template             ::= '\`' (([#x20-#x5B] | [#x5D-#x5F] | [#x61-#xFFFF]) | #x5C (#x60 | #x5C | #x2F | #x62 | #x66 | #x6E | #x72 | #x74 | #x75 HEXDIG HEXDIG HEXDIG HEXDIG))* '\`'
+decimal              ::= "$" "-"? [0-9]+ ("." [0-9]+)?
+datetime             ::= "~" [0-9TZ#x2D:+]+
 HEXDIG               ::= [a-fA-F0-9]
 
 SPACE                ::= #x20

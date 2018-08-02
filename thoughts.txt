@@ -156,7 +156,7 @@ Design choices:
 Other things to think about:
 - datetime type - ISO 8601 ~2018-07-20T10:25:25+00:00 ~P3Y6M4DT12H30M5S
 - table literals
-- nesting syntax
+- nesting syntax?
 - decimal type?
 - integer type?
 
