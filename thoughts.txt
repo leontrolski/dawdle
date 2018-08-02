@@ -124,15 +124,15 @@ def Namespace relation: namespace ignore
 Base operators:
 > v ^ X U - J G
 
-Operators:
-> Func Arg Arg ...
-v Header Header ...
-^ Header Func Arg Arg ...
-X Arg
-U Arg
-- Arg
-J Arg
-G _see above_
+Base Operators:
+> func value value ...
+v header header ...
+^ header func value value ...
+X value
+U value
+- value
+J value
+G aggregators
 
 
 

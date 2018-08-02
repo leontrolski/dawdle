@@ -75,7 +75,7 @@ Custom other_other_rel:*
         const expected = {section: [
             {line: [{relation: 'some_rel:'}]},
             {line: [{operator: 'J'}, {relation: 'other_rel:'}]},
-            {line: [{operator: 'U'}, {var: 'some_var'}, {named_var: [{var: 'named'}, {number: '1.0'}]}]},
+            {line: [{operator: 'U'}, {var: 'some_var'}, {named_value: [{var: 'named'}, {number: '1.0'}]}]},
             {line: [{operator: 'Custom'}, {all_headers: 'other_other_rel:*'}]},
             {map_macro: [{var: 'foo'}, {template: "`yo`"}]},
         ]}
@@ -141,7 +141,7 @@ G :foo
             {"line": [{"relation": "g:"}]},
             {"line": [{"operator": "G"}, {"header": ":foo"}]},
             {"section": [
-                {"group_line": [{"header": ":bar"}, {"var": "count"}, {"header": ":bar_id"}]}]}]
+                {"aggregator": [{"header": ":bar"}, {"var": "count"}, {"header": ":bar_id"}]}]}]
         assert.deepEqual(expected, parser.parser(in_).section)
     })
     it('should parse a relation literal', ()=>{

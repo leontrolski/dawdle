@@ -4,19 +4,19 @@ const R = require('ramda')
 
 // Capital words are kept but passed through, must resolve to one named token
 const grammar = `
-section              ::= (let | def)* (line | group_line | map_macro | relation_literal | Block)+
+section              ::= (let | def)* (line | aggregator | map_macro | relation_literal | Block)+
 Block                ::= INDENT section DE_INDENT
 let                  ::= SPACE* "let" SPACE (relation | var) NEWLINE Block END
 def                  ::= SPACE* "def" SPACE operator (SPACE (relation | var))* NEWLINE Block END
 line                 ::= SPACE* ((operator (SPACE Value)*) | Value) END
-group_line           ::= SPACE* header SPACE var (SPACE Value)* END
+aggregator           ::= SPACE* header SPACE var (SPACE Value)* END
 map_macro            ::= SPACE* "(" "map" SPACE Value ")" SPACE template END
 
-Value                ::= Literal | all_headers | relation | header | named_var | var | set
+Value                ::= Literal | all_headers | relation | header | named_value | var | set
 all_headers          ::= NAME ":*"
 relation             ::= NAME ":"
 header               ::= ":" NAME
-named_var            ::= var "=" Value
+named_value          ::= var "=" Value
 var                  ::= NAME
 operator             ::= ">" | "v" | "^" | "X" | "U" | "-" | "J" | "G" | CAPITALISED_NAME
 set                  ::= "[" (Value (SPACE Value)*)* "]"
@@ -51,13 +51,13 @@ const types = {
     let: 'let',
     def: 'def',
     line: 'line',
-    group_line: 'group_line',
+    aggregator: 'aggregator',
     map_macro: 'map_macro',
     relation_literal: 'relation_literal',
     headers: 'headers',
     row: 'row',
     set: 'set',
-    named_var: 'named_var',
+    named_value: 'named_value',
 }
 
 const multiple = [
@@ -65,14 +65,15 @@ const multiple = [
     types.let,
     types.def,
     types.line,
-    types.group_line,
+    types.aggregator,
     types.map_macro,
     types.relation_literal,
     types.headers,
     types.row,
     types.set,
-    types.named_var,
+    types.named_value,
 ]
+
 
 const generatedParser = new ebnf.Grammars.W3C.Parser(grammar)
 const basicParser = s=>generatedParser.getAST(addIndents(s))
