@@ -7,17 +7,11 @@ const R = require('ramda')
 // backslash is #x5C
 // Capital words are kept but passed through, must resolve to one named token
 
-// program              ::= definition* (line | block)+ EOF
-// definition           ::= let NEWLINE*
-// block                ::= INDENT line+ DE_INDENT
-// def                  ::= SPACE* DEF SPACE custom_operator (SPACE Value)* NEWLINE
-// line                 ::= SPACE* (relation | (operator (SPACE Value)*) | var) NEWLINE
-
-// add Value to line
 const grammar = `
-program              ::= let*
-let                  ::= SPACE* LET SPACE (relation | var) NEWLINE block (NEWLINE | EOF)
-block                ::= INDENT let* (line | block)+ DE_INDENT
+section              ::= (let | def)* (line | Block)+
+let                  ::= SPACE* LET SPACE (relation | var) NEWLINE Block (NEWLINE | EOF)
+def                  ::= SPACE* DEF SPACE operator (SPACE (relation | var))* NEWLINE Block (NEWLINE | EOF)
+Block                ::= INDENT section DE_INDENT
 line                 ::= SPACE* (relation | (operator (SPACE Value)*) | var | Value) NEWLINE
 Value                ::= Literal | relation | header | var | set
 
@@ -34,8 +28,7 @@ set                  ::= "[" (Value (SPACE Value)*)* "]"
 var                  ::= NAME
 relation             ::= NAME ":"
 header               ::= ":" NAME
-custom_operator      ::= CAPITALISED_NAME
-operator             ::= ">" | "v" | "^" | "X" | "|" | "-" | "J" | "G" | custom_operator
+operator             ::= ">" | "v" | "^" | "X" | "|" | "-" | "J" | "G" | CAPITALISED_NAME
 
 Literal              ::= number | string | bool | template | null
 bool                 ::= "true" | "false"
@@ -80,7 +73,7 @@ let addIndents = s=>{
     return lines.join('\n')
 }
 
-const multiple = ['program', 'definition', 'block', 'let', 'def', 'line', 'set']
+const multiple = ['section', 'let', 'def', 'line', 'set']
 
 const useful = o=>R.merge(
     {t: o.type},

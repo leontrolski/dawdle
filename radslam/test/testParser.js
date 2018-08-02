@@ -148,8 +148,15 @@ let a:
     | d:
         e:
 
+def Foo relation: bar
+    i:
+
 let e:
     f:
+
+g:
+    h:
+    | j:
 `
 
 // |
