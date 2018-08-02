@@ -198,25 +198,4 @@ foo`
             {line: [{var: 'foo'}]}]}
         assert.deepEqual(expected, parser.parser(in_))
     })
-    it('should parse an empty relation literal with no rows', ()=>{
-        const in_ = `def Outer relation: right:
-    let joined:
-        relation:
-        J right:
-
-    relation:
-    -
-        joined:
-        v relation:*
-    X
-        right:
-        > first
-        (map right:*) \`^ \${_} make_null\`
-    U joined:
-
-out:`
-        const expected = {}
-        parser.log(parser.parser(in_))
-        // assert.deepEqual(expected, parser.parser(in_))
-    })
 })

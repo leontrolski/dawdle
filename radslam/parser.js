@@ -45,18 +45,33 @@ DE_INDENT            ::= "</INDENT>" NEWLINE
 NAME                 ::= [a-z_][a-zA-Z_0-9]*
 CAPITALISED_NAME     ::= [A-Z][a-zA-Z_0-9]*
 `
+
+const types = {
+    section: 'section',
+    let: 'let',
+    def: 'def',
+    line: 'line',
+    group_line: 'group_line',
+    map_macro: 'map_macro',
+    relation_literal: 'relation_literal',
+    headers: 'headers',
+    row: 'row',
+    set: 'set',
+    named_var: 'named_var',
+}
+
 const multiple = [
-    'section',
-    'let',
-    'def',
-    'line',
-    'group_line',
-    'map_macro',
-    'relation_literal',
-    'headers',
-    'row',
-    'set',
-    'named_var',
+    types.section,
+    types.let,
+    types.def,
+    types.line,
+    types.group_line,
+    types.map_macro,
+    types.relation_literal,
+    types.headers,
+    types.row,
+    types.set,
+    types.named_var,
 ]
 
 const generatedParser = new ebnf.Grammars.W3C.Parser(grammar)
@@ -104,4 +119,13 @@ const log = o=>console.log(jsYaml.dump(o, {lineWidth: 800,}))
 
 const parser = s=>minimal(basicParser(s))
 
-module.exports = {parser, basicParser, log, addIndents, minimal}
+module.exports = {
+    // main
+    parser,
+    types,
+    // extras
+    basicParser,
+    log,
+    addIndents,
+    minimal
+}

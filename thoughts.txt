@@ -151,6 +151,7 @@ Design choices:
 - Custom operators can only be composed of the base operators and other functions
 - Sets are always splatted in place
 - (map some_set) is a macro
+- make error messages nice
 
 
 df:
