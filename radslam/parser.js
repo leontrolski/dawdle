@@ -1,19 +1,19 @@
 const ebnf = require('ebnf')
-const jsYaml = require('./js-yaml-fork')
+const jsYaml = require('js-yaml')
 const R = require('ramda')
 
 // Capital words are kept but passed through, must resolve to one named token
 const grammar = `
-section              ::= (let | def)* (line | group_by_line | relation_literal | Block)+
+section              ::= (let | def)* (line | group_line | relation_literal | Block)+
 let                  ::= SPACE* "let" SPACE (relation | var) NEWLINE Block END
 def                  ::= SPACE* "def" SPACE operator (SPACE (relation | var))* NEWLINE Block END
 Block                ::= INDENT section DE_INDENT
 line                 ::= SPACE* ((operator (SPACE Value)*) | Value) END
-group_by_line        ::= SPACE* header SPACE var (SPACE Value)* END
+group_line        ::= SPACE* header SPACE var (SPACE Value)* END
 
 relation_literal     ::= headers (SPACE* RULE END row+)?
-headers              ::= SPACE* SEP ((SPACE+ header SPACE+ SEP)+ | (SPACE+ SEP)) END
-row                  ::= SPACE* SEP ((SPACE+ Value  SPACE+ SEP)+ | (SPACE+ SEP)) END
+headers              ::= SPACE* SEP ((SPACE* header SPACE* SEP)+ | (SPACE* SEP)) END
+row                  ::= SPACE* SEP ((SPACE* Value  SPACE* SEP)+ | (SPACE* SEP)) END
 
 SPACE                ::= #x20
 NEWLINE              ::= #x0A
@@ -25,15 +25,16 @@ DE_INDENT            ::= "</INDENT>" NEWLINE
 NAME                 ::= [a-z_][a-zA-Z_0-9]*
 CAPITALISED_NAME     ::= [A-Z][a-zA-Z_0-9]*
 
-Value                ::= Literal | all_headers | relation | header | var | set
+Value                ::= Literal | all_headers | relation | header | named_var | var | set
 all_headers          ::= NAME ":*"
 relation             ::= NAME ":"
 header               ::= ":" NAME
+named_var            ::= var "=" Value
 var                  ::= NAME
 operator             ::= ">" | "v" | "^" | "X" | "U" | "-" | "J" | "G" | CAPITALISED_NAME
+set                  ::= "[" (Value (SPACE Value)*)* "]"
 
 Literal              ::= number | string | bool | template | null
-set                  ::= "[" (Value (SPACE Value)*)* "]"
 bool                 ::= "true" | "false"
 null                 ::= "null"
 number               ::= "-"? ("0" | [1-9] [0-9]*) ("." [0-9]+)? (("e" | "E") ( "-" | "+" )? ("0" | [1-9] [0-9]*))?
@@ -46,11 +47,12 @@ const multiple = [
     'let',
     'def',
     'line',
-    'group_by_line',
+    'group_line',
     'relation_literal',
     'headers',
     'row',
     'set',
+    'named_var',
 ]
 
 const generatedParser = new ebnf.Grammars.W3C.Parser(grammar)
@@ -62,24 +64,24 @@ const basicParser = s=>generatedParser.getAST(addIndents(s))
  * @param {string}  source string
  */
 const addIndents = s=>{
-    let getIndent = (line, lineNo)=>{
+    const getIndent = (line, lineNo)=>{
         if(line.trim() === '') return null
-        let match = line.match(/^(    )*[^ ]/g)
+        const match = line.match(/^(    )*[^ ]/g)
         if(!match) throw `line: ${lineNo + 1} incorrectly indented`
         return (match[0].length - 1) / 4
     }
-    let split = s.replace(/^\n+/, '').split('\n')  // replace leading whitespace
+    const split = s.split('\n')
     lineNosIndents = split
         .map(getIndent)
         .map((indent, lineNo)=>[lineNo, indent])
         .filter(([lineNo, indent])=>indent != null)
-    let diffs = R.fromPairs(lineNosIndents
+    const diffs = R.fromPairs(lineNosIndents
         .map(([lineNo, indent], i)=>[lineNo, (lineNosIndents[i + 1] || [0, 0])[1] - indent]))
 
     let lines = []
     split.forEach((line, lineNo)=>{
         lines.push(line)
-        let diff = diffs[lineNo] || 0
+        const diff = diffs[lineNo] || 0
         for (let i = 0; i < Math.abs(diff); i++){
             lines.push(diff > 0? '<INDENT>' : '</INDENT>')
         }
@@ -94,11 +96,8 @@ const minimal = o=>
             {[o.type]: o.children.map(minimal)}
             : {[o.type]: o.text}
 
-const logAst = s=>console.log(jsYaml.dump(parser(s), {
-    flowKey: 'line',  // inline yaml at these points
-    lineWidth: 800,
-}))
+const log = o=>console.log(jsYaml.dump(o, {lineWidth: 800,}))
 
 const parser = s=>minimal(basicParser(s))
 
-module.exports = {parser, basicParser, logAst, addIndents, minimal}
+module.exports = {parser, basicParser, log, addIndents, minimal}

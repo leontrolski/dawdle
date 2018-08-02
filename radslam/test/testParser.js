@@ -8,9 +8,7 @@ chai.config.truncateThreshold = 1000
 
 describe('parser.addIndents', ()=>{
     it('should add sections and indents', ()=>{
-        const in_ = `
-
-a-1
+        const in_ = `a-1
 a-2
     a-3
     a-4
@@ -64,22 +62,20 @@ a-0
 
 describe('parser.parser', ()=>{
     it('should parse a single var', ()=>{
-        const in_ = `some_var
-`
+        const in_ = `some_var`
         const expected = {section: [{line: [{var: 'some_var'}]}]}
         assert.deepEqual(expected, parser.parser(in_))
     })
     it('should parse a relation with a few operations', ()=>{
-        const in_ = `
-some_rel:
+        const in_ = `some_rel:
 J other_rel:
-U some_var other_var
-Custom all:*`
+U some_var named=1.0
+Custom other_other_rel:*`
         const expected = {section: [
             {line: [{relation: 'some_rel:'}]},
             {line: [{operator: 'J'}, {relation: 'other_rel:'}]},
-            {line: [{operator: 'U'}, {var: 'some_var'}, {var: 'other_var'}]},
-            {line: [{operator: 'Custom'}, {all_headers: 'all:*'}]},
+            {line: [{operator: 'U'}, {var: 'some_var'}, {named_var: [{var: 'named'}, {number: '1.0'}]}]},
+            {line: [{operator: 'Custom'}, {all_headers: 'other_other_rel:*'}]},
         ]}
         assert.deepEqual(expected, parser.parser(in_))
     })
@@ -104,8 +100,7 @@ Custom all:*`
         assert.deepEqual(expected, parser.parser(in_))
     })
     it('should parse sections', ()=>{
-        const in_ = `
-let a:
+        const in_ = `let a:
     let b:
         5
 
@@ -141,15 +136,14 @@ G :foo
             {"line": [{"relation": "g:"}]},
             {"line": [{"operator": "G"}, {"header": ":foo"}]},
             {"section": [
-                {"group_by_line": [{"header": ":bar"}, {"var": "count"}, {"header": ":bar_id"}]}]}]
+                {"group_line": [{"header": ":bar"}, {"var": "count"}, {"header": ":bar_id"}]}]}]
         assert.deepEqual(expected, parser.parser(in_).section)
     })
     it('should parse a relation literal', ()=>{
-        const in_ = `
-| :a    | :b  |
----------------
-| "foo" | 2.4 |
-| null  | -3  |
+        const in_ = `| :a    |:b|
+-------------------
+| "foo"   | 2.4 |
+|null  | -3  |
 `
         const expected = {section: [
             {relation_literal: [
@@ -166,8 +160,7 @@ G :foo
         assert.deepEqual(expected, parser.parser(in_))
     })
     it('should parse an empty relation literal with one row', ()=>{
-        const in_ = `
-| |
+        const in_ = `| |
 ---
 | |`
         const expected = {section: [
@@ -176,9 +169,8 @@ G :foo
                 {row: []}]}]}
         assert.deepEqual(expected, parser.parser(in_))
     })
-    it('should allow nesting relation literals', ()=>{
-        const in_ = `
-let foo
+    it('should allow relation literals in other contexts', ()=>{
+        const in_ = `let foo
     | :left |
     ---------
     | true  |
