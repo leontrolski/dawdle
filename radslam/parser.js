@@ -5,11 +5,10 @@ const R = require('ramda')
 // Capital words are kept but passed through, must resolve to one named token
 const grammar = `
 section              ::= (let | def)* (line | Block)+
-let                  ::= SPACE* LET SPACE (relation | var) NEWLINE Block (NEWLINE | EOF)
-def                  ::= SPACE* DEF SPACE operator (SPACE (relation | var))* NEWLINE Block (NEWLINE | EOF)
+let                  ::= SPACE* "let" SPACE (relation | var) NEWLINE Block (NEWLINE | EOF)
+def                  ::= SPACE* "def" SPACE operator (SPACE (relation | var))* NEWLINE Block (NEWLINE | EOF)
 Block                ::= INDENT section DE_INDENT
-line                 ::= SPACE* ((operator (SPACE Value)*) | Value) (NEWLINE | EOF)
-Value                ::= Literal | relation | header | var | set
+line                 ::= SPACE* (((operator | header) (SPACE Value)*) | Value) (NEWLINE | EOF)
 
 SPACE                ::= #x20
 NEWLINE              ::= #x0A
@@ -17,16 +16,16 @@ INDENT               ::= "<INDENT>" NEWLINE
 DE_INDENT            ::= "</INDENT>" NEWLINE
 NAME                 ::= [a-z_][a-zA-Z_0-9]*
 CAPITALISED_NAME     ::= [A-Z][a-zA-Z_0-9]*
-DEF                  ::= "def"
-LET                  ::= "let"
 
-set                  ::= "[" (Value (SPACE Value)*)* "]"
-var                  ::= NAME
+Value                ::= Literal | all_headers | relation | header | var | set
+all_headers          ::= NAME ":*"
 relation             ::= NAME ":"
 header               ::= ":" NAME
+var                  ::= NAME
 operator             ::= ">" | "v" | "^" | "X" | "|" | "-" | "J" | "G" | CAPITALISED_NAME
 
 Literal              ::= number | string | bool | template | null
+set                  ::= "[" (Value (SPACE Value)*)* "]"
 bool                 ::= "true" | "false"
 null                 ::= "null"
 number               ::= "-"? ("0" | [1-9] [0-9]*) ("." [0-9]+)? (("e" | "E") ( "-" | "+" )? ("0" | [1-9] [0-9]*))?

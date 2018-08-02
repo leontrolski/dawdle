@@ -74,12 +74,12 @@ describe('parser.parser', ()=>{
 some_rel:
 J other_rel:
 | some_var other_var
-Custom`
+Custom all:*`
         const expected = {section: [
             {line: [{relation: 'some_rel:'}]},
             {line: [{operator: 'J'}, {relation: 'other_rel:'}]},
             {line: [{operator: '|'}, {var: 'some_var'}, {var: 'other_var'}]},
-            {line: [{operator: 'Custom'}]},
+            {line: [{operator: 'Custom'}, {all_headers: 'all:*'}]},
         ]}
         assert.deepEqual(expected, parser.parser(in_))
     })
@@ -120,8 +120,8 @@ let e:
     f:
 
 g:
-    h:
-    | j:
+G :foo
+    :bar count :bar_id
 `
         const expected = {"section": [
             {"let": [{"relation": "a:"}, {"section": [
@@ -139,9 +139,9 @@ g:
                 {"line": [{"relation": "f:"}]}]}]
             },
             {"line": [{"relation": "g:"}]},
+            {"line": [{"operator": "G"}, {"header": ":foo"}]},
             {"section": [
-                {"line": [{"relation": "h:"}]},
-                {"line": [{"operator": "|"}, {"relation": "j:"}]}]}]}
+                {"line": [{"header": ":bar"}, {"var": "count"}, {"header": ":bar_id"}]}]}]}
         assert.deepEqual(expected, parser.parser(in_))
     })
 })
