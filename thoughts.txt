@@ -121,37 +121,8 @@ def Namespace relation: namespace ignore
     (map to_rename) `Rename ${_} ${namespace}.${_}`
 
 
-// lists are treated as sets
-//    [:foo :bar]
-
-
 Base operators:
 > v ^ X | - J G
-
-PROGRAM
-
-BLOCK
-
-BLOCK
-
-BLOCK
-
-Forms:
-
-Relation
-    BLOCK
-
-Var
-    BLOCK
-
-Def Arg Arg ...
-    BLOCK
-
-G Header Header ...
-    AGG_BLOCK
-
-LINE
-    BLOCK
 
 Operators:
 > Func Arg Arg ...
@@ -177,7 +148,7 @@ Design choices:
 - Each line of dawdle should map deterministically both ways to the JSON AST
 - Given an environment, it should always be possible to determine the schema at any line
 - Given test values, it should always be possible to determine the value at any line
-- Functions can only be composed of the base operators and other functions
+- Custom operators can only be composed of the base operators and other functions
 - Sets are always splatted in place
 - (map some_set) is a macro
 

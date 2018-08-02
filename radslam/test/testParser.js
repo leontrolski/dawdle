@@ -64,79 +64,44 @@ a-0
 
 describe('parser.parser', ()=>{
     it('should parse a single var', ()=>{
-        const in_ = `some_var`
-        const expected = {
-            t: 'program',
-            c: [{
-                t: 'block',
-                c: [{
-                    t: 'line',
-                    c: [{t: 'var', v: 'some_var'}]
-                }]
-            }],
-        }
-        assert.deepEqual(expected, parser.useful(parser.parser(in_)))
+        const in_ = `some_var
+`
+        const expected = {section: [{line: [{var: 'some_var'}]}]}
+        assert.deepEqual(expected, parser.parser(in_))
     })
-    it('should parse a relation with a couple of operations', ()=>{
+    it('should parse a relation with a few operations', ()=>{
         const in_ = `
 some_rel:
 J other_rel:
-| some_var other_var`
-        const expected = [{
-            t: 'block',
-            c: [
-                {
-                    t: 'line',
-                    c: [
-                        {t: 'relation', v: 'some_rel:'},
-                    ]
-                },
-                {
-                    t: 'line',
-                    c: [
-                        {t: 'operator', v: 'J'},
-                        {t: 'Value', c: {t: 'relation', v: 'other_rel:'}},
-                    ]
-                },
-                {
-                    t: 'line',
-                    c: [
-                        {t: 'operator', v: '|'},
-                        {t: 'Value', c: {t: 'var', v: 'some_var'}},
-                        {t: 'Value', c: {t: 'var', v: 'other_var'}},
-                    ]
-                },
-            ]
-        }]
-        assert.deepEqual(expected, parser.useful(parser.parser(in_)).c)
+| some_var other_var
+Custom`
+        const expected = {section: [
+            {line: [{relation: 'some_rel:'}]},
+            {line: [{operator: 'J'}, {relation: 'other_rel:'}]},
+            {line: [{operator: '|'}, {var: 'some_var'}, {var: 'other_var'}]},
+            {line: [{operator: 'Custom'}]},
+        ]}
+        assert.deepEqual(expected, parser.parser(in_))
     })
     it('should parse JSON literals | [templates set]', ()=>{
-        const in_ = '| 1 -2 3.0 true null ["string" `template` ["sub_set"]] []'
-        const expected = [{
-            t: 'block',
-            c: [
-                {
-                    t: 'line',
-                    c: [
-                        {t: 'operator', v: '|'},
-                        {t: 'Value', c: {t: 'Literal', c: {t: 'number', v: '1'}}},
-                        {t: 'Value', c: {t: 'Literal', c: {t: 'number', v: '-2'}}},
-                        {t: 'Value', c: {t: 'Literal', c: {t: 'number', v: '3.0'}}},
-                        {t: 'Value', c: {t: 'Literal', c: {t: 'bool', v: 'true'}}},
-                        {t: 'Value', c: {t: 'Literal', c: {t: 'null', v: 'null'}}},
-                        {t: 'Value', c: {t: 'set', c: [
-                            {t: 'Value', c: {t: 'Literal', c: {t: 'string', v: '"string"'}}},
-                            {t: 'Value', c: {t: 'Literal', c: {t: 'template', v: '`template`'}}},
-                            {t: 'Value', c: {t: 'set', c: [
-                                {t: 'Value', c: {t: 'Literal', c: {t: 'string', v: '"sub_set"'}}},
-                            ]}},
-                        ]}},
-                        {t: 'Value', c: {t: 'set', v: "[]"}},
-                    ]
-                },
-            ]
-        }]
-        assert.deepEqual(expected, parser.useful(parser.parser(in_)).c)
+        const in_ = '| 1 -2 3.0 true null ["string" `template` ["sub_set"]] []\n'
+        const expected = {section: [{line: [
+            {operator: '|'},
+            {number: '1'},
+            {number: '-2'},
+            {number: '3.0'},
+            {bool: 'true'},
+            {null: 'null'},
+            {set: [
+                {string: '"string"'},
+                {template: '`template`'},
+                {set: [
+                    {string: '"sub_set"'},
+                ]},
+            ]},
+            {set: []},
+        ]}]}
+        assert.deepEqual(expected, parser.parser(in_))
     })
     it('should parse blocks', ()=>{
         const in_ = `
@@ -158,58 +123,25 @@ g:
     h:
     | j:
 `
-
-// |
-//     a:
-//     J a:
-// X
-//     a:
-//     -
-//         a:
-
-// a:
-        const expected = {}
-        const ast = parser.parser(in_)
-        console.log(parser.addIndents(in_))
-        console.log(ast)
-        assert.deepEqual(expected, parser.minimal(ast))
-    })
-})
-
-describe('parser.minimal', ()=>{
-    it('should turn a raw AST into minimal form', ()=>{
-        const in_ = `
-a:
-|
-    a:
-    J a:
-X
-    a:
-    -
-        a:
-
-a:
-- [3 "foo"]
-`
-        const expected = [
-            {block: [
-                {line: [{relation: 'a:'}]},
-                {line: [{operator: '|'}]},
-                {block: [
-                    {line: [{relation: 'a:'}]},
-                    {line: [{operator: 'J'}, {relation: 'a:'}]},
-                ]},
-                {line: [{operator: 'X'}]},
-                {block: [
-                    {line: [{relation: 'a:'}]},
-                    {line: [{operator: '-'}]},
-                    {block: [
-                        {line: [{relation: 'a:'}]},
-                    ]}]}]},
-            {block: [
-                {line: [{relation: 'a:'}]},
-                {line: [{operator: '-'}, {set: [{number: "3"}, {string: '"foo"'}]}]}]}
-        ]
-        assert.deepEqual(expected, parser.minimal(parser.parser(in_)).program)
+        const expected = {"section": [
+            {"let": [{"relation": "a:"}, {"section": [
+                {"let": [{"relation": "b:"},{"section": [
+                    {"line": [{"number": "5"}]}]}]
+                },
+                {"line": [{"relation": "c:"}]},
+                {"line": [{"operator": "|"}, {"relation": "d:"}]}, {"section": [
+                    {"line": [{"relation": "e:"}]}]}]}]
+            },
+            {"def": [{"operator": "Foo"}, {"relation": "relation:"}, {"var": "bar"}, {"section": [
+                {"line": [{"relation": "i:"}]}]}]
+            },
+            {"let": [{"relation": "e:"}, {"section": [
+                {"line": [{"relation": "f:"}]}]}]
+            },
+            {"line": [{"relation": "g:"}]},
+            {"section": [
+                {"line": [{"relation": "h:"}]},
+                {"line": [{"operator": "|"}, {"relation": "j:"}]}]}]}
+        assert.deepEqual(expected, parser.parser(in_))
     })
 })
