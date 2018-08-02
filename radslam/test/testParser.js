@@ -70,12 +70,14 @@ describe('parser.parser', ()=>{
         const in_ = `some_rel:
 J other_rel:
 U some_var named=1.0
-Custom other_other_rel:*`
+Custom other_other_rel:*
+(map foo) \`yo\``
         const expected = {section: [
             {line: [{relation: 'some_rel:'}]},
             {line: [{operator: 'J'}, {relation: 'other_rel:'}]},
             {line: [{operator: 'U'}, {var: 'some_var'}, {named_var: [{var: 'named'}, {number: '1.0'}]}]},
             {line: [{operator: 'Custom'}, {all_headers: 'other_other_rel:*'}]},
+            {map_macro: [{var: 'foo'}, {template: "`yo`"}]},
         ]}
         assert.deepEqual(expected, parser.parser(in_))
     })
@@ -195,5 +197,26 @@ foo`
             ]},
             {line: [{var: 'foo'}]}]}
         assert.deepEqual(expected, parser.parser(in_))
+    })
+    it('should parse an empty relation literal with no rows', ()=>{
+        const in_ = `def Outer relation: right:
+    let joined:
+        relation:
+        J right:
+
+    relation:
+    -
+        joined:
+        v relation:*
+    X
+        right:
+        > first
+        (map right:*) \`^ \${_} make_null\`
+    U joined:
+
+out:`
+        const expected = {}
+        parser.log(parser.parser(in_))
+        // assert.deepEqual(expected, parser.parser(in_))
     })
 })

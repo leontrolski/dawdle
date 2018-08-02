@@ -4,12 +4,13 @@ const R = require('ramda')
 
 // Capital words are kept but passed through, must resolve to one named token
 const grammar = `
-section              ::= (let | def)* (line | group_line | relation_literal | Block)+
+section              ::= (let | def)* (line | group_line | map_macro | relation_literal | Block)+
+Block                ::= INDENT section DE_INDENT
 let                  ::= SPACE* "let" SPACE (relation | var) NEWLINE Block END
 def                  ::= SPACE* "def" SPACE operator (SPACE (relation | var))* NEWLINE Block END
-Block                ::= INDENT section DE_INDENT
 line                 ::= SPACE* ((operator (SPACE Value)*) | Value) END
 group_line           ::= SPACE* header SPACE var (SPACE Value)* END
+map_macro            ::= SPACE* "(" "map" SPACE Value ")" SPACE template END
 
 Value                ::= Literal | all_headers | relation | header | named_var | var | set
 all_headers          ::= NAME ":*"
@@ -50,6 +51,7 @@ const multiple = [
     'def',
     'line',
     'group_line',
+    'map_macro',
     'relation_literal',
     'headers',
     'row',
