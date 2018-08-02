@@ -4,14 +4,22 @@ const R = require('ramda')
 
 // Capital words are kept but passed through, must resolve to one named token
 const grammar = `
-section              ::= (let | def)* (line | Block)+
-let                  ::= SPACE* "let" SPACE (relation | var) NEWLINE Block (NEWLINE | EOF)
-def                  ::= SPACE* "def" SPACE operator (SPACE (relation | var))* NEWLINE Block (NEWLINE | EOF)
+section              ::= (let | def)* (line | group_by_line | relation_literal | Block)+
+let                  ::= SPACE* "let" SPACE (relation | var) NEWLINE Block END
+def                  ::= SPACE* "def" SPACE operator (SPACE (relation | var))* NEWLINE Block END
 Block                ::= INDENT section DE_INDENT
-line                 ::= SPACE* (((operator | header) (SPACE Value)*) | Value) (NEWLINE | EOF)
+line                 ::= SPACE* ((operator (SPACE Value)*) | Value) END
+group_by_line        ::= SPACE* header SPACE var (SPACE Value)* END
+
+relation_literal     ::= headers (SPACE* RULE END row+)?
+headers              ::= SPACE* SEP ((SPACE+ header SPACE+ SEP)+ | (SPACE+ SEP)) END
+row                  ::= SPACE* SEP ((SPACE+ Value  SPACE+ SEP)+ | (SPACE+ SEP)) END
 
 SPACE                ::= #x20
 NEWLINE              ::= #x0A
+END                  ::= (NEWLINE | EOF)
+SEP                  ::= "|"
+RULE                 ::= "-"+
 INDENT               ::= "<INDENT>" NEWLINE
 DE_INDENT            ::= "</INDENT>" NEWLINE
 NAME                 ::= [a-z_][a-zA-Z_0-9]*
@@ -22,7 +30,7 @@ all_headers          ::= NAME ":*"
 relation             ::= NAME ":"
 header               ::= ":" NAME
 var                  ::= NAME
-operator             ::= ">" | "v" | "^" | "X" | "|" | "-" | "J" | "G" | CAPITALISED_NAME
+operator             ::= ">" | "v" | "^" | "X" | "U" | "-" | "J" | "G" | CAPITALISED_NAME
 
 Literal              ::= number | string | bool | template | null
 set                  ::= "[" (Value (SPACE Value)*)* "]"
@@ -33,6 +41,17 @@ string               ::= '"'  (([#x20-#x21] | [#x23-#x5B] | [#x5D-#xFFFF]) | #x5
 template             ::= '\`' (([#x20-#x5B] | [#x5D-#x5F] | [#x61-#xFFFF]) | #x5C (#x60 | #x5C | #x2F | #x62 | #x66 | #x6E | #x72 | #x74 | #x75 HEXDIG HEXDIG HEXDIG HEXDIG))* '\`'
 HEXDIG               ::= [a-fA-F0-9]
 `
+const multiple = [
+    'section',
+    'let',
+    'def',
+    'line',
+    'group_by_line',
+    'relation_literal',
+    'headers',
+    'row',
+    'set',
+]
 
 const generatedParser = new ebnf.Grammars.W3C.Parser(grammar)
 const basicParser = s=>generatedParser.getAST(addIndents(s))
@@ -42,7 +61,7 @@ const basicParser = s=>generatedParser.getAST(addIndents(s))
  * Add <INDENT> tags to indented sections
  * @param {string}  source string
  */
-let addIndents = s=>{
+const addIndents = s=>{
     let getIndent = (line, lineNo)=>{
         if(line.trim() === '') return null
         let match = line.match(/^(    )*[^ ]/g)
@@ -67,8 +86,6 @@ let addIndents = s=>{
     })
     return lines.join('\n')
 }
-
-const multiple = ['section', 'let', 'def', 'line', 'set']
 
 const minimal = o=>
     o.type.search(/^[A-Z]/) > -1?

@@ -73,20 +73,20 @@ describe('parser.parser', ()=>{
         const in_ = `
 some_rel:
 J other_rel:
-| some_var other_var
+U some_var other_var
 Custom all:*`
         const expected = {section: [
             {line: [{relation: 'some_rel:'}]},
             {line: [{operator: 'J'}, {relation: 'other_rel:'}]},
-            {line: [{operator: '|'}, {var: 'some_var'}, {var: 'other_var'}]},
+            {line: [{operator: 'U'}, {var: 'some_var'}, {var: 'other_var'}]},
             {line: [{operator: 'Custom'}, {all_headers: 'all:*'}]},
         ]}
         assert.deepEqual(expected, parser.parser(in_))
     })
-    it('should parse JSON literals | [templates set]', ()=>{
-        const in_ = '| 1 -2 3.0 true null ["string" `template` ["sub_set"]] []\n'
+    it('should parse JSON literals U [templates set]', ()=>{
+        const in_ = 'U 1 -2 3.0 true null ["string" `template` ["sub_set"]] []'
         const expected = {section: [{line: [
-            {operator: '|'},
+            {operator: 'U'},
             {number: '1'},
             {number: '-2'},
             {number: '3.0'},
@@ -103,14 +103,14 @@ Custom all:*`
         ]}]}
         assert.deepEqual(expected, parser.parser(in_))
     })
-    it('should parse blocks', ()=>{
+    it('should parse sections', ()=>{
         const in_ = `
 let a:
     let b:
         5
 
     c:
-    | d:
+    U d:
         e:
 
 def Foo relation: bar
@@ -123,13 +123,13 @@ g:
 G :foo
     :bar count :bar_id
 `
-        const expected = {"section": [
+        const expected = [
             {"let": [{"relation": "a:"}, {"section": [
-                {"let": [{"relation": "b:"},{"section": [
+                {"let": [{"relation": "b:"}, {"section": [
                     {"line": [{"number": "5"}]}]}]
                 },
                 {"line": [{"relation": "c:"}]},
-                {"line": [{"operator": "|"}, {"relation": "d:"}]}, {"section": [
+                {"line": [{"operator": "U"}, {"relation": "d:"}]}, {"section": [
                     {"line": [{"relation": "e:"}]}]}]}]
             },
             {"def": [{"operator": "Foo"}, {"relation": "relation:"}, {"var": "bar"}, {"section": [
@@ -141,7 +141,64 @@ G :foo
             {"line": [{"relation": "g:"}]},
             {"line": [{"operator": "G"}, {"header": ":foo"}]},
             {"section": [
-                {"line": [{"header": ":bar"}, {"var": "count"}, {"header": ":bar_id"}]}]}]}
+                {"group_by_line": [{"header": ":bar"}, {"var": "count"}, {"header": ":bar_id"}]}]}]
+        assert.deepEqual(expected, parser.parser(in_).section)
+    })
+    it('should parse a relation literal', ()=>{
+        const in_ = `
+| :a    | :b  |
+---------------
+| "foo" | 2.4 |
+| null  | -3  |
+`
+        const expected = {section: [
+            {relation_literal: [
+                {headers: [{header: ':a'}, {header: ':b'}]},
+                {row: [{string: '"foo"'}, {number: '2.4'}]},
+                {row: [{null: 'null'}, {number: '-3'}]},]}]}
+        assert.deepEqual(expected, parser.parser(in_))
+    })
+    it('should parse an empty relation literal with no rows', ()=>{
+        const in_ = `| |`
+        const expected = {section: [
+            {relation_literal: [
+                {headers: []}]}]}
+        assert.deepEqual(expected, parser.parser(in_))
+    })
+    it('should parse an empty relation literal with one row', ()=>{
+        const in_ = `
+| |
+---
+| |`
+        const expected = {section: [
+            {relation_literal: [
+                {headers: []},
+                {row: []}]}]}
+        assert.deepEqual(expected, parser.parser(in_))
+    })
+    it('should allow nesting relation literals', ()=>{
+        const in_ = `
+let foo
+    | :left |
+    ---------
+    | true  |
+    J
+        | :right |
+        ----------
+        | false  |
+
+foo`
+        const expected = {section: [
+            {let: [{var: 'foo'}, {section: [
+                {relation_literal: [
+                    {headers: [{header: ':left'}]},
+                    {row: [{bool: 'true'}]}]},
+                {line: [{operator: 'J'}]}, {section: [
+                    {relation_literal: [
+                        {headers: [{header: ':right'}]},
+                        {row: [{bool: 'false'}]}]}]}]},
+            ]},
+            {line: [{var: 'foo'}]}]}
         assert.deepEqual(expected, parser.parser(in_))
     })
 })

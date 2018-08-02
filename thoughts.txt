@@ -109,7 +109,7 @@ def Outer relation: right:
         right:
         > first
         (map right:*) `^ ${_} make_null`
-    | joined:
+    U joined:
 
 
 def Namespace relation: namespace ignore
@@ -122,14 +122,14 @@ def Namespace relation: namespace ignore
 
 
 Base operators:
-> v ^ X | - J G
+> v ^ X U - J G
 
 Operators:
 > Func Arg Arg ...
 v Header Header ...
 ^ Header Func Arg Arg ...
 X Arg
-| Arg
+U Arg
 - Arg
 J Arg
 G _see above_
