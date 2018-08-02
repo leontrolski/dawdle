@@ -9,21 +9,8 @@ let                  ::= SPACE* "let" SPACE (relation | var) NEWLINE Block END
 def                  ::= SPACE* "def" SPACE operator (SPACE (relation | var))* NEWLINE Block END
 Block                ::= INDENT section DE_INDENT
 line                 ::= SPACE* ((operator (SPACE Value)*) | Value) END
-group_line        ::= SPACE* header SPACE var (SPACE Value)* END
+group_line           ::= SPACE* header SPACE var (SPACE Value)* END
 
-relation_literal     ::= headers (SPACE* RULE END row+)?
-headers              ::= SPACE* SEP ((SPACE* header SPACE* SEP)+ | (SPACE* SEP)) END
-row                  ::= SPACE* SEP ((SPACE* Value  SPACE* SEP)+ | (SPACE* SEP)) END
-
-SPACE                ::= #x20
-NEWLINE              ::= #x0A
-END                  ::= (NEWLINE | EOF)
-SEP                  ::= "|"
-RULE                 ::= "-"+
-INDENT               ::= "<INDENT>" NEWLINE
-DE_INDENT            ::= "</INDENT>" NEWLINE
-NAME                 ::= [a-z_][a-zA-Z_0-9]*
-CAPITALISED_NAME     ::= [A-Z][a-zA-Z_0-9]*
 
 Value                ::= Literal | all_headers | relation | header | named_var | var | set
 all_headers          ::= NAME ":*"
@@ -34,6 +21,10 @@ var                  ::= NAME
 operator             ::= ">" | "v" | "^" | "X" | "U" | "-" | "J" | "G" | CAPITALISED_NAME
 set                  ::= "[" (Value (SPACE Value)*)* "]"
 
+relation_literal     ::= headers (SPACE* RULE END row+)?
+headers              ::= SPACE* SEP ((SPACE* header SPACE* SEP)+ | (SPACE* SEP)) END
+row                  ::= SPACE* SEP ((SPACE* Value  SPACE* SEP)+ | (SPACE* SEP)) END
+
 Literal              ::= number | string | bool | template | null
 bool                 ::= "true" | "false"
 null                 ::= "null"
@@ -41,6 +32,16 @@ number               ::= "-"? ("0" | [1-9] [0-9]*) ("." [0-9]+)? (("e" | "E") ( 
 string               ::= '"'  (([#x20-#x21] | [#x23-#x5B] | [#x5D-#xFFFF]) | #x5C (#x22 | #x5C | #x2F | #x62 | #x66 | #x6E | #x72 | #x74 | #x75 HEXDIG HEXDIG HEXDIG HEXDIG))* '"'
 template             ::= '\`' (([#x20-#x5B] | [#x5D-#x5F] | [#x61-#xFFFF]) | #x5C (#x60 | #x5C | #x2F | #x62 | #x66 | #x6E | #x72 | #x74 | #x75 HEXDIG HEXDIG HEXDIG HEXDIG))* '\`'
 HEXDIG               ::= [a-fA-F0-9]
+
+SPACE                ::= #x20
+NEWLINE              ::= #x0A
+END                  ::= (NEWLINE | EOF)
+SEP                  ::= "|"
+RULE                 ::= "-"+
+INDENT               ::= "<INDENT>" NEWLINE
+DE_INDENT            ::= "</INDENT>" NEWLINE
+NAME                 ::= [a-z_][a-zA-Z_0-9]*
+CAPITALISED_NAME     ::= [A-Z][a-zA-Z_0-9]*
 `
 const multiple = [
     'section',
