@@ -7,7 +7,7 @@ const assert = chai.assert
 chai.config.includeStack = true
 chai.config.truncateThreshold = 1000
 
-describe('parser.parser', ()=>{
+describe('compiler.compiler', ()=>{
     it('beginnings of a compiler-y thing', ()=>{
         const env = {
             make_null: ()=>({null: 'null'}),
@@ -28,11 +28,16 @@ describe('parser.parser', ()=>{
         (map right:*) \`^ \${_} make_null\`
     U joined:
 
-| :left_id | :l |
------------------
-| 1        | 10 |
-| 2        | 20 |
-| 3        | 30 |
+let not_foo
+    [:left_id :l]
+
+| :left_id | :l | :nah | :foo |
+-------------------------------
+| 1        | 10 | 9    | 8    |
+| 2        | 20 | 9    | 8    |
+| 3        | 30 | 9    | 8    |
+v :left_id :l :foo
+v not_foo
 Outer
     | :right_id | :left_id | :r |
     -----------------------------
@@ -51,6 +56,7 @@ Outer
         const ast = parser.parser(in_)
         const expected = []
         // parser.log(parser.parser(in_))
+        compiler.compiler(ast, [])
         // assert.deepEqual(expected, compiler.compiler(env, ast))
     })
 })

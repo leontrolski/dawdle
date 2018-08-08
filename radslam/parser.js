@@ -4,7 +4,7 @@ const R = require('ramda')
 
 // Capital words are kept but passed through, must resolve to one named token
 const grammar = `
-section              ::= (let | def)* (line | aggregator | map_macro | relation_literal | Block)+
+section              ::= (let | def)* (relation_literal | line | aggregator | map_macro | Block)+
 Block                ::= INDENT section DE_INDENT
 let                  ::= SPACE* "let" SPACE (relation | var) NEWLINE Block END
 def                  ::= SPACE* "def" SPACE operator (SPACE (relation | var))* NEWLINE Block END
@@ -53,11 +53,26 @@ const types = {
     line: 'line',
     aggregator: 'aggregator',
     map_macro: 'map_macro',
+
+    all_headers: 'all_headers',
+    relation: 'relation',
+    header: 'header',
+    named_value: 'named_value',
+    var: 'var',
+    operator: 'operator',
+    set: 'set',
+
     relation_literal: 'relation_literal',
     headers: 'headers',
     row: 'row',
-    set: 'set',
-    named_value: 'named_value',
+
+    bool: 'bool',
+    null: 'null',
+    number: 'number',
+    string: 'string',
+    template: 'template',
+    decimal: 'decimal',
+    datetime: 'datetime',
 }
 
 const multiple = [
@@ -67,11 +82,13 @@ const multiple = [
     types.line,
     types.aggregator,
     types.map_macro,
+
+    types.named_value,
+
     types.relation_literal,
     types.headers,
     types.row,
     types.set,
-    types.named_value,
 ]
 
 
@@ -120,10 +137,16 @@ const log = o=>console.log(jsYaml.dump(o, {lineWidth: 800,}))
 
 const parser = s=>minimal(basicParser(s))
 
+const getType = o=>Object.keys(o)[0]
+
+const isMemberOf = (o, types_)=>types_.includes(getType(o))
+
 module.exports = {
     // main
     parser,
     types,
+    getType,
+    isMemberOf,
     // extras
     basicParser,
     log,
