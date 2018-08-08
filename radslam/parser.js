@@ -45,53 +45,6 @@ DE_INDENT            ::= "</INDENT>" NEWLINE
 NAME                 ::= [a-z_][a-zA-Z_0-9]*
 CAPITALISED_NAME     ::= [A-Z][a-zA-Z_0-9]*
 `
-
-const types = {
-    section: 'section',
-    let: 'let',
-    def: 'def',
-    line: 'line',
-    aggregator: 'aggregator',
-    map_macro: 'map_macro',
-
-    all_headers: 'all_headers',
-    relation: 'relation',
-    header: 'header',
-    named_value: 'named_value',
-    var: 'var',
-    operator: 'operator',
-    set: 'set',
-
-    relation_literal: 'relation_literal',
-    headers: 'headers',
-    row: 'row',
-
-    bool: 'bool',
-    null: 'null',
-    number: 'number',
-    string: 'string',
-    template: 'template',
-    decimal: 'decimal',
-    datetime: 'datetime',
-}
-
-const multiple = [
-    types.section,
-    types.let,
-    types.def,
-    types.line,
-    types.aggregator,
-    types.map_macro,
-
-    types.named_value,
-
-    types.relation_literal,
-    types.headers,
-    types.row,
-    types.set,
-]
-
-
 const generatedParser = new ebnf.Grammars.W3C.Parser(grammar)
 const basicParser = s=>generatedParser.getAST(addIndents(s))
 
@@ -139,22 +92,120 @@ const parser = s=>minimal(basicParser(s))
 
 const getType = o=>Object.keys(o)[0]
 
-const isMemberOf = (o, types_)=>types_.includes(getType(o))
-const is_ = {
-    letOrDef = o=>isMemberOf(o, [types.let, types.def]),
-    relationLiteral = o=>isMemberOf(o, [types.relation_literal]),
-    singleVar = o=>(
-        isMemberOf(o, [types.line]) &&
+// repetitive definitions
+const types = {
+    section: 'section',
+    let: 'let',
+    def: 'def',
+    line: 'line',
+    aggregator: 'aggregator',
+    map_macro: 'map_macro',
+
+    all_headers: 'all_headers',
+    relation: 'relation',
+    header: 'header',
+    named_value: 'named_value',
+    var: 'var',
+    operator: 'operator',
+    set: 'set',
+
+    relation_literal: 'relation_literal',
+    headers: 'headers',
+    row: 'row',
+
+    bool: 'bool',
+    null: 'null',
+    number: 'number',
+    string: 'string',
+    template: 'template',
+    decimal: 'decimal',
+    datetime: 'datetime',
+}
+const multiple = [
+    types.section,
+    types.let,
+    types.def,
+    types.line,
+    types.aggregator,
+    types.map_macro,
+
+    types.named_value,
+
+    types.relation_literal,
+    types.headers,
+    types.row,
+    types.set,
+]
+const is = {
+    section: o=>getType(o) === types.section,
+    let: o=>getType(o) === types.let,
+    def: o=>getType(o) === types.def,
+    line: o=>getType(o) === types.line,
+    aggregator: o=>getType(o) === types.aggregator,
+    map_macro: o=>getType(o) === types.map_macro,
+    all_headers: o=>getType(o) === types.all_headers,
+    relation: o=>getType(o) === types.relation,
+    header: o=>getType(o) === types.header,
+    named_value: o=>getType(o) === types.named_value,
+    var: o=>getType(o) === types.var,
+    operator: o=>getType(o) === types.operator,
+    set: o=>getType(o) === types.set,
+    relation_literal: o=>getType(o) === types.relation_literal,
+    headers: o=>getType(o) === types.headers,
+    row: o=>getType(o) === types.row,
+    bool: o=>getType(o) === types.bool,
+    null: o=>getType(o) === types.null,
+    number: o=>getType(o) === types.number,
+    string: o=>getType(o) === types.string,
+    template: o=>getType(o) === types.template,
+    decimal: o=>getType(o) === types.decimal,
+    datetime: o=>getType(o) === types.datetime,
+    // compound
+    letOrDef: o=>is.let(o) || is.def(o),
+    singleRelation: o=>
+        is.line(o) &&
         o[types.line].length === 1 &&
-        isMemberOf(o[types.line][0], [types.var])),
-    singleRelation = o=>(
-        isMemberOf(o, [types.line]) &&
+        is.relation(o[types.line][0]),
+    singleVar: o=>
+        is.line(o) &&
         o[types.line].length === 1 &&
-        isMemberOf(o[types.line][0], [types.relation])),
-    singleSet = o=>(
-        isMemberOf(o, [types.line]) &&
+        is.var(o[types.line][0]),
+    singleSet: o=>
+        is.line(o) &&
         o[types.line].length === 1 &&
-        isMemberOf(o[types.line][0], [types.set])),
+        is.set(o[types.line][0]),
+}
+class TypeError extends Error {constructor(node) {
+    super(`Unable to handle node: ${inspect(node)}`)
+}}
+const makeAsserter = type=>o=>{
+    if(!is[type]) throw TypeError(o)
+    return o
+}
+const assertIs = {
+    section: makeAsserter(types.section),
+    let: makeAsserter(types.let),
+    def: makeAsserter(types.def),
+    line: makeAsserter(types.line),
+    aggregator: makeAsserter(types.aggregator),
+    map_macro: makeAsserter(types.map_macro),
+    all_headers: makeAsserter(types.all_headers),
+    relation: makeAsserter(types.relation),
+    header: makeAsserter(types.header),
+    named_value: makeAsserter(types.named_value),
+    var: makeAsserter(types.var),
+    operator: makeAsserter(types.operator),
+    set: makeAsserter(types.set),
+    relation_literal: makeAsserter(types.relation_literal),
+    headers: makeAsserter(types.headers),
+    row: makeAsserter(types.row),
+    bool: makeAsserter(types.bool),
+    null: makeAsserter(types.null),
+    number: makeAsserter(types.number),
+    string: makeAsserter(types.string),
+    template: makeAsserter(types.template),
+    decimal: makeAsserter(types.decimal),
+    datetime: makeAsserter(types.datetime),
 }
 
 module.exports = {
@@ -162,11 +213,12 @@ module.exports = {
     parser,
     types,
     getType,
-    isMemberOf,
-    is_,
+    is,
+    assertIs,
     // extras
     basicParser,
     log,
     addIndents,
-    minimal
+    minimal,
+    TypeError,
 }

@@ -1,5 +1,5 @@
-const {types, getType, isMemberOf, is_} = require('./parser')
-const {errors, asserters} = require('./errorsAndAsserters')
+const {types, is, assertIs} = require('./parser')
+const {errors, asserters, log} = require('./errorsAndAsserters')
 
 const R = require('ramda')
 
@@ -36,23 +36,19 @@ const determineHeaders = {
 // join - assert there is at least one common header
 // group - assert none of the aggregator headers are in the headers
 
-
-const isLetOrDef = o=>isMemberOf(o, [types.let, types.def])
-
 // for literals
-const astToRelation = relationLiteral=>{
-    let [{headers}, ...rows] = relationLiteral
+const mungeRelationLiteral = relationLiteral=>{
+    let [{headers}, ...rows] = relationLiteral[types.relation_literal]
     rows = rows.map(row=>row[types.row])
     return {headers, rows}
 }
+
 const astToValue = {
     [types.bool]: node=>JSON.parse(node[types.bool]),
     [types.null]: node=>JSON.parse(node[types.null]),
     [types.number]: node=>JSON.parse(node[types.number]),
     [types.string]: node=>JSON.parse(node[types.string]),
     [types.header]: node=>node[types.header].slice(1),
-    // this will require context to allow `var`s in table
-    [types.relation_literal]: node=>astToRelation(node[types.relation_literal]),
     // requires context
     // [types.template]: node=>JSON.parse(node[types.template]),
     // TODO: implement these
@@ -60,52 +56,61 @@ const astToValue = {
     // [types.datetime]: node=>JSON.parse(node[types.datetime]),
 }
 
-const getHeadersFromRelation = o=>{
-    if(isMemberOf(o, [types.relation_literal])){
-        return astToValue[types.relation_literal](o).headers
-    } else if(isMemberOf(o, [types.var])){
-        throw new errors.NotImplemented('headers from var')
-    } else {
-        throw new errors.NoWayToReadHeadersFromNode(o)
+
+const splatSets = list=>{
+    let listOut = []
+    for(let o of list){
+        if(is.set(o)) listOut = listOut.concat(o[types.set])
+        else listOut.push(o)
     }
+    return listOut
 }
 
-/**
- *
- * @param {*} env - [[key, value], ...]
- * @param {*} ast - {section: []}
- */
 const compiler = (node, env)=>{
-    env = env || []
+    env = env || {relations: {}, vars: {}}
     asserters.assertSectionShape(node)
 
-    const defs = node[types.section].filter(isLetOrDef)
+    const defs = node[types.section].filter(is.letOrDef)
     for(let letOrDef of defs){
-        if(isMemberOf(letOrDef, [types.def])){
+        if(is.def(letOrDef)){
             // do nothing yet
         }
-        if(isMemberOf(letOrDef, [types.let])){
+        if(is.let(letOrDef)){
             const [varOrRelation, section] = letOrDef[types.let]
-            env.push([varOrRelation, compiler(section)])
+            if(is.var(varOrRelation)) env.vars[varOrRelation[types.var]] = compiler(section)
+            if(is.relation(varOrRelation)) env.relations[varOrRelation[types.relation]] = compiler(section)
         }
     }
-    console.log(env)
+    const resolve = o=>{
+        if(is.var(o)) return env.vars[o[types.var]] || (()=>{throw new errors.ScopeError(o)})()
+        if(is.relation(o)) return env.relations[o[types.relation]] || (()=>{throw new errors.ScopeError(o)})()
+        return o
+    }
 
-
-    const body = node[types.section].filter(R.complement(isLetOrDef))
+    const body = node[types.section].filter(R.complement(is.letOrDef))
     const [first, ...rest] = body
-    // if(isMemberOf(first, [types.var])){
 
-
-
-    const firstHeaders = getHeadersFromRelation(first)
+    let firstHeaders = []
+    if(is.singleRelation(first)){
+        throw 'waaa'
+        return 'singleRelation'
+    } else if (is.singleVar(first)){
+        throw 'waaa2'
+        return 'singleVar'
+    } else if (is.singleSet(first)){
+        firstHeaders = first[types.line][0]
+        return firstHeaders
+        // then do any other operations...
+    } else if(is.relation_literal(first)){
+        firstHeaders = mungeRelationLiteral(first).headers
+    }
     let bodyHeaders = [firstHeaders]
     for(let line of rest){  // and append potential next section to args
-        if(!isMemberOf(line, [types.line])){
+        if(!is.line(line)){
             throw new errors.NotImplemented('only dealing with lines currently')
         }
         const [operatorOrValue, ...args] = line[types.line]
-        if(!isMemberOf(operatorOrValue, [types.operator])){
+        if(!is.operator(operatorOrValue)){
             throw new errors.NotImplemented('only dealing with operators currently')
         }
         let operator = operatorOrValue[types.operator]
@@ -114,18 +119,16 @@ const compiler = (node, env)=>{
         if(!['select'].includes(operator)){
             throw new errors.NotImplemented('only dealing with select')
         }
-        for(let arg of args){
-            if(!isMemberOf(arg, [types.header])){
-                throw new errors.NotImplemented('only dealing with header args currently')
-            }
-        }
         const newHeaders = determineHeaders[operator](
-            {headers: R.last(bodyHeaders)}, ...args)
-
+            {headers: R.last(bodyHeaders)},
+            ...splatSets(args.map(resolve)).map(R.pipe(resolve, assertIs.header))
+        )
         bodyHeaders.push(newHeaders)
-        // console.log(bodyHeaders)
+        log(bodyHeaders)
     }
-    return {bodyHeaders}
+    log(bodyHeaders)
+    return {headers: bodyHeaders.slice(-1), all: bodyHeaders}
+
 }
 
 module.exports = {compiler}
