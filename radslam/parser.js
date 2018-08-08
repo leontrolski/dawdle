@@ -42,7 +42,7 @@ SEP                  ::= "|"
 RULE                 ::= "-"+
 INDENT               ::= "<INDENT>" NEWLINE
 DE_INDENT            ::= "</INDENT>" NEWLINE
-NAME                 ::= [a-z_][a-zA-Z_0-9]*
+NAME                 ::= [a-z_][a-zA-Z_0-9.-]*
 CAPITALISED_NAME     ::= [A-Z][a-zA-Z_0-9]*
 `
 const generatedParser = new ebnf.Grammars.W3C.Parser(grammar)
@@ -196,11 +196,11 @@ const is = {
         o[types.line].length === 1 &&
         is.set(o[types.line][0]),
 }
-class TypeError extends Error {constructor(node) {
-    super(`Unable to handle node: ${inspect(node)}`)
+class TypeError extends Error {constructor(type, node) {
+    super(`Type error, node is not type ${type}: ${inspect(node)}`)
 }}
 const makeAsserter = type=>o=>{
-    if(!is[type]) throw TypeError(o)
+    if(!is[type]) throw new TypeError(type, o)
     return o
 }
 const assertIs = {

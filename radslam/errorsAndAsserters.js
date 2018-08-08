@@ -1,8 +1,8 @@
-const {types, is, TypeError} = require('./parser')
+const {types, is, assertIs, TypeError} = require('./parser')
 
 const util = require('util')
 const R = require('ramda')
-const inspect = o=>util.inspect(o, {depth: 4})
+const inspect = o=>util.inspect(o, {depth: 4, colors: true, breakLength: 100})
 const log = o=>console.log(inspect(o))
 
 class ScopeError extends Error {constructor(node) {
@@ -16,6 +16,21 @@ class FirstNodeNotARelationOrSet extends Error {constructor(node) {
 }}
 class NodeNotValidBodyType extends Error {constructor(node) {
     super(`The node is not a valid body type: ${inspect(node)}`)
+}}
+class SelectError extends Error {constructor(fromHeaders, headers) {
+    super(`Cannot select headers: ${inspect(headers)} \nfrom: ${inspect(fromHeaders)}`)
+}}
+class CrossError extends Error {constructor(fromHeaders, headers) {
+    super(`Cannot cross product as there are overlapping headers between: ${inspect(headers)} \nand: ${inspect(fromHeaders)}`)
+}}
+class UnionOrDifferenceError extends Error {constructor(fromHeaders, headers) {
+    super(`Cannot union or difference as there are differing headers between: ${inspect(headers)} \nand: ${inspect(fromHeaders)}`)
+}}
+class JoinError extends Error {constructor(fromHeaders, headers) {
+    super(`Cannot join as there are no shared headers between: ${inspect(headers)} \nand: ${inspect(fromHeaders)}`)
+}}
+class MissingHeaders extends Error {constructor(fromHeaders, headers) {
+    super(`Object has not headers: ${inspect(node)}`)
 }}
 class NotImplemented extends Error {constructor(message) {
     super(message)
@@ -41,6 +56,47 @@ const assertBodyShape = body=>{
     }
 }
 
+const assertHasHeaders = rel=>{
+    if(R.isNil(rel.headers)) throw new MissingHeaders(rel)
+    rel.headers.forEach(o=>assertIs.header(o))
+}
+const assertArgs = {
+    filter: (rel, func, ...values)=>{
+        assertHasHeaders(rel)
+        assertIs.var(func)
+    },
+    select: (rel, ...headers)=>{
+        assertHasHeaders(rel)
+        if(!R.equals(R.intersection(rel.headers, headers), headers)) throw new SelectError(rel.headers, headers)
+    },
+    extend: (rel, header, func, ...values)=>{
+        assertHasHeaders(rel)
+        assertIs.header(header)
+        assertIs.var(func)
+    },
+    cross: (rel, value)=>{
+        assertHasHeaders(rel)
+        assertHasHeaders(value)
+        if(!R.isEmpty(R.intersection(rel.headers, value.headers))) throw new CrossError(rel.headers, value.headers)
+    },
+    union: (rel, value)=>{
+        assertHasHeaders(rel)
+        assertHasHeaders(value)
+        if(!R.equal(rel.headers, value.headers)) throw new UnionOrDifferenceError(rel.headers, value.headers)
+    },
+    difference: (rel, value)=>{
+        assertHasHeaders(rel)
+        assertHasHeaders(value)
+        if(!R.equal(rel.headers, value.headers)) throw new UnionOrDifferenceError(rel.headers, value.headers)
+    },
+    join: (rel, value)=>{
+        assertHasHeaders(rel)
+        assertHasHeaders(value)
+        if(R.isEmpty(R.intersection(rel.headers, value.headers))) throw new JoinError(rel.headers, value.headers)
+    },
+    group: (rel, ...headers_allAggregator)=>null, // assert none of the aggregator headers are in the headers
+}
+
 module.exports = {
     errors: {
         TypeError,
@@ -48,11 +104,17 @@ module.exports = {
         SectionOrderIncorrect,
         FirstNodeNotARelationOrSet,
         NodeNotValidBodyType,
+        SelectError,
+        CrossError,
+        UnionOrDifferenceError,
+        JoinError,
+        MissingHeaders,
         NotImplemented,
     },
     asserters: {
         assertSectionShape,
         assertBodyShape,
+        assertArgs,
     },
     log,
 }

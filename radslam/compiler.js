@@ -3,6 +3,10 @@ const {errors, asserters, log} = require('./errorsAndAsserters')
 
 const R = require('ramda')
 
+// TODO:
+// - start work on def
+// - finish up assertArgs
+// - sort out [line, section] possibility
 const determineHeaders = {
     // should all these lines be [baseOperators.filter]: ...
     filter: (rel, func, ...values)=>rel.headers,
@@ -17,29 +21,10 @@ const determineHeaders = {
         return headers.concat(allAggregator.headers)
     }
 }
-// all - assert all headers are of type header
-// select - assert all headers are in rel.headers
-// cross - assert no duplicate headers
-// union, difference - assert headers are the same
-// join - assert there is at least one common header
-// group - assert none of the aggregator headers are in the headers
 
 const mungeRelationLiteral = relationLiteral=>{
-    let [{headers}, ...rows] = relationLiteral[types.relation_literal]
-    rows = rows.map(row=>row[types.row])
-    return {headers, rows}
-}
-const astToValue = {
-    [types.bool]: node=>JSON.parse(node[types.bool]),
-    [types.null]: node=>JSON.parse(node[types.null]),
-    [types.number]: node=>JSON.parse(node[types.number]),
-    [types.string]: node=>JSON.parse(node[types.string]),
-    [types.header]: node=>node[types.header].slice(1),
-    // requires context
-    // [types.template]: node=>JSON.parse(node[types.template]),
-    // TODO: implement these
-    // [types.decimal]: node=>JSON.parse(node[types.decimal]),
-    // [types.datetime]: node=>JSON.parse(node[types.datetime]),
+    let [headers, ..._] = relationLiteral[types.relation_literal]
+    return R.merge(relationLiteral, headers)
 }
 
 const splatSets = list=>{
@@ -52,7 +37,7 @@ const splatSets = list=>{
 }
 
 const compiler = (node, env)=>{
-    env = env || {relations: {}, vars: {}, defs: {}}
+    env = R.merge(env || {relations: {}, vars: {}, defs: {}}, {})  // clone as we mutate it later
     asserters.assertSectionShape(node)
 
     const defs = node[types.section].filter(is.letOrDef)
@@ -91,7 +76,9 @@ const compiler = (node, env)=>{
     }
     const accum = [rel]
     for(let line of rest){  // and append potential next section to args
+
         if(!is.line(line)) continue  // TMP
+
         let [operator, ...args] = line[types.line]
         // resolve args and splat sets
         args = splatSets(args.map(resolve)).map(resolve)
@@ -99,18 +86,31 @@ const compiler = (node, env)=>{
         assertIs.operator(operator)
         operatorName = baseOperatorInverseMap[operator[types.operator]]
         operator = operatorName ? {[types.operator]: operatorName} : null // TMP resolve(operator)
+
         if(R.isNil(operator)) continue // TMP only works for select at the moment
 
-        const newHeaders = determineHeaders[operator[types.operator]](
-            R.last(accum),
-            ...args.map(assertIs.header)
-        )
+        asserters.assertArgs[operator[types.operator]](R.last(accum), ...args)
+        const newHeaders = determineHeaders[operator[types.operator]](R.last(accum), ...args)
         accum.push(R.merge(line, {headers: newHeaders}))
     }
     const out = {headers: R.last(accum).headers, accum: accum}
     log(out.accum.map(R.prop('headers')))
     log(out)
     return out
+}
+
+// functions for actual calculation
+const astToValue = {
+    [types.bool]: node=>JSON.parse(node[types.bool]),
+    [types.null]: node=>JSON.parse(node[types.null]),
+    [types.number]: node=>JSON.parse(node[types.number]),
+    [types.string]: node=>JSON.parse(node[types.string]),
+    [types.header]: node=>node[types.header].slice(1),
+    // requires context
+    // [types.template]: node=>JSON.parse(node[types.template]),
+    // TODO: implement these
+    // [types.decimal]: node=>JSON.parse(node[types.decimal]),
+    // [types.datetime]: node=>JSON.parse(node[types.datetime]),
 }
 
 module.exports = {compiler}
