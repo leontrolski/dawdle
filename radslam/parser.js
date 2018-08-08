@@ -92,7 +92,28 @@ const parser = s=>minimal(basicParser(s))
 
 const getType = o=>Object.keys(o)[0]
 
-// repetitive definitions
+// repetitive enum-like definitions
+const baseOperators = {
+    filter: 'filter',
+    select: 'select',
+    extend: 'extend',
+    cross: 'cross',
+    union: 'union',
+    difference: 'difference',
+    join: 'join',
+    group: 'group',
+}
+const baseOperatorMap = {
+    filter: '>',
+    select: 'v',
+    extend: '^',
+    cross: 'X',
+    union: 'U',
+    difference: '-',
+    join: 'J',
+    group: 'G',
+}
+const baseOperatorInverseMap = R.invertObj(baseOperatorMap)
 const types = {
     section: 'section',
     let: 'let',
@@ -210,6 +231,9 @@ const assertIs = {
 
 module.exports = {
     // main
+    baseOperators,
+    baseOperatorMap,
+    baseOperatorInverseMap,
     parser,
     types,
     getType,

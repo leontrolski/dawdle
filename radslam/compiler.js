@@ -1,20 +1,7 @@
-const {types, is, assertIs} = require('./parser')
+const {types, is, assertIs, baseOperators, baseOperatorInverseMap} = require('./parser')
 const {errors, asserters, log} = require('./errorsAndAsserters')
 
 const R = require('ramda')
-
-
-const nameSymbolMap = {
-    filter: '>',
-    select: 'v',
-    extend: '^',
-    cross: 'X',
-    union: 'U',
-    difference: '-',
-    join: 'J',
-    group: 'G',
-}
-const symbolNameMap = R.invertObj(nameSymbolMap)
 
 const determineHeaders = {
     filter: (rel, func, ...values)=>rel.headers,
@@ -67,7 +54,7 @@ const splatSets = list=>{
 }
 
 const compiler = (node, env)=>{
-    env = env || {relations: {}, vars: {}}
+    env = env || {relations: {}, vars: {}, defs: {}}
     asserters.assertSectionShape(node)
 
     const defs = node[types.section].filter(is.letOrDef)
@@ -84,8 +71,10 @@ const compiler = (node, env)=>{
     const resolve = o=>{
         if(is.var(o)) return env.vars[o[types.var]] || (()=>{throw new errors.ScopeError(o)})()
         if(is.relation(o)) return env.relations[o[types.relation]] || (()=>{throw new errors.ScopeError(o)})()
+        if(is.operator(o)) return env.defs[o[types.operator]] || (()=>{throw new errors.ScopeError(o)})()
         return o
     }
+    const splatSetsAndResolve = list=>splatSets(list.map(resolve)).map(resolve)
 
     const body = node[types.section].filter(R.complement(is.letOrDef))
     const [first, ...rest] = body
@@ -98,37 +87,34 @@ const compiler = (node, env)=>{
         throw 'waaa2'
         return 'singleVar'
     } else if (is.singleSet(first)){
-        firstHeaders = first[types.line][0]
-        return firstHeaders
+        const set = first[types.line][0]
+        return set
         // then do any other operations...
     } else if(is.relation_literal(first)){
-        firstHeaders = mungeRelationLiteral(first).headers
+        rel = mungeRelationLiteral(first).headers
     }
-    let bodyHeaders = [firstHeaders]
+    let bodyHeaders = [rel]
     for(let line of rest){  // and append potential next section to args
         if(!is.line(line)){
+            continue
             throw new errors.NotImplemented('only dealing with lines currently')
         }
-        const [operatorOrValue, ...args] = line[types.line]
-        if(!is.operator(operatorOrValue)){
-            throw new errors.NotImplemented('only dealing with operators currently')
-        }
-        let operator = operatorOrValue[types.operator]
-        operator = symbolNameMap[operator] || operator
+        let [operator, ...args] = line[types.line]
+        assertIs.operator(operator)
+        operatorName = baseOperatorInverseMap[operator[types.operator]]
+        operator = operatorName ? {[types.operator]: operatorName} : null // resolve(operator)
 
-        if(!['select'].includes(operator)){
-            throw new errors.NotImplemented('only dealing with select')
+        if(R.equals({[types.operator]: 'select'}, operator)){ //only dealing with select
+            const newHeaders = determineHeaders[operatorName](
+                {headers: R.last(bodyHeaders)},
+                ...splatSetsAndResolve(args).map(assertIs.header)
+            )
+            bodyHeaders.push(newHeaders)
         }
-        const newHeaders = determineHeaders[operator](
-            {headers: R.last(bodyHeaders)},
-            ...splatSets(args.map(resolve)).map(R.pipe(resolve, assertIs.header))
-        )
-        bodyHeaders.push(newHeaders)
-        log(bodyHeaders)
     }
-    log(bodyHeaders)
-    return {headers: bodyHeaders.slice(-1), all: bodyHeaders}
-
+    const out = {headers: R.last(bodyHeaders), all: bodyHeaders}
+    log(out)
+    return out
 }
 
 module.exports = {compiler}
