@@ -23,13 +23,11 @@ const determineHeaders = {
 // join - assert there is at least one common header
 // group - assert none of the aggregator headers are in the headers
 
-// for literals
 const mungeRelationLiteral = relationLiteral=>{
     let [{headers}, ...rows] = relationLiteral[types.relation_literal]
     rows = rows.map(row=>row[types.row])
     return {headers, rows}
 }
-
 const astToValue = {
     [types.bool]: node=>JSON.parse(node[types.bool]),
     [types.null]: node=>JSON.parse(node[types.null]),
@@ -42,7 +40,6 @@ const astToValue = {
     // [types.decimal]: node=>JSON.parse(node[types.decimal]),
     // [types.datetime]: node=>JSON.parse(node[types.datetime]),
 }
-
 
 const splatSets = list=>{
     let listOut = []
@@ -93,7 +90,7 @@ const compiler = (node, env)=>{
     } else if(is.relation_literal(first)){
         rel = mungeRelationLiteral(first).headers
     }
-    let bodyHeaders = [rel]
+    const accum = [rel]
     for(let line of rest){  // and append potential next section to args
         if(!is.line(line)){
             continue
@@ -106,13 +103,13 @@ const compiler = (node, env)=>{
 
         if(R.equals({[types.operator]: 'select'}, operator)){ //only dealing with select
             const newHeaders = determineHeaders[operatorName](
-                {headers: R.last(bodyHeaders)},
+                R.last(accum),
                 ...splatSetsAndResolve(args).map(assertIs.header)
             )
-            bodyHeaders.push(newHeaders)
+            accum.push(R.merge(line, {headers: newHeaders}))
         }
     }
-    const out = {headers: R.last(bodyHeaders), all: bodyHeaders}
+    const out = {headers: R.last(accum).headers, accum: accum}
     log(out)
     return out
 }
