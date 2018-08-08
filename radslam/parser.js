@@ -140,6 +140,22 @@ const parser = s=>minimal(basicParser(s))
 const getType = o=>Object.keys(o)[0]
 
 const isMemberOf = (o, types_)=>types_.includes(getType(o))
+const is_ = {
+    letOrDef = o=>isMemberOf(o, [types.let, types.def]),
+    relationLiteral = o=>isMemberOf(o, [types.relation_literal]),
+    singleVar = o=>(
+        isMemberOf(o, [types.line]) &&
+        o[types.line].length === 1 &&
+        isMemberOf(o[types.line][0], [types.var])),
+    singleRelation = o=>(
+        isMemberOf(o, [types.line]) &&
+        o[types.line].length === 1 &&
+        isMemberOf(o[types.line][0], [types.relation])),
+    singleSet = o=>(
+        isMemberOf(o, [types.line]) &&
+        o[types.line].length === 1 &&
+        isMemberOf(o[types.line][0], [types.set])),
+}
 
 module.exports = {
     // main
@@ -147,6 +163,7 @@ module.exports = {
     types,
     getType,
     isMemberOf,
+    is_,
     // extras
     basicParser,
     log,

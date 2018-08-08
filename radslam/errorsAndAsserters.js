@@ -1,4 +1,4 @@
-const {types, isMemberOf} = require('./parser')
+const {types, isMemberOf, is_} = require('./parser')
 
 const util = require('util')
 const R = require('ramda')
@@ -20,21 +20,17 @@ class NotImplemented extends Error {constructor(message) {
     super(message)
 }}
 
-const isLetOrDef = o=>isMemberOf(o, [types.let, types.def])
-
 const assertSectionShape = section=>{
-    const defs = section[types.section].filter(isLetOrDef)
-    const body = section[types.section].filter(R.complement(isLetOrDef))
+    const defs = section[types.section].filter(is_.letOrDef)
+    const body = section[types.section].filter(R.complement(is_.letOrDef))
     if(!R.equals(section, {[types.section]: [...defs, ...body]})){
         throw new SectionOrderIncorrect(section)
     }
     assertBodyShape(body)
 }
 const assertBodyShape = body=>{
-    const isRelationOrSet = o=>
-        isMemberOf(o, [types.relation_literal]) ||
-        // matches form {line: [{set: }]}
-        (isMemberOf(o, [types.line]) && o[types.line].length === 1 && isMemberOf(o[types.line][0], [types.set]))
+    // matches form relation_literal | {line: [var | relation | set]}
+    const isValidFirstValue = R.anyPass([is_.relationLiteral, is_.singleVar, is_.singleRelation, is_.singleSet]),
     const isValidBodyType = o=>isMemberOf(o, [types.line, types.map_macro, types.section])
 
     const [first, ...rest] = body

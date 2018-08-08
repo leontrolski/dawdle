@@ -1,4 +1,4 @@
-const {types, getType, isMemberOf} = require('./parser')
+const {types, getType, isMemberOf, is_} = require('./parser')
 const {errors, asserters} = require('./errorsAndAsserters')
 
 const R = require('ramda')
@@ -78,6 +78,7 @@ const getHeadersFromRelation = o=>{
 const compiler = (node, env)=>{
     env = env || []
     asserters.assertSectionShape(node)
+
     const defs = node[types.section].filter(isLetOrDef)
     for(let letOrDef of defs){
         if(isMemberOf(letOrDef, [types.def])){
@@ -93,10 +94,10 @@ const compiler = (node, env)=>{
 
     const body = node[types.section].filter(R.complement(isLetOrDef))
     const [first, ...rest] = body
+    // if(isMemberOf(first, [types.var])){
 
-    if(isMemberOf(letOrDef, [types.def])){
 
-    }
+
     const firstHeaders = getHeadersFromRelation(first)
     let bodyHeaders = [firstHeaders]
     for(let line of rest){  // and append potential next section to args
