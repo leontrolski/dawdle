@@ -4,6 +4,7 @@ const {errors, asserters, log} = require('./errorsAndAsserters')
 const R = require('ramda')
 
 const determineHeaders = {
+    // should all these lines be [baseOperators.filter]: ...
     filter: (rel, func, ...values)=>rel.headers,
     select: (rel, ...headers)=>headers,
     extend: (rel, header, func, ...values)=>R.union(rel.headers, [header]),
@@ -71,8 +72,6 @@ const compiler = (node, env)=>{
         if(is.operator(o)) return env.defs[o[types.operator]] || (()=>{throw new errors.ScopeError(o)})()
         return o
     }
-    const splatSetsAndResolve = list=>splatSets(list.map(resolve)).map(resolve)
-
     const body = node[types.section].filter(R.complement(is.letOrDef))
     const [first, ...rest] = body
 
@@ -88,28 +87,28 @@ const compiler = (node, env)=>{
         return set
         // then do any other operations...
     } else if(is.relation_literal(first)){
-        rel = mungeRelationLiteral(first).headers
+        rel = mungeRelationLiteral(first)
     }
     const accum = [rel]
     for(let line of rest){  // and append potential next section to args
-        if(!is.line(line)){
-            continue
-            throw new errors.NotImplemented('only dealing with lines currently')
-        }
+        if(!is.line(line)) continue  // TMP
         let [operator, ...args] = line[types.line]
+        // resolve args and splat sets
+        args = splatSets(args.map(resolve)).map(resolve)
+        // resolve operator
         assertIs.operator(operator)
         operatorName = baseOperatorInverseMap[operator[types.operator]]
-        operator = operatorName ? {[types.operator]: operatorName} : null // resolve(operator)
+        operator = operatorName ? {[types.operator]: operatorName} : null // TMP resolve(operator)
+        if(R.isNil(operator)) continue // TMP only works for select at the moment
 
-        if(R.equals({[types.operator]: 'select'}, operator)){ //only dealing with select
-            const newHeaders = determineHeaders[operatorName](
-                R.last(accum),
-                ...splatSetsAndResolve(args).map(assertIs.header)
-            )
-            accum.push(R.merge(line, {headers: newHeaders}))
-        }
+        const newHeaders = determineHeaders[operator[types.operator]](
+            R.last(accum),
+            ...args.map(assertIs.header)
+        )
+        accum.push(R.merge(line, {headers: newHeaders}))
     }
     const out = {headers: R.last(accum).headers, accum: accum}
+    log(out.accum.map(R.prop('headers')))
     log(out)
     return out
 }
