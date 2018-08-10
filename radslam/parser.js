@@ -90,10 +90,11 @@ const log = o=>console.log(jsYaml.dump(o, {lineWidth: 800,}))
 
 const parser = s=>minimal(basicParser(s))
 
-const getType = o=>(
-    R.intersection(Object.keys(o), Object.keys(types)) ||
-    (()=>{throw new errors.UnableToDetermineTypeError(o)})()
-)[0]
+const getType = o=>{
+    const intersection = R.intersection(Object.keys(o), Object.keys(types))
+    if(intersection.length != 1) throw new errors.UnableToDetermineTypeError(o)
+    return intersection[0]
+}
 
 // repetitive enum-like definitions
 const baseOperators = {

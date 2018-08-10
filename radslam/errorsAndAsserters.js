@@ -5,8 +5,8 @@ const R = require('ramda')
 const inspect = o=>util.inspect(o, {depth: 4, colors: true, breakLength: 100})
 const log = o=>console.log(inspect(o))
 
-class ScopeError extends Error {constructor(node) {
-    super(`Scope doesn't contain var, relation or def: ${inspect(node)}`)
+class ScopeError extends Error {constructor(node, env) {
+    super(`Scope doesn't contain var, relation or def: ${inspect(node)} \n in env: ${inspect(env)}`)
 }}
 class SectionOrderIncorrect extends Error {constructor(node) {
     super(`The order of defs and lines in the section is incorrect: ${inspect(node)}`)

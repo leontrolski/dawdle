@@ -58,9 +58,10 @@ const compiler = (section, env)=>{
     }
     // log(env)/
     const resolve = o=>{
-        if(is.var(o)) return env.vars[o[types.var]] || (()=>{throw new errors.ScopeError(o)})()
-        if(is.relation(o)) return env.relations[o[types.relation]] || (()=>{throw new errors.ScopeError(o)})()
-        if(is.operator(o)) return env.defs[o[types.operator]] || (()=>{throw new errors.ScopeError(o)})()
+        if(is.var(o)) return env.vars[o[types.var]] || (()=>{throw new errors.ScopeError(o, env)})()
+        // mmm
+        if(is.relation(o) && !R.isNil(o[types.relation])) return env.relations[o[types.relation]] || (()=>{throw new errors.ScopeError(o, env)})()
+        if(is.operator(o)) return env.defs[o[types.operator]] || (()=>{throw new errors.ScopeError(o, env)})()
         return o
     }
     const resolveOperatorArgs = operator=> env.defArgs[operator[types.operator]]
@@ -70,8 +71,7 @@ const compiler = (section, env)=>{
 
     let firstHeaders = []
     if(is.singleRelation(first)){
-        throw 'waaa'
-        return 'singleRelation'
+        rel = resolve(first[types.line][0])
     } else if (is.singleVar(first)){
         throw 'waaa2'
         return 'singleVar'
@@ -108,12 +108,12 @@ const compiler = (section, env)=>{
             const operatorSection = resolve(operator)
             const operatorArgs = resolveOperatorArgs(operator)
             asserters.assertOperatorArgsMatch(operatorArgs, args)
+            operatorEnv = R.clone(env)
             for(let [operatorArg, arg] of R.zip(operatorArgs, args)){
-                log([operatorArg, arg])
-                // operatorEnv = R.clone(env)
-
+                if(is.var(operatorArg)) operatorEnv.vars[operatorArg[types.var]] = arg
+                if(is.relation(operatorArg)) operatorEnv.relations[operatorArg[types.relation]] = arg
             }
-            // compiler(operatorSection, env)
+            compiler(operatorSection, operatorEnv)
             headerAsserter = (..._)=>null
             headerDeterminer = (..._)=>null
         }
@@ -125,7 +125,7 @@ const compiler = (section, env)=>{
     }
     const out = R.merge(R.last(accum), {}) // , {accum: accum})
     // log(out.accum.map(R.prop('headers')))
-    // log(out)
+    log(out)
     return out
 }
 
