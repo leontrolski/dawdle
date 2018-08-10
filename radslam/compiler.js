@@ -32,48 +32,7 @@ const splatSets = list=>{
 const unnamedRelation = {[types.relation]: null}
 const emptyEnv = {relations: {}, vars: {}, operators: {}}
 
-
-
-const compiler = (section, env)=>{
-    env = R.clone(env || emptyEnv)  // clone as we mutate it later
-    asserters.assertSectionShape(section)
-
-    const defs = section[types.section].filter(is.letOrDef)
-    for(let letOrDef of defs){
-        if(is.def(letOrDef)){
-            const [operator, ...args] = letOrDef[types.def]
-            const section = args.pop()
-            env.operators[operator[types.operator]] = R.merge(section, {args})
-        }
-        if(is.let(letOrDef)){
-            const [v, section] = letOrDef[types.let]
-            if(is.var(v)) env.vars[v[types.var]] = compiler(section)
-            if(is.relation(v)) env.relations[v[types.relation]] = compiler(section)
-        }
-    }
-    const resolve = o=>{
-        if(!R.isNil(o.headers)) return o  // already been resolved, this shouldn't really be here
-        if(is.var(o)) return env.vars[o[types.var]] || (()=>{throw new errors.ScopeError(o, env)})()
-        if(is.relation(o)) return env.relations[o[types.relation]] || (()=>{throw new errors.ScopeError(o, env)})()
-        if(is.operator(o)) return env.operators[o[types.operator]] || (()=>{throw new errors.ScopeError(o, env)})()
-        if(is.relation_literal(o)) return R.merge(unnamedRelation, {headers: o[types.relation_literal][0][types.rl_headers]})
-        return o
-    }
-
-    const body = section[types.section].filter(R.complement(is.letOrDef))
-    const [first, ...rest] = body
-
-    let firstHeaders = []
-    if(is.singleRelation(first)){
-        rel = resolve(first[types.line][0])
-    } else if(is.relation_literal(first)){
-        rel = resolve(first)
-    } else if (is.singleVar(first)){
-        throw new errors.NotImplemented('not implemented single var sets yet')
-    } else if (is.singleSet(first)){
-        return first[types.line][0]
-        // then do any set operations...
-    }
+const doRelationOperations = (rel, rest, env)=>{
     const accum = [rel]
     let i = 0
     for(let line of rest){  // and append potential next section to args
@@ -114,6 +73,50 @@ const compiler = (section, env)=>{
     // log(out.accum.map(R.prop('headers')))
     log(out)
     return out
+}
+
+const compiler = (section, env)=>{
+    env = R.clone(env || emptyEnv)  // clone as we mutate it later
+    asserters.assertSectionShape(section)
+
+    const defs = section[types.section].filter(is.letOrDef)
+    for(let letOrDef of defs){
+        if(is.def(letOrDef)){
+            const [operator, ...args] = letOrDef[types.def]
+            const section = args.pop()
+            env.operators[operator[types.operator]] = R.merge(section, {args})
+        }
+        if(is.let(letOrDef)){
+            const [v, section] = letOrDef[types.let]
+            if(is.var(v)) env.vars[v[types.var]] = compiler(section)
+            if(is.relation(v)) env.relations[v[types.relation]] = compiler(section)
+        }
+    }
+    const resolve = o=>{
+        if(!R.isNil(o.headers)) return o  // already been resolved, this shouldn't really be here
+        if(is.var(o)) return env.vars[o[types.var]] || (()=>{throw new errors.ScopeError(o, env)})()
+        if(is.relation(o)) return env.relations[o[types.relation]] || (()=>{throw new errors.ScopeError(o, env)})()
+        if(is.operator(o)) return env.operators[o[types.operator]] || (()=>{throw new errors.ScopeError(o, env)})()
+        if(is.relation_literal(o)) return R.merge(unnamedRelation, {headers: o[types.relation_literal][0][types.rl_headers]})
+        return o
+    }
+
+    const body = section[types.section].filter(R.complement(is.letOrDef))
+    const [first, ...rest] = body
+
+    let firstHeaders = []
+    if(is.singleRelation(first)){
+        rel = resolve(first[types.line][0])
+        return doRelationOperations (rel, rest, env)
+    } else if(is.relation_literal(first)){
+        rel = resolve(first)
+        return doRelationOperations (rel, rest, env)
+    } else if (is.singleVar(first)){
+        throw new errors.NotImplemented('not implemented single var sets yet')
+    } else if (is.singleSet(first)){
+        return first[types.line][0]
+        // then do any set operations...
+    }
 }
 
 // functions for actual calculation
