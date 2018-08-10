@@ -152,6 +152,7 @@ Design choices:
 - make error messages nice
 
 TODO
+- add comments to parser
 - highlighting <INDENTS>
 - should these return multiple tables instead?
 - think about the join problem more..

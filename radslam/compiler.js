@@ -35,29 +35,36 @@ const splatSets = list=>{
     }
     return listOut
 }
+const emptyEnv = {relations: {}, vars: {}, defs: {}, defArgs: {}}
 
-const compiler = (node, env)=>{
-    env = R.merge(env || {relations: {}, vars: {}, defs: {}}, {})  // clone as we mutate it later
-    asserters.assertSectionShape(node)
+const compiler = (section, env)=>{
+    env = R.merge(env || emptyEnv, {})  // clone as we mutate it later
+    asserters.assertSectionShape(section)
 
-    const defs = node[types.section].filter(is.letOrDef)
+    const defs = section[types.section].filter(is.letOrDef)
     for(let letOrDef of defs){
         if(is.def(letOrDef)){
-            // do nothing yet
+            const [operator, ...args] = letOrDef[types.def]
+            const section = args.pop()
+            env.defs[operator[types.operator]] = section
+            env.defArgs[operator[types.operator]] = args
         }
         if(is.let(letOrDef)){
-            const [varOrRelation, section] = letOrDef[types.let]
-            if(is.var(varOrRelation)) env.vars[varOrRelation[types.var]] = compiler(section)
-            if(is.relation(varOrRelation)) env.relations[varOrRelation[types.relation]] = compiler(section)
+            const [v, section] = letOrDef[types.let]
+            if(is.var(v)) env.vars[v[types.var]] = compiler(section)
+            if(is.relation(v)) env.relations[v[types.relation]] = compiler(section)
         }
     }
+    // log(env)/
     const resolve = o=>{
         if(is.var(o)) return env.vars[o[types.var]] || (()=>{throw new errors.ScopeError(o)})()
         if(is.relation(o)) return env.relations[o[types.relation]] || (()=>{throw new errors.ScopeError(o)})()
         if(is.operator(o)) return env.defs[o[types.operator]] || (()=>{throw new errors.ScopeError(o)})()
         return o
     }
-    const body = node[types.section].filter(R.complement(is.letOrDef))
+    const resolveOperatorArgs = operator=> env.defArgs[operator[types.operator]]
+
+    const body = section[types.section].filter(R.complement(is.letOrDef))
     const [first, ...rest] = body
 
     let firstHeaders = []
@@ -75,27 +82,40 @@ const compiler = (node, env)=>{
         rel = mungeRelationLiteral(first)
     }
     const accum = [rel]
+    let i = 0
     for(let line of rest){  // and append potential next section to args
-
-        if(!is.line(line)) continue  // TMP
+        if(is.section(line)) continue  // these are handled below
 
         let [operator, ...args] = line[types.line]
-        // resolve args and splat sets
-        args = splatSets(args.map(resolve)).map(resolve)
-        // resolve operator
         assertIs.operator(operator)
-        operatorName = baseOperatorInverseMap[operator[types.operator]]
-        operator = operatorName ? {[types.operator]: operatorName} : null // TMP resolve(operator)
+        args = splatSets(args.map(resolve)).map(resolve)  // resolve args and splat sets
+        // add next section to args if it exists
+        const nextLine = rest[i + 1]
+        if(!R.isNil(nextLine) && is.section(nextLine)){
+            args.push(compiler(nextLine))
+        }
 
-        if(R.isNil(operator)) continue // TMP only works for select at the moment
+        let headerAsserter, headerDeterminer, operatorName
+        if(operatorName = baseOperatorInverseMap[operator[types.operator]]){
+            headerAsserter = asserters.assertArgs[operatorName]
+            headerDeterminer = determineHeaders[operatorName]
+        } else{
+            const operatorSection = resolve(operator)
+            // log(resolveOperatorArgs(operator))
+            log({args})
+            // compiler(operatorSection, env)
+            headerAsserter = (..._)=>null
+            headerDeterminer = (..._)=>null
+        }
 
-        asserters.assertArgs[operator[types.operator]](R.last(accum), ...args)
-        const newHeaders = determineHeaders[operator[types.operator]](R.last(accum), ...args)
+        headerAsserter(R.last(accum), ...args)
+        const newHeaders = headerDeterminer(R.last(accum), ...args)
         accum.push(R.merge(line, {headers: newHeaders}))
+        i += 1
     }
     const out = {headers: R.last(accum).headers, accum: accum}
-    log(out.accum.map(R.prop('headers')))
-    log(out)
+    // log(out.accum.map(R.prop('headers')))
+    // log(out)
     return out
 }
 

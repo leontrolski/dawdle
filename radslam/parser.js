@@ -42,7 +42,7 @@ SEP                  ::= "|"
 RULE                 ::= "-"+
 INDENT               ::= "<INDENT>" NEWLINE
 DE_INDENT            ::= "</INDENT>" NEWLINE
-NAME                 ::= [a-z_][a-zA-Z_0-9.-]*
+NAME                 ::= [a-z_][a-zA-Z_0-9.]*
 CAPITALISED_NAME     ::= [A-Z][a-zA-Z_0-9]*
 `
 const generatedParser = new ebnf.Grammars.W3C.Parser(grammar)

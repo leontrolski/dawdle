@@ -14,19 +14,8 @@ describe('compiler.compiler', ()=>{
             first: (relation)=>relation.rows[0],
         }
         const in_ = `def Outer relation: right:
-    let joined:
-        relation:
-        J right:
-
     relation:
-    -
-        joined:
-        v relation:*
-    X
-        right:
-        > first
-        (map right:*) \`^ \${_} make_null\`
-    U joined:
+    J right:
 
 let not_foo
     [:left_id :l]

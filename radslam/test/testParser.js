@@ -68,13 +68,13 @@ describe('parser.parser', ()=>{
     })
     it('should parse a relation with a few operations', ()=>{
         const in_ = `some_rel:
-J other_rel: :namespace.some-header
+J other_rel: :namespace.some_header
 U some_var named=1.0
 Custom other_other_rel:*
 (map foo) \`yo\``
         const expected = {section: [
             {line: [{relation: 'some_rel:'}]},
-            {line: [{operator: 'J'}, {relation: 'other_rel:'}, {header: ':namespace.some-header'}]},
+            {line: [{operator: 'J'}, {relation: 'other_rel:'}, {header: ':namespace.some_header'}]},
             {line: [{operator: 'U'}, {var: 'some_var'}, {named_value: [{var: 'named'}, {number: '1.0'}]}]},
             {line: [{operator: 'Custom'}, {all_headers: 'other_other_rel:*'}]},
             {map_macro: [{var: 'foo'}, {template: "`yo`"}]},
