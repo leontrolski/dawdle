@@ -56,7 +56,6 @@ const compiler = (section, env)=>{
             if(is.relation(v)) env.relations[v[types.relation]] = compiler(section)
         }
     }
-    // log(env)/
     const resolve = o=>{
         if(is.var(o)) return env.vars[o[types.var]] || (()=>{throw new errors.ScopeError(o, env)})()
         // mmm
@@ -113,9 +112,9 @@ const compiler = (section, env)=>{
                 if(is.var(operatorArg)) operatorEnv.vars[operatorArg[types.var]] = arg
                 if(is.relation(operatorArg)) operatorEnv.relations[operatorArg[types.relation]] = arg
             }
-            compiler(operatorSection, operatorEnv)
-            headerAsserter = (..._)=>null
-            headerDeterminer = (..._)=>null
+
+            // headerAsserter = (..._)=>null
+            headerDeterminer = (..._)=>compiler(operatorSection, operatorEnv)
         }
 
         headerAsserter(...args)
