@@ -85,10 +85,14 @@ const compiler = (section, env)=>{
     let i = 0
     for(let line of rest){  // and append potential next section to args
         if(is.section(line)) continue  // these are handled below
+        const prevValue = R.last(accum)
 
         let [operator, ...args] = line[types.line]
         assertIs.operator(operator)
-        args = splatSets(args.map(resolve)).map(resolve)  // resolve args and splat sets
+        // resolve args and splat sets
+        args = splatSets(args.map(resolve)).map(resolve)
+        // prepend args with the previous value
+        args = [prevValue].concat(args)
         // add next section to args if it exists
         const nextLine = rest[i + 1]
         if(!R.isNil(nextLine) && is.section(nextLine)){
@@ -108,8 +112,8 @@ const compiler = (section, env)=>{
             headerDeterminer = (..._)=>null
         }
 
-        headerAsserter(R.last(accum), ...args)
-        const newHeaders = headerDeterminer(R.last(accum), ...args)
+        headerAsserter(...args)
+        const newHeaders = headerDeterminer(...args)
         accum.push(R.merge(line, {headers: newHeaders}))
         i += 1
     }
