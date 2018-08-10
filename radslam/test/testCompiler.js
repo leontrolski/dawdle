@@ -46,7 +46,7 @@ Outer
         const ast = parser.parser(in_)
         const expected = []
         // parser.log(parser.parser(in_))
-        compiler.compiler(ast)
+        compiler.compiler(compiler.emptyEnv, ast)
         // assert.deepEqual(expected, compiler.compiler(env, ast))
     })
 })

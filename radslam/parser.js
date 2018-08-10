@@ -187,18 +187,13 @@ const is = {
     datetime: o=>getType(o) === types.datetime,
     // compound
     letOrDef: o=>is.let(o) || is.def(o),
-    singleRelation: o=>
+    singleRelationOrVarOrSet: o=>
         is.line(o) &&
         o[types.line].length === 1 &&
-        is.relation(o[types.line][0]),
-    singleVar: o=>
-        is.line(o) &&
-        o[types.line].length === 1 &&
-        is.var(o[types.line][0]),
-    singleSet: o=>
-        is.line(o) &&
-        o[types.line].length === 1 &&
-        is.set(o[types.line][0]),
+        (is.relation(o[types.line][0]) || is.var(o[types.line][0]) || is.set(o[types.line][0])),
+    baseOperator: o=>
+        is.operator(o) &&
+        Object.keys(baseOperatorInverseMap).includes(o[types.operator]),
 }
 class TypeError extends Error {constructor(type, node) {
     super(`Type error, node is not type ${type}: ${inspect(node)}`)

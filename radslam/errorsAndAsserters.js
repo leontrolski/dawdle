@@ -47,13 +47,14 @@ const assertSectionShape = section=>{
 }
 const assertBodyShape = body=>{
     // matches form relation_literal | {line: [var | relation | set]}
-    const isValidFirstValue = R.anyPass([is.relation_literal, is.singleRelation, is.singleVar, is.singleSet])
+    const isValidFirstValue = R.anyPass([is.relation_literal, is.singleRelationOrVarOrSet])
     const isValidBodyType = R.anyPass([is.line, is.map_macro, is.section])
 
     const [first, ...rest] = body
     if(!isValidFirstValue(first)) throw new FirstNodeNotARelationOrSet(first)
     for (let o of rest){
         if(!isValidBodyType(o)) throw new NodeNotValidBodyType(o)
+        if(is.line(o)) assertIs.operator(o[0])
     }
 }
 
