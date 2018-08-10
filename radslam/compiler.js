@@ -112,9 +112,8 @@ const compiler = (section, env)=>{
                 if(is.var(operatorArg)) operatorEnv.vars[operatorArg[types.var]] = arg
                 if(is.relation(operatorArg)) operatorEnv.relations[operatorArg[types.relation]] = arg
             }
-
-            // headerAsserter = (..._)=>null
-            headerDeterminer = (..._)=>compiler(operatorSection, operatorEnv)
+            headerAsserter = (..._)=>null
+            headerDeterminer = (..._)=>compiler(operatorSection, operatorEnv).headers
         }
 
         headerAsserter(...args)

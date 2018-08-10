@@ -33,6 +33,7 @@ Outer
     | 1         | 1        | 11 |
     | 2         | 1        | 12 |
     | 3         | 2        | 23 |
+^ :new_header 8 8
 `
         // expecting to see:
         //
