@@ -21,9 +21,9 @@ var                  ::= NAME
 operator             ::= ">" | "v" | "^" | "X" | "U" | "-" | "J" | "G" | CAPITALISED_NAME
 set                  ::= "[" (Value (SPACE Value)*)* "]"
 
-relation_literal     ::= headers (SPACE* RULE END row+)?
-headers              ::= SPACE* SEP ((SPACE* header SPACE* SEP)+ | (SPACE* SEP)) END
-row                  ::= SPACE* SEP ((SPACE* Value  SPACE* SEP)+ | (SPACE* SEP)) END
+relation_literal     ::= rl_headers (SPACE* RULE END rl_row+)?
+rl_headers           ::= SPACE* SEP ((SPACE* header SPACE* SEP)+ | (SPACE* SEP)) END
+rl_row               ::= SPACE* SEP ((SPACE* Value  SPACE* SEP)+ | (SPACE* SEP)) END
 
 Literal              ::= number | string | bool | template | null | decimal | datetime
 bool                 ::= "true" | "false"
@@ -90,7 +90,10 @@ const log = o=>console.log(jsYaml.dump(o, {lineWidth: 800,}))
 
 const parser = s=>minimal(basicParser(s))
 
-const getType = o=>Object.keys(o)[0]
+const getType = o=>(
+    R.intersection(Object.keys(o), Object.keys(types)) ||
+    (()=>{throw new errors.UnableToDetermineTypeError(o)})()
+)[0]
 
 // repetitive enum-like definitions
 const baseOperators = {
@@ -131,8 +134,8 @@ const types = {
     set: 'set',
 
     relation_literal: 'relation_literal',
-    headers: 'headers',
-    row: 'row',
+    rl_headers: 'rl_headers',
+    rl_row: 'rl_row',
 
     bool: 'bool',
     null: 'null',
@@ -153,8 +156,8 @@ const multiple = [
     types.named_value,
 
     types.relation_literal,
-    types.headers,
-    types.row,
+    types.rl_headers,
+    types.rl_row,
     types.set,
 ]
 const is = {
@@ -172,8 +175,8 @@ const is = {
     operator: o=>getType(o) === types.operator,
     set: o=>getType(o) === types.set,
     relation_literal: o=>getType(o) === types.relation_literal,
-    headers: o=>getType(o) === types.headers,
-    row: o=>getType(o) === types.row,
+    rl_headers: o=>getType(o) === types.rl_headers,
+    rl_row: o=>getType(o) === types.rl_row,
     bool: o=>getType(o) === types.bool,
     null: o=>getType(o) === types.null,
     number: o=>getType(o) === types.number,
@@ -199,6 +202,9 @@ const is = {
 class TypeError extends Error {constructor(type, node) {
     super(`Type error, node is not type ${type}: ${inspect(node)}`)
 }}
+class UnableToDetermineTypeError extends Error {constructor(node) {
+    super(`Unable to determine type of node: ${inspect(node)}`)
+}}
 const makeAsserter = type=>o=>{
     if(!is[type]) throw new TypeError(type, o)
     return o
@@ -218,8 +224,8 @@ const assertIs = {
     operator: makeAsserter(types.operator),
     set: makeAsserter(types.set),
     relation_literal: makeAsserter(types.relation_literal),
-    headers: makeAsserter(types.headers),
-    row: makeAsserter(types.row),
+    rl_headers: makeAsserter(types.rl_headers),
+    rl_row: makeAsserter(types.rl_row),
     bool: makeAsserter(types.bool),
     null: makeAsserter(types.null),
     number: makeAsserter(types.number),
@@ -245,4 +251,5 @@ module.exports = {
     addIndents,
     minimal,
     TypeError,
+    UnableToDetermineTypeError,
 }

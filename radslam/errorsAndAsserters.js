@@ -1,4 +1,4 @@
-const {types, is, assertIs, TypeError} = require('./parser')
+const {types, is, assertIs, getType, TypeError, UnableToDetermineTypeError} = require('./parser')
 
 const util = require('util')
 const R = require('ramda')
@@ -31,6 +31,9 @@ class JoinError extends Error {constructor(fromHeaders, headers) {
 }}
 class MissingHeaders extends Error {constructor(fromHeaders, headers) {
     super(`Object has not headers: ${inspect(node)}`)
+}}
+class OperatorArgsError extends Error {constructor(operatorArgs, args) {
+    super(`Provided args: ${inspect(args)} \ndo not match types of operator args: ${inspect(operatorArgs)}`)
 }}
 class NotImplemented extends Error {constructor(message) {
     super(message)
@@ -96,10 +99,14 @@ const assertArgs = {
     },
     group: (rel, ...headers_allAggregator)=>null, // assert none of the aggregator headers are in the headers
 }
+const assertOperatorArgsMatch = (operatorArgs, args)=>{
+    if(!R.equals(operatorArgs.map(getType), args.map(getType))) throw new OperatorArgsError(operatorArgs, args)
+}
 
 module.exports = {
     errors: {
         TypeError,
+        UnableToDetermineTypeError,
         ScopeError,
         SectionOrderIncorrect,
         FirstNodeNotARelationOrSet,
@@ -109,12 +116,14 @@ module.exports = {
         UnionOrDifferenceError,
         JoinError,
         MissingHeaders,
+        OperatorArgsError,
         NotImplemented,
     },
     asserters: {
         assertSectionShape,
         assertBodyShape,
         assertArgs,
+        assertOperatorArgsMatch,
     },
     log,
 }

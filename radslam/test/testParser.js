@@ -152,16 +152,16 @@ G :foo
 `
         const expected = {section: [
             {relation_literal: [
-                {headers: [{header: ':a'}, {header: ':b'}]},
-                {row: [{string: '"foo"'}, {number: '2.4'}]},
-                {row: [{null: 'null'}, {number: '-3'}]},]}]}
+                {rl_headers: [{header: ':a'}, {header: ':b'}]},
+                {rl_row: [{string: '"foo"'}, {number: '2.4'}]},
+                {rl_row: [{null: 'null'}, {number: '-3'}]},]}]}
         assert.deepEqual(expected, parser.parser(in_))
     })
     it('should parse an empty relation literal with no rows', ()=>{
         const in_ = `| |`
         const expected = {section: [
             {relation_literal: [
-                {headers: []}]}]}
+                {rl_headers: []}]}]}
         assert.deepEqual(expected, parser.parser(in_))
     })
     it('should parse an empty relation literal with one row', ()=>{
@@ -170,8 +170,8 @@ G :foo
 | |`
         const expected = {section: [
             {relation_literal: [
-                {headers: []},
-                {row: []}]}]}
+                {rl_headers: []},
+                {rl_row: []}]}]}
         assert.deepEqual(expected, parser.parser(in_))
     })
     it('should allow relation literals in other contexts', ()=>{
@@ -188,12 +188,12 @@ foo`
         const expected = {section: [
             {let: [{var: 'foo'}, {section: [
                 {relation_literal: [
-                    {headers: [{header: ':left'}]},
-                    {row: [{bool: 'true'}]}]},
+                    {rl_headers: [{header: ':left'}]},
+                    {rl_row: [{bool: 'true'}]}]},
                 {line: [{operator: 'J'}]}, {section: [
                     {relation_literal: [
-                        {headers: [{header: ':right'}]},
-                        {row: [{bool: 'false'}]}]}]}]},
+                        {rl_headers: [{header: ':right'}]},
+                        {rl_row: [{bool: 'false'}]}]}]}]},
             ]},
             {line: [{var: 'foo'}]}]}
         assert.deepEqual(expected, parser.parser(in_))

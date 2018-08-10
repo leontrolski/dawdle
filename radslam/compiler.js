@@ -23,8 +23,8 @@ const determineHeaders = {
 }
 
 const mungeRelationLiteral = relationLiteral=>{
-    let [headers, ..._] = relationLiteral[types.relation_literal]
-    return R.merge(relationLiteral, headers)
+    let [rl_headers, ..._] = relationLiteral[types.relation_literal]
+    return R.merge({headers: rl_headers[types.rl_headers]}, unnamedRelation)
 }
 
 const splatSets = list=>{
@@ -35,10 +35,11 @@ const splatSets = list=>{
     }
     return listOut
 }
+const unnamedRelation = {[types.relation]: null}
 const emptyEnv = {relations: {}, vars: {}, defs: {}, defArgs: {}}
 
 const compiler = (section, env)=>{
-    env = R.merge(env || emptyEnv, {})  // clone as we mutate it later
+    env = R.clone(env || emptyEnv)  // clone as we mutate it later
     asserters.assertSectionShape(section)
 
     const defs = section[types.section].filter(is.letOrDef)
@@ -105,19 +106,24 @@ const compiler = (section, env)=>{
             headerDeterminer = determineHeaders[operatorName]
         } else{
             const operatorSection = resolve(operator)
-            // log(resolveOperatorArgs(operator))
-            log({args})
+            const operatorArgs = resolveOperatorArgs(operator)
+            asserters.assertOperatorArgsMatch(operatorArgs, args)
+            for(let [operatorArg, arg] of R.zip(operatorArgs, args)){
+                log([operatorArg, arg])
+                // operatorEnv = R.clone(env)
+
+            }
             // compiler(operatorSection, env)
             headerAsserter = (..._)=>null
             headerDeterminer = (..._)=>null
         }
 
         headerAsserter(...args)
-        const newHeaders = headerDeterminer(...args)
-        accum.push(R.merge(line, {headers: newHeaders}))
+        const newValue = R.merge(unnamedRelation, {headers: headerDeterminer(...args)})
+        accum.push(newValue)
         i += 1
     }
-    const out = {headers: R.last(accum).headers, accum: accum}
+    const out = R.merge(R.last(accum), {}) // , {accum: accum})
     // log(out.accum.map(R.prop('headers')))
     // log(out)
     return out
