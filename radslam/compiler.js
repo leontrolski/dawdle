@@ -4,9 +4,7 @@ const {errors, asserters, log} = require('./errorsAndAsserters')
 const R = require('ramda')
 
 // TODO:
-// - start work on def
 // - finish up assertArgs
-// - sort out [line, section] possibility
 const determineHeaders = {
     // should all these lines be [baseOperators.filter]: ...
     filter: (rel, func, ...values)=>rel.headers,
@@ -22,10 +20,6 @@ const determineHeaders = {
     }
 }
 
-const mungeRelationLiteral = relationLiteral=>{
-    let [rl_headers, ..._] = relationLiteral[types.relation_literal]
-    return R.merge({headers: rl_headers[types.rl_headers]}, unnamedRelation)
-}
 
 const splatSets = list=>{
     let listOut = []
@@ -36,7 +30,9 @@ const splatSets = list=>{
     return listOut
 }
 const unnamedRelation = {[types.relation]: null}
-const emptyEnv = {relations: {}, vars: {}, defs: {}, defArgs: {}}
+const emptyEnv = {relations: {}, vars: {}, operators: {}}
+
+
 
 const compiler = (section, env)=>{
     env = R.clone(env || emptyEnv)  // clone as we mutate it later
@@ -47,8 +43,7 @@ const compiler = (section, env)=>{
         if(is.def(letOrDef)){
             const [operator, ...args] = letOrDef[types.def]
             const section = args.pop()
-            env.defs[operator[types.operator]] = section
-            env.defArgs[operator[types.operator]] = args
+            env.operators[operator[types.operator]] = R.merge(section, {args})
         }
         if(is.let(letOrDef)){
             const [v, section] = letOrDef[types.let]
@@ -57,13 +52,13 @@ const compiler = (section, env)=>{
         }
     }
     const resolve = o=>{
+        if(!R.isNil(o.headers)) return o  // already been resolved, this shouldn't really be here
         if(is.var(o)) return env.vars[o[types.var]] || (()=>{throw new errors.ScopeError(o, env)})()
-        // mmm
-        if(is.relation(o) && !R.isNil(o[types.relation])) return env.relations[o[types.relation]] || (()=>{throw new errors.ScopeError(o, env)})()
-        if(is.operator(o)) return env.defs[o[types.operator]] || (()=>{throw new errors.ScopeError(o, env)})()
+        if(is.relation(o)) return env.relations[o[types.relation]] || (()=>{throw new errors.ScopeError(o, env)})()
+        if(is.operator(o)) return env.operators[o[types.operator]] || (()=>{throw new errors.ScopeError(o, env)})()
+        if(is.relation_literal(o)) return R.merge(unnamedRelation, {headers: o[types.relation_literal][0][types.rl_headers]})
         return o
     }
-    const resolveOperatorArgs = operator=> env.defArgs[operator[types.operator]]
 
     const body = section[types.section].filter(R.complement(is.letOrDef))
     const [first, ...rest] = body
@@ -71,15 +66,13 @@ const compiler = (section, env)=>{
     let firstHeaders = []
     if(is.singleRelation(first)){
         rel = resolve(first[types.line][0])
-    } else if (is.singleVar(first)){
-        throw 'waaa2'
-        return 'singleVar'
-    } else if (is.singleSet(first)){
-        const set = first[types.line][0]
-        return set
-        // then do any other operations...
     } else if(is.relation_literal(first)){
-        rel = mungeRelationLiteral(first)
+        rel = resolve(first)
+    } else if (is.singleVar(first)){
+        throw new errors.NotImplemented('not implemented single var sets yet')
+    } else if (is.singleSet(first)){
+        return first[types.line][0]
+        // then do any set operations...
     }
     const accum = [rel]
     let i = 0
@@ -99,25 +92,21 @@ const compiler = (section, env)=>{
             args.push(compiler(nextLine))
         }
 
-        let headerAsserter, headerDeterminer, operatorName
+        let newHeaders, operatorName
         if(operatorName = baseOperatorInverseMap[operator[types.operator]]){
-            headerAsserter = asserters.assertArgs[operatorName]
-            headerDeterminer = determineHeaders[operatorName]
+            asserters.assertArgs[operatorName](...args)
+            newHeaders = {headers: determineHeaders[operatorName](...args)}
         } else{
             const operatorSection = resolve(operator)
-            const operatorArgs = resolveOperatorArgs(operator)
-            asserters.assertOperatorArgsMatch(operatorArgs, args)
+            asserters.assertOperatorArgsMatch(operatorSection.args, args)
             operatorEnv = R.clone(env)
-            for(let [operatorArg, arg] of R.zip(operatorArgs, args)){
+            for(let [operatorArg, arg] of R.zip(operatorSection.args, args)){
                 if(is.var(operatorArg)) operatorEnv.vars[operatorArg[types.var]] = arg
                 if(is.relation(operatorArg)) operatorEnv.relations[operatorArg[types.relation]] = arg
             }
-            headerAsserter = (..._)=>null
-            headerDeterminer = (..._)=>compiler(operatorSection, operatorEnv).headers
+            newHeaders = compiler(operatorSection, operatorEnv)
         }
-
-        headerAsserter(...args)
-        const newValue = R.merge(unnamedRelation, {headers: headerDeterminer(...args)})
+        const newValue = R.merge(unnamedRelation, newHeaders)
         accum.push(newValue)
         i += 1
     }

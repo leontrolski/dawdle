@@ -42,9 +42,7 @@ class NotImplemented extends Error {constructor(message) {
 const assertSectionShape = section=>{
     const defs = section[types.section].filter(is.letOrDef)
     const body = section[types.section].filter(R.complement(is.letOrDef))
-    if(!R.equals(section, {[types.section]: [...defs, ...body]})){
-        throw new SectionOrderIncorrect(section)
-    }
+    if(!R.equals(section[types.section], [...defs, ...body])) throw new SectionOrderIncorrect(section)
     assertBodyShape(body)
 }
 const assertBodyShape = body=>{
