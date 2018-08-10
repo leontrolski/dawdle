@@ -72,11 +72,11 @@ const doRelationOperations = (env, firstRelation, lines)=>{
 // functions to register and resolve from an env
 const emptyEnv = {relations: {}, vars: {}, operators: {}}
 const resolve = (env, o)=>{
-    if(!R.isNil(o.headers)) return o  // already been resolved, this shouldn't really be here
-    else if(is.var(o)) return env.vars[o[types.var]] || (()=>{throw new errors.ScopeError(o, env)})()
-    else if(is.relation(o)) return env.relations[o[types.relation]] || (()=>{throw new errors.ScopeError(o, env)})()
-    else if(is.operator(o)) return env.operators[o[types.operator]] || (()=>{throw new errors.ScopeError(o, env)})()
-    else if(is.relation_literal(o)) return R.merge(unnamedRelation, {headers: o[types.relation_literal][0][types.rl_headers]})  // this maybe should be able to work with a given env..?
+    if(!R.isNil(o.headers)) return o  // already been resolved
+    if(is.var(o)) return env.vars[o[types.var]] || (()=>{throw new errors.ScopeError(o, env)})()
+    if(is.relation(o)) return env.relations[o[types.relation]] || (()=>{throw new errors.ScopeError(o, env)})()
+    if(is.operator(o)) return env.operators[o[types.operator]] || (()=>{throw new errors.ScopeError(o, env)})()
+    if(is.relation_literal(o)) return R.merge(unnamedRelation, {headers: o[types.relation_literal][0][types.rl_headers]})  // this maybe should be able to work with a given env..?
     return o
 }
 const registerDefinition = (env, definition)=>{
