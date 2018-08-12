@@ -79,20 +79,35 @@ const addIndents = s=>{
     return lines.join('\n')
 }
 
-const minimal = o=>
-    o.type.search(/^[A-Z]/) > -1?
-        minimal(o.children[0])
-        :multiple.includes(o.type)?
-            {[o.type]: o.children.map(minimal)}
-            : {[o.type]: o.text}
+const munge = (o, offset)=>{
+    if(R.isNil(o)) return {errors: [new ParserError()]}
 
-const log = o=>console.log(jsYaml.dump(o, {lineWidth: 800,}))
+    // do I even need to do this bit?
+    // <INDENT>\n </INDENT>\n
+    // 123456789  1234567890
+    // offset = offset + (o.type === 'section'? 9 : 0)  // this goes wrong as it mutates
 
-const parser = s=>minimal(basicParser(s))
+    // if starts with capital letter, pass through
+    if(o.type.search(/^[A-Z]/) > -1) return munge(o.children[0], offset)
+
+    const defaultInfo = multiple.includes(o.type)?
+        {[o.type]: o.children.map(n=>munge(n, offset))}
+        :{[o.type]: o.text}
+
+    if(R.isNil(offset)) return defaultInfo
+
+    return R.merge(defaultInfo, {
+        start: o.start, // - offset,
+        end: o.end, // - offset,
+        errors: o.errors || []
+    })
+}
+const parser = s=>munge(basicParser(s), null)
+const fullParser = s=>munge(basicParser(s), -9)
 
 const getType = o=>{
     const intersection = R.intersection(Object.keys(o), Object.keys(types))
-    if(intersection.length != 1) throw new errors.UnableToDetermineTypeError(o)
+    if(intersection.length != 1) throw new UnableToDetermineTypeError(o)
     return intersection[0]
 }
 
@@ -145,6 +160,8 @@ const types = {
     template: 'template',
     decimal: 'decimal',
     datetime: 'datetime',
+
+    function: 'function',
 }
 const multiple = [
     types.section,
@@ -185,6 +202,7 @@ const is = {
     template: o=>getType(o) === types.template,
     decimal: o=>getType(o) === types.decimal,
     datetime: o=>getType(o) === types.datetime,
+    function: o=>getType(o) === types.function,
     // compound
     letOrDef: o=>is.let(o) || is.def(o),
     singleRelationOrVarOrSet: o=>
@@ -197,6 +215,9 @@ const is = {
 }
 class TypeError extends Error {constructor(type, node) {
     super(`Type error, node is not type ${type}: ${inspect(node)}`)
+}}
+class ParserError extends Error {constructor() {
+    super(`Parser fully failed`)
 }}
 class UnableToDetermineTypeError extends Error {constructor(node) {
     super(`Unable to determine type of node: ${inspect(node)}`)
@@ -229,23 +250,22 @@ const assertIs = {
     template: makeAsserter(types.template),
     decimal: makeAsserter(types.decimal),
     datetime: makeAsserter(types.datetime),
+    function: makeAsserter(types.function),
 }
 
 module.exports = {
-    // main
     baseOperators,
     baseOperatorMap,
     baseOperatorInverseMap,
+    basicParser,
     parser,
+    fullParser,
     types,
     getType,
     is,
     assertIs,
-    // extras
-    basicParser,
-    log,
     addIndents,
-    minimal,
     TypeError,
+    ParserError,
     UnableToDetermineTypeError,
 }

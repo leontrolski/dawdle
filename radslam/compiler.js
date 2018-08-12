@@ -1,4 +1,4 @@
-const {types, is, assertIs, baseOperators, baseOperatorInverseMap} = require('./parser')
+const {parser, types, is, assertIs, baseOperators, baseOperatorInverseMap} = require('./parser')
 const {errors, asserters, log} = require('./errorsAndAsserters')
 
 const R = require('ramda')
@@ -31,9 +31,11 @@ const splatSets = list=>{
 
 const doRelationOperations = (env, firstRelation, lines)=>{
     const accum = [firstRelation]
-    let i = 0
+    let nextLineIndex = 0
     for(let line of lines){
+        nextLineIndex += 1
         if(is.section(line)) continue  // these are handled below
+        if(is.map_macro(line)) throw 'map_macro'
         const prevValue = R.last(accum)
 
         let [operator, ...args] = line[types.line]
@@ -42,7 +44,7 @@ const doRelationOperations = (env, firstRelation, lines)=>{
         // prepend args with the previous value
         args = [prevValue].concat(args)
         // add next section to args if it exists
-        const nextSection = lines[i + 1]
+        const nextSection = lines[nextLineIndex]
         if(!R.isNil(nextSection) && is.section(nextSection)) args.push(compiler(env, nextSection))
 
         let newHeaders
@@ -62,10 +64,9 @@ const doRelationOperations = (env, firstRelation, lines)=>{
         }
         const newValue = R.merge(unnamedRelation, newHeaders)
         accum.push(newValue)
-        i += 1
     }
     const out = R.merge(R.last(accum), {}) // , {accum: accum})
-    log(out)
+    // log(out)
     return out
 }
 
@@ -77,6 +78,10 @@ const resolve = (env, o)=>{
     if(is.relation(o)) return env.relations[o[types.relation]] || (()=>{throw new errors.ScopeError(o, env)})()
     if(is.operator(o)) return env.operators[o[types.operator]] || (()=>{throw new errors.ScopeError(o, env)})()
     if(is.relation_literal(o)) return R.merge(unnamedRelation, {headers: o[types.relation_literal][0][types.rl_headers]})  // this maybe should be able to work with a given env..?
+    if(is.all_headers(o)){
+        const relation = {[types.relation]: R.init(o[types.all_headers])}
+        return {[types.set]: resolve(env, relation).headers}
+    }
     return o
 }
 const registerDefinition = (env, definition)=>{

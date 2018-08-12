@@ -199,3 +199,109 @@ foo`
         assert.deepEqual(expected, parser.parser(in_))
     })
 })
+describe('parser.fullParser', ()=>{
+    it('should parse two vars in a set with their positions', ()=>{
+        const in_ = "[foo bar]"
+        //           012345678
+        const expected = {
+            start: 0,
+            end: 9,
+            errors: [],
+            section: [
+                {
+                    start: 0,
+                    end: 9,
+                    errors: [],
+                    line: [
+                        {
+                            start: 0,
+                            end: 9,
+                            errors: [],
+                            set: [
+                                {
+                                    start: 1,
+                                    end: 4,
+                                    errors: [],
+                                    var: 'foo'
+                                }, {
+                                    start: 5,
+                                    end: 8,
+                                    errors: [],
+                                    var: 'bar'
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+        assert.deepEqual(expected, parser.fullParser(in_))
+    })
+    it('should give a (semi) useful error when unable to parse', ()=>{
+        // this is a pretty rubbish test
+        // but also maybe the errors raised are a bit rubbish too..?
+        // maybe the parser top level shouldn't be 'section' or seomthing like that...?
+        const in_ = "[foo bar]\n["
+        //           0123456789 0
+        const expected = "Unexpected end of input: \n["
+        assert.deepEqual(expected, parser.fullParser(in_).errors[0].message)
+    })
+    xit('should give a useful error when unable to parse a particular line')
+    xit('should correct for one indent', ()=>{
+        const in_ = "a:\nU\n    b:\n"
+        //           012 34 5678901
+        const expected = {
+            start: 0,
+            end: 12,
+            errors: [],
+            section: [
+                {
+                    start: 0,
+                    end: 3,
+                    errors: [],
+                    line: [
+                        {
+                            start: 0,
+                            end: 2,
+                            errors: [],
+                            relation: 'a:',
+                        }
+                    ],
+                }, {
+                    start: 3,
+                    end: 5,
+                    errors: [],
+                    line: [
+                        {
+                            start: 3,
+                            end: 4,
+                            errors: [],
+                            operator: 'U',
+                        }
+                    ],
+                }, {
+                    start: 5,
+                    end: 12,
+                    errors: [],
+                    section: [
+                        {
+                            start: 5,
+                            end: 12,
+                            errors: [],
+                            line: [
+                                {
+                                    start: 9,
+                                    end: 11,
+                                    errors: [],
+                                    relation: 'b:',
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+        assert.deepEqual(expected, parser.fullParser(in_))
+    })
+    xit('should correct for multiple indents')
+})

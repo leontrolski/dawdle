@@ -2,7 +2,7 @@ const {types, is, assertIs, getType, TypeError, UnableToDetermineTypeError} = re
 
 const util = require('util')
 const R = require('ramda')
-const inspect = o=>util.inspect(o, {depth: 4, colors: true, breakLength: 100})
+const inspect = o=>util.inspect(o, {depth: 5, colors: true, breakLength: 100})
 const log = o=>console.log(inspect(o))
 
 class ScopeError extends Error {constructor(node, env) {
@@ -89,7 +89,7 @@ const assertArgs = {
     difference: (rel, value)=>{
         assertHasHeaders(rel)
         assertHasHeaders(value)
-        if(!R.equal(rel.headers, value.headers)) throw new UnionOrDifferenceError(rel.headers, value.headers)
+        if(!R.equals(rel.headers, value.headers)) throw new UnionOrDifferenceError(rel.headers, value.headers)
     },
     join: (rel, value)=>{
         assertHasHeaders(rel)

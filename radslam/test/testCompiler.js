@@ -7,15 +7,27 @@ const assert = chai.assert
 chai.config.includeStack = true
 chai.config.truncateThreshold = 1000
 
+
 describe('compiler.compiler', ()=>{
     it('beginnings of a compiler-y thing', ()=>{
-        const env = {
-            make_null: ()=>({null: 'null'}),
-            first: (relation)=>relation.rows[0],
-        }
+        const env = {vars: {
+            make_null: {function: ()=>({null: 'null'})},
+            first: {function: (relation)=>relation.rows[0]},
+        }}
         const in_ = `def Outer relation: right:
+    let joined:
+        relation:
+        J right:
+
     relation:
-    J right:
+    -
+        joined:
+        v relation:*
+    X
+        right:
+        > first
+        (map right:*) \`^ \${_} make_null\`
+    U joined:
 
 let not_foo
     [:left_id :l]
@@ -45,8 +57,8 @@ Outer
         // | 3        | 30 | null      | null |
         const ast = parser.parser(in_)
         const expected = []
-        // parser.log(parser.parser(in_))
-        compiler.compiler(compiler.emptyEnv, ast)
+        // parser.log(ast)
+        compiler.compiler(env, ast)
         // assert.deepEqual(expected, compiler.compiler(env, ast))
     })
 })
