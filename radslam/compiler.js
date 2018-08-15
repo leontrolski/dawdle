@@ -4,7 +4,7 @@ const {errors, asserters, log} = require('./errorsAndAsserters')
 const R = require('ramda')
 
 const unnamedRelation = {[types.relation]: null}
-
+let macroOperatorIndex = 0
 
 const determineHeaders = {
     filter: (rel, func, ...values)=>rel.headers,
@@ -42,12 +42,21 @@ const doRelationOperations = (env, firstRelation, lines)=>{
                 const macroEnv = R.merge(env, {vars: {_: value}})
                 return resolve(macroEnv, template)
             })
-            log(resolved)
-            log(resolved.map(parser))
-            // console.log(headers, template)
-            // console.log(set)
-            // console.log(strings)
-            throw 'map_macro'
+            const macroLines = resolved
+                .map(parser)
+                .map(asserters.assertMacroShape)
+                .map(o=>o[types.section][0])
+            const operatorName = `macroOperator${macroOperatorIndex}`
+            macroOperatorIndex += 1
+            const macroOperatorLine = {[types.line]: [{[types.operator]: operatorName}]}
+            const macroRegistration = {operators: {[operatorName]: {
+                [types.operator]: operatorName,
+                operator_section: {[types.section]: [{[types.line]: [{[types.relation]: 'relation:'}]}].concat(macroLines)},
+                args: [{[types.relation]: 'relation:'}],
+            }}}
+            line = macroOperatorLine
+            env = R.mergeDeepRight(env, macroRegistration)
+            // throw 'map_macro'
         }
         const prevValue = R.last(accum)
 
@@ -56,7 +65,7 @@ const doRelationOperations = (env, firstRelation, lines)=>{
         args = splatSets(args.map(o=>resolve(env, o))).map(o=>resolve(env, o))
         // prepend args with the previous value
         args = [prevValue].concat(args)
-        // add next section to args if it exists
+        // append next section to args if it exists
         const nextSection = lines[nextLineIndex]
         if(!R.isNil(nextSection) && is.section(nextSection)) args.push(compileHeaders(env, nextSection))
 

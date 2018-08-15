@@ -1,16 +1,10 @@
-const {types, is, assertIs, getType, ParserError, TypeError, UnableToDetermineTypeError} = require('./parser')
+const {types, is, assertIs, getType, inspect, ParserError, TypeError, UnableToDetermineTypeError} = require('./parser')
 
-const util = require('util')
 const R = require('ramda')
-const inspect = o=>util.inspect(o, {depth: 5, colors: true, breakLength: 100})
 const log = o=>console.log(inspect(o))
 
 class ScopeError extends Error {constructor(node, env) {
     super(`Scope doesn't contain var, relation or def: ${inspect(node)} \n in env: ${inspect(env)}`)
-}}
-// throw error at parse time instead
-class SectionIsNotASection extends Error {constructor(node) {
-    super(`The node is not of type section: ${inspect(node)}`)
 }}
 class SectionOrderIncorrect extends Error {constructor(node) {
     super(`The order of defs and lines in the section is incorrect: ${inspect(node)}`)
@@ -20,6 +14,9 @@ class FirstNodeNotARelationOrSet extends Error {constructor(node) {
 }}
 class NodeNotValidBodyType extends Error {constructor(node) {
     super(`The node is not a valid body type: ${inspect(node)}`)
+}}
+class MacroLineNotSingleLine extends Error {constructor(node) {
+    super(`The node is not a section with a single operator line: ${inspect(node)}`)
 }}
 class SelectError extends Error {constructor(fromHeaders, headers) {
     super(`Cannot select headers: ${inspect(headers)} \nfrom: ${inspect(fromHeaders)}`)
@@ -44,11 +41,12 @@ class NotImplemented extends Error {constructor(message) {
 }}
 
 const assertSectionShape = section=>{
-    if(R.isNil(section[types.section])) throw new SectionIsNotASection(section)
+    if(R.isNil(section[types.section])) throw new ParserError()
     const defs = section[types.section].filter(is.letOrDef)
     const body = section[types.section].filter(R.complement(is.letOrDef))
     if(!R.equals(section[types.section], [...defs, ...body])) throw new SectionOrderIncorrect(section)
     assertBodyShape(body)
+    return section
 }
 const assertBodyShape = body=>{
     // matches form relation_literal | {line: [var | relation | set]}
@@ -61,11 +59,20 @@ const assertBodyShape = body=>{
         if(!isValidBodyType(o)) throw new NodeNotValidBodyType(o)
         if(is.line(o)) assertIs.operator(o[0])
     }
+    return body
+}
+
+const assertMacroShape = section=>{
+    assertIs.section(section)
+    if(section[types.section].length != 1) throw new MacroLineNotSingleLine(section)
+    assertIs.operator(section[types.section][0][types.line][0])
+    return section
 }
 
 const assertHasHeaders = rel=>{
     if(R.isNil(rel.headers)) throw new MissingHeaders(rel)
     rel.headers.forEach(o=>assertIs.header(o))
+    return rel
 }
 const assertArgs = {
     filter: (rel, func, ...values)=>{
@@ -126,6 +133,7 @@ module.exports = {
     asserters: {
         assertSectionShape,
         assertBodyShape,
+        assertMacroShape,
         assertArgs,
         assertOperatorArgsMatch,
     },

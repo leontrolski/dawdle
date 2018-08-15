@@ -1,6 +1,8 @@
+const util = require('util')
 const ebnf = require('ebnf')
 const jsYaml = require('js-yaml')
 const R = require('ramda')
+const inspect = o=>util.inspect(o, {depth: 6, colors: true, breakLength: 100})
 
 // Capital words are kept but passed through, must resolve to one named token
 const grammar = `
@@ -255,6 +257,7 @@ const assertIs = {
 }
 
 module.exports = {
+    inspect,
     baseOperators,
     baseOperatorMap,
     baseOperatorInverseMap,
