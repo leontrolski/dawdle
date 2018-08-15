@@ -8,6 +8,7 @@ const log = o=>console.log(inspect(o))
 class ScopeError extends Error {constructor(node, env) {
     super(`Scope doesn't contain var, relation or def: ${inspect(node)} \n in env: ${inspect(env)}`)
 }}
+// throw error at parse time instead
 class SectionIsNotASection extends Error {constructor(node) {
     super(`The node is not of type section: ${inspect(node)}`)
 }}
