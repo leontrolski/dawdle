@@ -110,6 +110,7 @@ const getType = o=>{
     if(intersection.length != 1) throw new UnableToDetermineTypeError(o)
     return intersection[0]
 }
+const getValue = o=>o[getType(o)]
 
 // repetitive enum-like definitions
 const baseOperators = {
@@ -262,6 +263,7 @@ module.exports = {
     fullParser,
     types,
     getType,
+    getValue,
     is,
     assertIs,
     addIndents,

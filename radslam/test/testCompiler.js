@@ -26,7 +26,7 @@ describe('compiler.compiler', ()=>{
     X
         right:
         > first
-        (map right:*) \`^ \${_} make_null\`
+        (map right:*) \`^ :{{_}} make_null\`
     U joined:
 
 let not_foo
@@ -58,7 +58,7 @@ Outer
         const ast = parser.parser(in_)
         const expected = []
         // parser.log(ast)
-        compiler.compiler(env, ast)
+        compiler.compileHeaders(env, ast)
         // assert.deepEqual(expected, compiler.compiler(env, ast))
     })
 })

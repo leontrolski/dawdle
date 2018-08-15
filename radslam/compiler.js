@@ -1,4 +1,4 @@
-const {parser, types, is, assertIs, baseOperators, baseOperatorInverseMap} = require('./parser')
+const {parser, types, getType, is, assertIs, baseOperatorInverseMap} = require('./parser')
 const {errors, asserters, log} = require('./errorsAndAsserters')
 
 const R = require('ramda')
@@ -35,7 +35,20 @@ const doRelationOperations = (env, firstRelation, lines)=>{
     for(let line of lines){
         nextLineIndex += 1
         if(is.section(line)) continue  // these are handled below
-        if(is.map_macro(line)) throw 'map_macro'
+        if(is.map_macro(line)){
+            const [headers, template] = line[types.map_macro]
+            const set = assertIs.set(resolve(env, headers))
+            const resolved = set[types.set].map(value=>{
+                const macroEnv = R.merge(env, {vars: {_: value}})
+                return resolve(macroEnv, template)
+            })
+            log(resolved)
+            log(resolved.map(parser))
+            // console.log(headers, template)
+            // console.log(set)
+            // console.log(strings)
+            throw 'map_macro'
+        }
         const prevValue = R.last(accum)
 
         let [operator, ...args] = line[types.line]
@@ -45,7 +58,7 @@ const doRelationOperations = (env, firstRelation, lines)=>{
         args = [prevValue].concat(args)
         // add next section to args if it exists
         const nextSection = lines[nextLineIndex]
-        if(!R.isNil(nextSection) && is.section(nextSection)) args.push(compiler(env, nextSection))
+        if(!R.isNil(nextSection) && is.section(nextSection)) args.push(compileHeaders(env, nextSection))
 
         let newHeaders
         if(is.baseOperator(operator)){
@@ -60,7 +73,7 @@ const doRelationOperations = (env, firstRelation, lines)=>{
             for(let [operatorArg, arg] of R.zip(operator_.args, args)){
                 operatorEnv = R.mergeDeepRight(operatorEnv, registerOperatorArg(operatorArg, arg))
             }
-            newHeaders = compiler(operatorEnv, operator_.operator_section)
+            newHeaders = compileHeaders(operatorEnv, operator_.operator_section)
         }
         const newValue = R.merge(unnamedRelation, newHeaders)
         accum.push(newValue)
@@ -82,6 +95,8 @@ const resolve = (env, o)=>{
         const relation = {[types.relation]: R.init(o[types.all_headers])}
         return {[types.set]: resolve(env, relation).headers}
     }
+    if(is.set(o)) return {[types.set]: o[types.set].map(o=>resolve(env, o))}
+    if(is.template(o)) return populateTemplate(env, o)
     return o
 }
 const registerDefinition = (env, definition)=>{
@@ -92,9 +107,9 @@ const registerDefinition = (env, definition)=>{
     }
     // else is.let(definition)
     const [let_, section] = definition[types.let]
-    if(is.var(let_)) return {vars: {[let_[types.var]]: compiler(env, section)}}
+    if(is.var(let_)) return {vars: {[let_[types.var]]: compileHeaders(env, section)}}
     // else is.relation(let_)
-    if(is.relation(let_)) return {relations: {[let_[types.relation]]: compiler(env, section)}}
+    if(is.relation(let_)) return {relations: {[let_[types.relation]]: compileHeaders(env, section)}}
 }
 const registerOperatorArg = (operatorArg, arg)=>{
     if(is.var(operatorArg)) return {vars: {[operatorArg[types.var]]: arg}}
@@ -102,7 +117,7 @@ const registerOperatorArg = (operatorArg, arg)=>{
     return {relations: {[operatorArg[types.relation]]: arg}}
 }
 
-const compiler = (env, section)=>{
+const compileHeaders = (env, section)=>{
     asserters.assertSectionShape(section)
     const defs = section[types.section].filter(is.letOrDef)
     const body = section[types.section].filter(R.complement(is.letOrDef))
@@ -121,7 +136,6 @@ const compiler = (env, section)=>{
     }
 }
 
-// functions for actual calculation
 const astToValue = {
     [types.bool]: node=>JSON.parse(node[types.bool]),
     [types.null]: node=>JSON.parse(node[types.null]),
@@ -134,5 +148,18 @@ const astToValue = {
     // [types.decimal]: node=>JSON.parse(node[types.decimal]),
     // [types.datetime]: node=>JSON.parse(node[types.datetime]),
 }
+const toString = o=>astToValue[getType(o)](o)
+const populateTemplate = (env, o)=>{
+    let out = ''
+    let string = o[types.template].slice(1, -1)
+    for(let match of string.match(/{{[a-zA-Z0-9\.\:_]+}}/g)){
+        const varName = match.slice(2, -2)
+        const index = string.search(match)
+        out += string.slice(0, index)  // the head
+        out += toString(env.vars[varName] || (()=>{throw new errors.ScopeError(match, env)})())
+        string = string.slice(index + match.length)  // the tail
+    }
+    return out + string
+}
 
-module.exports = {compiler, emptyEnv}
+module.exports = {compileHeaders, emptyEnv}

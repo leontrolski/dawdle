@@ -1,4 +1,4 @@
-const {types, is, assertIs, getType, TypeError, UnableToDetermineTypeError} = require('./parser')
+const {types, is, assertIs, getType, ParserError, TypeError, UnableToDetermineTypeError} = require('./parser')
 
 const util = require('util')
 const R = require('ramda')
@@ -7,6 +7,9 @@ const log = o=>console.log(inspect(o))
 
 class ScopeError extends Error {constructor(node, env) {
     super(`Scope doesn't contain var, relation or def: ${inspect(node)} \n in env: ${inspect(env)}`)
+}}
+class SectionIsNotASection extends Error {constructor(node) {
+    super(`The node is not of type section: ${inspect(node)}`)
 }}
 class SectionOrderIncorrect extends Error {constructor(node) {
     super(`The order of defs and lines in the section is incorrect: ${inspect(node)}`)
@@ -40,6 +43,7 @@ class NotImplemented extends Error {constructor(message) {
 }}
 
 const assertSectionShape = section=>{
+    if(R.isNil(section[types.section])) throw new SectionIsNotASection(section)
     const defs = section[types.section].filter(is.letOrDef)
     const body = section[types.section].filter(R.complement(is.letOrDef))
     if(!R.equals(section[types.section], [...defs, ...body])) throw new SectionOrderIncorrect(section)

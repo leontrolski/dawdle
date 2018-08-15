@@ -4,7 +4,7 @@ release str
 jira_ticket:
 > like :ticket "INTEG%"
 > = :issuetype "Task"
-> ilike :summary `%${oem}%${release}%tracking ticket%`
+> ilike :summary `%{{oem}}%{{release}}%tracking ticket%`
 ^ :rank order :created
 
 sniff_pack str
@@ -51,7 +51,7 @@ let all_possible_groups:
     run:
     v groups
     > and
-        (map groups) `isnot ${} null`
+        (map groups) `isnot {{_}} null`
 
 let reverse_indexed_in_groups:
     run:
@@ -106,7 +106,7 @@ def Outer relation: right:
     X
         right:
         > first
-        (map right:*) `^ ${_} make_null`
+        (map right:*) `^ {{_}} make_null`
     U joined:
 
 
@@ -116,7 +116,7 @@ def Namespace relation: namespace ignore
         - ignore
 
     relation:
-    (map to_rename) `Rename ${_} ${namespace}.${_}`
+    (map to_rename) `Rename {{_}} {{namespace}}.{{_}}`
 
 
 Base operators:
@@ -154,6 +154,7 @@ Design choices:
 TODO
 - finish header determiner
 - generate text and html from ast, check that it matches both ways
+- allow `let` for types other than sets and relations
 - add -- comments to parser
 - should these return multiple tables instead?
 - think about the join problem more..
