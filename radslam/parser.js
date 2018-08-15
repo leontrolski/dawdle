@@ -211,7 +211,12 @@ const is = {
     singleRelationOrVarOrSet: o=>
         is.line(o) &&
         o[types.line].length === 1 &&
-        (is.relation(o[types.line][0]) || is.var(o[types.line][0]) || is.set(o[types.line][0])),
+        (
+            is.relation(o[types.line][0]) ||
+            is.var(o[types.line][0]) ||
+            is.set(o[types.line][0]) ||
+            is.all_headers(o[types.line][0])
+        ),
     baseOperator: o=>
         is.operator(o) &&
         Object.keys(baseOperatorInverseMap).includes(o[types.operator]),
@@ -259,7 +264,10 @@ const assertIs = {
     template: makeAsserter(types.template),
     decimal: makeAsserter(types.decimal),
     datetime: makeAsserter(types.datetime),
+
     function: makeAsserter(types.function),
+
+    baseOperator: makeAsserter('baseOperator'),  // TODO: make this less of a hack
 }
 
 module.exports = {

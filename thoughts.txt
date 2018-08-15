@@ -156,6 +156,8 @@ TODO
 - generate text and html from ast, check that it matches both ways
 - allow `let` for types other than sets and relations
 - add -- comments to parser
+- write more comprehensive tests
+- write docstrings for compiler
 - should these return multiple tables instead?
 - think about the join problem more..
 - what about update/insert etc

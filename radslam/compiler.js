@@ -5,6 +5,15 @@ const R = require('ramda')
 
 const unnamedRelation = {[types.relation]: null}
 
+const splatSets = list=>{
+    let listOut = []
+    for(let o of list){
+        if(is.set(o)) listOut = listOut.concat(o[types.set])
+        else listOut.push(o)
+    }
+    return listOut
+}
+
 const determineHeaders = {
     filter: (rel, func, ...values)=>rel.headers,
     select: (rel, ...headers)=>headers,
@@ -18,14 +27,34 @@ const determineHeaders = {
         return headers.concat(aggregators.headers)
     }
 }
+const determineSet = {
+    union: (set, ...rest)=>R.union(set[types.set], rest),
+    difference: (set, ...rest)=>R.difference(set[types.set], rest),
+}
 
-const splatSets = list=>{
-    let listOut = []
-    for(let o of list){
-        if(is.set(o)) listOut = listOut.concat(o[types.set])
-        else listOut.push(o)
+const doSetOperations = (env, firstSet, lines)=>{
+    // return firstSet
+    const accum = [firstSet]
+    let nextLineIndex = 0
+    for(let line of lines){
+        nextLineIndex += 1
+        if(is.section(line)) continue  // these are handled below
+        // TODO: handle macros etc as with relations
+        let [operator, ...args] = line[types.line]
+        // resolve args and splat sets
+        args = splatSets(args.map(o=>resolve(env, o))).map(o=>resolve(env, o))
+        // prepend args with the previous value
+        args = [R.last(accum)].concat(args)
+        // append next section to args if it exists
+        // const nextSection = lines[nextLineIndex]
+        // if(!R.isNil(nextSection) && is.section(nextSection)) args.push(compileHeaders(env, nextSection))
+        assertIs.baseOperator(operator)
+        const operatorName = baseOperatorInverseMap[operator[types.operator]]
+        // asserters.assertArgs[operatorName](...args)
+        const newSet = {[types.set]: determineSet[operatorName](...args)}
+        accum.push(newSet)
     }
-    return listOut
+    return R.merge(R.last(accum), {accum: R.init(accum)})
 }
 
 const doRelationOperations = (env, firstRelation, lines)=>{
@@ -39,13 +68,11 @@ const doRelationOperations = (env, firstRelation, lines)=>{
             line = expanded.line
             env = R.mergeDeepRight(env, expanded.registration)
         }
-        const prevValue = R.last(accum)
-
         let [operator, ...args] = line[types.line]
         // resolve args and splat sets
         args = splatSets(args.map(o=>resolve(env, o))).map(o=>resolve(env, o))
         // prepend args with the previous value
-        args = [prevValue].concat(args)
+        args = [R.last(accum)].concat(args)
         // append next section to args if it exists
         const nextSection = lines[nextLineIndex]
         if(!R.isNil(nextSection) && is.section(nextSection)) args.push(compileHeaders(env, nextSection))
@@ -68,9 +95,7 @@ const doRelationOperations = (env, firstRelation, lines)=>{
         const newValue = R.merge(unnamedRelation, newHeaders)
         accum.push(newValue)
     }
-    const out = R.merge(R.last(accum), {accum: R.init(accum)})
-    // log(out)
-    return out
+    return R.merge(R.last(accum), {accum: R.init(accum)})
 }
 
 // functions to register and resolve from an env
@@ -80,7 +105,7 @@ const resolve = (env, o)=>{
     if(is.var(o)) return env.vars[o[types.var]] || (()=>{throw new errors.ScopeError(o, env)})()
     if(is.relation(o)) return env.relations[o[types.relation]] || (()=>{throw new errors.ScopeError(o, env)})()
     if(is.operator(o)) return env.operators[o[types.operator]] || (()=>{throw new errors.ScopeError(o, env)})()
-    if(is.relation_literal(o)) return R.merge(unnamedRelation, {headers: o[types.relation_literal][0][types.rl_headers]})  // this maybe should be able to work with a given env..?
+    if(is.relation_literal(o)) return R.merge(unnamedRelation, {headers: o[types.relation_literal][0][types.rl_headers]})  // TODO: this should be able to work with a given env..?
     if(is.all_headers(o)){
         const relation = {[types.relation]: R.init(o[types.all_headers])}
         return {[types.set]: resolve(env, relation).headers}
@@ -145,7 +170,8 @@ const compileHeaders = (env, section)=>{
 
     if(is.relation(first) || is.relation_literal(first)){
         return doRelationOperations(envWithDefs, resolve(envWithDefs, first), lines)
-    } else if(is.var(first) || is.set(first)){
+    } else if(is.var(first) || is.set(first) || is.all_headers(first)){
+        return doSetOperations(envWithDefs, resolve(envWithDefs, first), lines)
         return first  // then do any set operations...  also, implement var beggining
     } else if(is.aggregator(first)){
         return {aggregators: null, headers: body.map(o=>o[types.aggregator][0])}

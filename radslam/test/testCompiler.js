@@ -20,7 +20,7 @@ describe('compiler.compileHeaders', ()=>{
         const env = compiler.emptyEnv
         const in_ = `[:foo :bar]`
         const ast = parser.parser(in_)
-        const expected = {set: [{header: ':foo'}, {header: ':bar'}]}
+        const expected = {set: [{header: ':foo'}, {header: ':bar'}], accum: []}
         assert.deepEqual(expected, compiler.compileHeaders(env, ast))
     })
     it('should handle let assignment of a relation', ()=>{
@@ -34,11 +34,17 @@ some_rel:
         const expected = {relation: null, headers: [{header: ':a'}, {header: ':b'}], accum: []}
         assert.deepEqual(expected, compiler.compileHeaders(env, ast))
     })
-    xit('should handle base operators at each step on a set', ()=>{
+    it('should handle base operators at each step on a set', ()=>{
         const env = compiler.emptyEnv
-        const in_ = `[:foo :bar]`
+        const in_ = `[1 2]
+U [2 3 4]`
         const ast = parser.parser(in_)
-        const expected = {set: [{header: ':foo'}, {header: ':bar'}]}
+        const expected = {
+            set: [{number: '1'}, {number: '2'}, {number: '3'}, {number: '4'}],
+            accum: [
+                {set: [{number: '1'}, {number: '2'}]},
+            ],
+        }
         assert.deepEqual(expected, compiler.compileHeaders(env, ast))
     })
     it('should handle base operators at each step on a relation', ()=>{
@@ -120,8 +126,8 @@ JoinClone
         J right:
 
     let just_right_headers
-        [:right_id :r]
-        - :r
+        right:*
+        - relation:*
 
     relation:
     -
