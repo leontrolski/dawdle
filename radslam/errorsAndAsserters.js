@@ -22,16 +22,16 @@ class SelectError extends Error {constructor(fromHeaders, headers) {
     super(`Cannot select headers: ${inspect(headers)} \nfrom: ${inspect(fromHeaders)}`)
 }}
 class CrossError extends Error {constructor(fromHeaders, headers) {
-    super(`Cannot cross product as there are overlapping headers between: ${inspect(headers)} \nand: ${inspect(fromHeaders)}`)
+    super(`Cannot cross product as there are overlapping headers between: ${inspect(fromHeaders)} \nand: ${inspect(headers)}`)
 }}
 class UnionOrDifferenceError extends Error {constructor(fromHeaders, headers) {
-    super(`Cannot union or difference as there are differing headers between: ${inspect(headers)} \nand: ${inspect(fromHeaders)}`)
+    super(`Cannot union or difference as there are differing headers between: ${inspect(fromHeaders)} \nand: ${inspect(headers)}`)
 }}
 class JoinError extends Error {constructor(fromHeaders, headers) {
-    super(`Cannot join as there are no shared headers between: ${inspect(headers)} \nand: ${inspect(fromHeaders)}`)
+    super(`Cannot join as there are no shared headers between: ${inspect(fromHeaders)} \nand: ${inspect(headers)}`)
 }}
-class MissingHeaders extends Error {constructor(fromHeaders, headers) {
-    super(`Object has not headers: ${inspect(node)}`)
+class MissingHeaders extends Error {constructor(node) {
+    super(`Object has no headers: ${inspect(node)}`)
 }}
 class OperatorArgsError extends Error {constructor(operatorArgs, args) {
     super(`Provided args: ${inspect(args)} \ndo not match types of operator args: ${inspect(operatorArgs)}`)
@@ -42,6 +42,11 @@ class NotImplemented extends Error {constructor(message) {
 
 const assertSectionShape = section=>{
     if(R.isNil(section[types.section])) throw new ParserError()
+    if(is.aggregator(section[types.section][0])){
+        // if the first node is an aggregator, assert that the rest are
+        section[types.section].forEach(assertIs.aggregator)
+        return section
+    }
     const defs = section[types.section].filter(is.letOrDef)
     const body = section[types.section].filter(R.complement(is.letOrDef))
     if(!R.equals(section[types.section], [...defs, ...body])) throw new SectionOrderIncorrect(section)
@@ -96,7 +101,7 @@ const assertArgs = {
     union: (rel, value)=>{
         assertHasHeaders(rel)
         assertHasHeaders(value)
-        if(!R.equal(rel.headers, value.headers)) throw new UnionOrDifferenceError(rel.headers, value.headers)
+        if(!R.equals(rel.headers, value.headers)) throw new UnionOrDifferenceError(rel.headers, value.headers)
     },
     difference: (rel, value)=>{
         assertHasHeaders(rel)

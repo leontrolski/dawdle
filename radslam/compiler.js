@@ -4,7 +4,6 @@ const {errors, asserters, log} = require('./errorsAndAsserters')
 const R = require('ramda')
 
 const unnamedRelation = {[types.relation]: null}
-let macroOperatorIndex = 0
 
 const determineHeaders = {
     filter: (rel, func, ...values)=>rel.headers,
@@ -14,9 +13,9 @@ const determineHeaders = {
     union: (rel, value)=>rel.headers,
     difference: (rel, value)=>rel.headers,
     join: (rel, value)=>R.union(rel.headers, value.headers),
-    group: (rel, ...headers_allAggregator)=>{
-        const [allAggregator, ...headers] = headers_allAggregator.reverse()
-        return headers.concat(allAggregator.headers)
+    group: (rel, ...headers_aggregators)=>{
+        const [aggregators, ...headers] = headers_aggregators.reverse()
+        return headers.concat(aggregators.headers)
     }
 }
 
@@ -36,27 +35,9 @@ const doRelationOperations = (env, firstRelation, lines)=>{
         nextLineIndex += 1
         if(is.section(line)) continue  // these are handled below
         if(is.map_macro(line)){
-            const [headers, template] = line[types.map_macro]
-            const set = assertIs.set(resolve(env, headers))
-            const resolved = set[types.set].map(value=>{
-                const macroEnv = R.merge(env, {vars: {_: value}})
-                return resolve(macroEnv, template)
-            })
-            const macroLines = resolved
-                .map(parser)
-                .map(asserters.assertMacroShape)
-                .map(o=>o[types.section][0])
-            const operatorName = `macroOperator${macroOperatorIndex}`
-            macroOperatorIndex += 1
-            const macroOperatorLine = {[types.line]: [{[types.operator]: operatorName}]}
-            const macroRegistration = {operators: {[operatorName]: {
-                [types.operator]: operatorName,
-                operator_section: {[types.section]: [{[types.line]: [{[types.relation]: 'relation:'}]}].concat(macroLines)},
-                args: [{[types.relation]: 'relation:'}],
-            }}}
-            line = macroOperatorLine
-            env = R.mergeDeepRight(env, macroRegistration)
-            // throw 'map_macro'
+            const expanded = expandAndRegisterMacro(env, line)
+            line = expanded.line
+            env = R.mergeDeepRight(env, expanded.registration)
         }
         const prevValue = R.last(accum)
 
@@ -87,7 +68,7 @@ const doRelationOperations = (env, firstRelation, lines)=>{
         const newValue = R.merge(unnamedRelation, newHeaders)
         accum.push(newValue)
     }
-    const out = R.merge(R.last(accum), {}) // , {accum: accum})
+    const out = R.merge(R.last(accum), {accum: R.init(accum)})
     // log(out)
     return out
 }
@@ -125,6 +106,29 @@ const registerOperatorArg = (operatorArg, arg)=>{
     // else is.relation(operatorArg)
     return {relations: {[operatorArg[types.relation]]: arg}}
 }
+let macroOperatorIndex = 0
+const expandAndRegisterMacro = (env, line)=>{
+    const [headers, template] = line[types.map_macro]
+    const set = assertIs.set(resolve(env, headers))
+    const resolved = set[types.set]
+        .map(value=>resolve(R.merge(env, {vars: {_: value}}), template))
+    const lines = resolved
+        .map(parser)
+        .map(asserters.assertMacroShape)
+        .map(o=>o[types.section][0])
+
+    const operatorName = `macroOperator${macroOperatorIndex}`
+    macroOperatorIndex += 1
+
+    const operatorLine = {[types.line]: [{[types.operator]: operatorName}]}
+    const registration = {operators: {[operatorName]: {
+        [types.operator]: operatorName,
+        operator_section: {[types.section]: [{[types.line]:
+            [{[types.relation]: 'relation:'}]}].concat(lines)},
+        args: [{[types.relation]: 'relation:'}],
+    }}}
+    return {line: operatorLine, registration: registration}
+}
 
 const compileHeaders = (env, section)=>{
     asserters.assertSectionShape(section)
@@ -135,6 +139,7 @@ const compileHeaders = (env, section)=>{
     for(let definition of defs){
         envWithDefs = R.mergeDeepRight(envWithDefs, registerDefinition(envWithDefs, definition))
     }
+
     let [first, ...lines] = body
     if(is.singleRelationOrVarOrSet(first)) first = first[types.line][0]
 
@@ -142,6 +147,8 @@ const compileHeaders = (env, section)=>{
         return doRelationOperations(envWithDefs, resolve(envWithDefs, first), lines)
     } else if(is.var(first) || is.set(first)){
         return first  // then do any set operations...  also, implement var beggining
+    } else if(is.aggregator(first)){
+        return {aggregators: null, headers: body.map(o=>o[types.aggregator][0])}
     }
 }
 

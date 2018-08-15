@@ -20,7 +20,7 @@ relation             ::= NAME ":"
 header               ::= ":" NAME
 named_value          ::= var "=" Value
 var                  ::= NAME
-operator             ::= ">" | "v" | "^" | "X" | "U" | "-" | "J" | "G" | CAPITALISED_NAME
+operator             ::= CAPITALISED_NAME | ">" | "v" | "^" | "X" | "U" | "-" | "J" | "G"
 set                  ::= "[" (Value (SPACE Value)*)* "]"
 
 relation_literal     ::= rl_headers (SPACE* RULE END rl_row+)?
@@ -45,7 +45,7 @@ RULE                 ::= "-"+
 INDENT               ::= "<INDENT>" NEWLINE
 DE_INDENT            ::= "</INDENT>" NEWLINE
 NAME                 ::= [a-z_][a-zA-Z_0-9.]*
-CAPITALISED_NAME     ::= [A-Z][a-zA-Z_0-9]*
+CAPITALISED_NAME     ::= [A-Z][a-zA-Z_0-9]+
 `
 const generatedParser = new ebnf.Grammars.W3C.Parser(grammar)
 const basicParser = s=>generatedParser.getAST(addIndents(s))
@@ -215,6 +215,12 @@ const is = {
     baseOperator: o=>
         is.operator(o) &&
         Object.keys(baseOperatorInverseMap).includes(o[types.operator]),
+    groupOperator: o=>
+        is.operator(o) &&
+        o[types.operator] === baseOperatorMap.group,
+    aggregatorSection: o=>
+        is.section(o) &&
+        is.aggregator(o[types.section][0]),
 }
 class TypeError extends Error {constructor(type, node) {
     super(`Type error, node is not type ${type}: ${inspect(node)}`)
