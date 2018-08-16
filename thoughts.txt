@@ -129,6 +129,7 @@ Design choices:
 
 TODO
 - generate html from ast
+- handle named vars
 - allow `let` for types other than sets and relations
 - add -- comments to parser
 - write more comprehensive tests

@@ -3,7 +3,10 @@ const {errors, asserters, log} = require('./errorsAndAsserters')
 
 const R = require('ramda')
 
-// `o` is a node, `i` is the indent level
+/**
+ * Convert an AST node to a source string.
+ * `o` is a node, `i` is the indent level.
+ */
 const nodeToString = (o, i)=>{
     const type_ = getType(o)
     if(multiple.includes(type_)) return typeStringMap[type_](o, i)
@@ -55,6 +58,21 @@ const typeStringMap = {
     },
 }
 
-const astToString = ast=>nodeToString(ast, 0)
+/**
+ * Convert an AST object to JSON string, indented by section.
+ * `o` is a node, `i` is the indent level.
+ *
+ * TODO: make this match up line to line with dawdle source.
+ */
+const nodeToJson = (o, i)=>{
+    const type_ = getType(o)
+    const indent = '    '.repeat(i)
+    if(is.section(o)) return `{"section":[\n${indent}${o[type_].map(o=>nodeToJson(o, i + 1)).join(',\n' + indent)}]}`
+    if(multiple.includes(type_)) return `{"${type_}":[${o[type_].map(o=>nodeToJson(o, i)).join(',')}]}`
+    return JSON.stringify(o)
+}
 
-module.exports = {astToString}
+const astToString = ast=>nodeToString(ast, 0)
+const jsonifyAndIndent = ast=>nodeToJson(ast, 1)
+
+module.exports = {astToString, jsonifyAndIndent}
