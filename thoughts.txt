@@ -118,30 +118,6 @@ def Namespace relation: namespace ignore
     relation:
     (map to_rename) `Rename {{_}} {{namespace}}.{{_}}`
 
-
-Base operators:
-> v ^ X U - J G
-
-Base Operators:
-> func value value ...
-v header header ...
-^ header func value value ...
-X value
-U value
-- value
-J value
-G aggregators
-
-
-
-Parse order:
-- expand macros
-- expand sets?
-- inline Gs
-- inline blocks
-- inline assignments?
-
-
 Design choices:
 - Each line of dawdle should map deterministically both ways to the JSON AST
 - Given an environment, it should always be possible to determine the schema at any line

@@ -35,7 +35,6 @@ const typeStringMap = {
         return `${nodeToString(var_, i)}=${nodeToString(value, i)}`
     },
     set: (o, i)=>`[${o[types.set].map(o=>nodeToString(o, i)).join(' ')}]`,
-    // this will require some special work
     relation_literal: (o, i)=>{
         const [headers, ...rows] = o[types.relation_literal]
         const headerStrings = headers[types.rl_headers].map(o=>nodeToString(o, i))
