@@ -161,6 +161,7 @@ TODO
 - should these return multiple tables instead?
 - think about the join problem more..
 - what about update/insert etc
+- finish off `doSetOperations`
 
 
 df:

@@ -45,11 +45,13 @@ const doSetOperations = (env, firstSet, lines)=>{
         args = splatSets(args.map(o=>resolve(env, o))).map(o=>resolve(env, o))
         // prepend args with the previous value
         args = [R.last(accum)].concat(args)
+        // TODO:
         // append next section to args if it exists
         // const nextSection = lines[nextLineIndex]
         // if(!R.isNil(nextSection) && is.section(nextSection)) args.push(compileHeaders(env, nextSection))
         assertIs.baseOperator(operator)
         const operatorName = baseOperatorInverseMap[operator[types.operator]]
+        // TODO:
         // asserters.assertArgs[operatorName](...args)
         const newSet = {[types.set]: determineSet[operatorName](...args)}
         accum.push(newSet)

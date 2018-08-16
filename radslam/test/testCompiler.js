@@ -37,12 +37,14 @@ some_rel:
     it('should handle base operators at each step on a set', ()=>{
         const env = compiler.emptyEnv
         const in_ = `[1 2]
-U [2 3 4]`
+U [2 3 4]
+- [2 4]`
         const ast = parser.parser(in_)
         const expected = {
-            set: [{number: '1'}, {number: '2'}, {number: '3'}, {number: '4'}],
+            set: [{number: '1'}, {number: '3'}],
             accum: [
                 {set: [{number: '1'}, {number: '2'}]},
+                {set: [{number: '1'}, {number: '2'}, {number: '3'}, {number: '4'}]},
             ],
         }
         assert.deepEqual(expected, compiler.compileHeaders(env, ast))
@@ -113,7 +115,6 @@ JoinClone
         }
         assert.deepEqual(expected, compiler.compileHeaders(env, ast))
     })
-    xit('do a load of stuff', ()=>{})
     it('should do a load of nested stuff', ()=>{
         const env = {vars: {
             make_null: {function: (row, relation, ..._)=>({null: 'null'})},

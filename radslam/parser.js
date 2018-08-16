@@ -279,6 +279,7 @@ module.exports = {
     parser,
     fullParser,
     types,
+    multiple,
     getType,
     getValue,
     is,
