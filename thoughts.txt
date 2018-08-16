@@ -152,8 +152,7 @@ Design choices:
 - make error messages nice
 
 TODO
-- finish header determiner
-- generate text and html from ast, check that it matches both ways
+- generate html from ast
 - allow `let` for types other than sets and relations
 - add -- comments to parser
 - write more comprehensive tests
