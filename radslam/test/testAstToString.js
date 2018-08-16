@@ -106,18 +106,18 @@ G :foo
                 {rl_headers: [{header: ':a'}, {header: ':b'}]},
                 {rl_row: [{string: '"foo"'}, {number: '2.4'}]},
                 {rl_row: [{null: 'null'}, {number: '-3'}]},]}]}
-        const expected = `| :a    |:b|
--------------------
-| "foo"   | 2.4 |
-|null  | -3  |`
-        assert.deepEqual(expected, parser.parser(in_))
+        const expected = `| :a    | :b  |
+---------------
+| "foo" | 2.4 |
+| null  | -3  |`
+        assert.deepEqual(expected, astToString.astToString(in_))
     })
     it('should stringify an empty relation literal with no rows', ()=>{
         const in_ = {section: [
             {relation_literal: [
                 {rl_headers: []}]}]}
         const expected = `| |`
-        assert.deepEqual(expected, parser.parser(in_))
+        assert.deepEqual(expected, astToString.astToString(in_))
     })
     it('should stringify an empty relation literal with one row', ()=>{
         const in_ = {section: [
@@ -127,7 +127,7 @@ G :foo
         const expected = `| |
 ---
 | |`
-        assert.deepEqual(expected, parser.parser(in_))
+        assert.deepEqual(expected, astToString.astToString(in_))
     })
 })
 describe('astToString.jsonifyAndIndent', ()=>{
