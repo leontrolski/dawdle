@@ -43,14 +43,10 @@ const typeStringMap = {
         const colWidths = R.transpose(rowsStrings.concat([headerStrings]))
             .map(col=>col.map(cell=>cell.length))
             .map(colLengths=>Math.max(...colLengths))
-        // colWidths = [5, 6, 7]
-        // | width | widthh | widthhh |
-        // ----------------------------
-        // 1234567890123456789012345678
         const makeRow = strings=>
             '| ' +
             R.zip(strings, colWidths)
-            .map(([string, colWidth])=>`${string.padEnd(colWidth, ' ')} `)
+            .map(([string, colWidth])=>string.padEnd(colWidth, ' ') + ' ')
             .join('| ')
             + '|'
         const headerString = makeRow(headerStrings)
