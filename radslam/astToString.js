@@ -3,44 +3,44 @@ const {errors, asserters, log} = require('./errorsAndAsserters')
 
 const R = require('ramda')
 
-const typeToString = o=>{
+// `o` is a node, `i` is the indent level
+const nodeToString = (o, i)=>{
     const type_ = getType(o)
-    if(multiple.includes(type_)) return typeStringMap[type_](o)
+    if(multiple.includes(type_)) return typeStringMap[type_](o, i)
     return o[type_]
 }
 const typeStringMap = {
-    section: o=>o[types.section].map(typeToString).join('\n'),
-    let: o=>{
+    section: (o, i)=>o[types.section].map(o=>is.section(o)?
+        nodeToString(o, is.section(o)? i + 1 : i)
+        : R.repeat('    ', i).join('') + nodeToString(o, i)
+    ).join('\n'),
+    let: (o, i)=>{
         const args = o[types.let]
         const section = args.pop()
-        return `let ${args.map(typeToString).join(' ')}\n${typeToString(section)}`
+        return `let ${args.map(o=>nodeToString(o, i)).join(' ')}\n${nodeToString(section, i + 1)}\n`
     },
-    def: o=>{
+    def: (o, i)=>{
         const args = o[types.def]
         const section = args.pop()
-        return `def ${args.map(typeToString).join(' ')}\n${typeToString(section)}`
+        return `def ${args.map(o=>nodeToString(o, i)).join(' ')}\n${nodeToString(section, i + 1)}\n`
     },
-    line: o=>o[types.line].map(typeToString).join(' '),
-    aggregator: o=>o[types.aggregator].map(typeToString).join(' '),
-    map_macro: o=>{
+    line: (o, i)=>o[types.line].map(o=>nodeToString(o, i)).join(' '),
+    aggregator: (o, i)=>o[types.aggregator].map(o=>nodeToString(o, i)).join(' '),
+    map_macro: (o, i)=>{
         const [var_, template] = o[types.map_macro]
-        return `(map ${typeToString(var_)}) ${typeToString(template)}`
+        return `(map ${nodeToString(var_, i)}) ${nodeToString(template, i)}`
     },
-
-    named_value: o=>{
+    named_value: (o, i)=>{
         const [var_, value] = o[types.named_value]
-        return `${typeToString(var_)}=${typeToString(value)}`
+        return `${nodeToString(var_, i)}=${nodeToString(value, i)}`
     },
+    set: (o, i)=>`[${o[types.set].map(o=>nodeToString(o, i)).join(' ')}]`,
     // this will require some special work
-    relation_literal: o=>o[types.relation_literal],
-    rl_headers: o=>o[types.rl_headers],
-    rl_row: o=>o[types.rl_row],
-    set: o=>`[${o[types.set].map(typeToString).join(' ')}]`,
+    relation_literal: (o, i)=>o[types.relation_literal],
+    rl_headers: (o, i)=>o[types.rl_headers],
+    rl_row: (o, i)=>o[types.rl_row],
 }
 
-const astToString = ast=>{
-    let indentLevel = 0
-    return typeToString(ast)
-}
+const astToString = ast=>nodeToString(ast, 0)
 
 module.exports = {astToString}

@@ -48,6 +48,20 @@ Custom other_other_rel:*
         assert.deepEqual(expected, astToString.astToString(in_))
     })
     it('should stringify nested sections', ()=>{
+        const in_ = {section:
+            [{line: [{number: "1"}]}, {section:
+                [{line: [{number: "2"}]}, {section:
+                    [{line: [{number: "3"}]}, {section:
+                            [{line: [{number: "4"}]}, {section:
+                                [{line: [{number: "5"}]}]}]}]}]}]}
+        const expected = `1
+    2
+        3
+            4
+                5`
+        assert.deepEqual(expected, astToString.astToString(in_))
+    })
+    it('should stringify multiple nested sections', ()=>{
         const in_ = {"section": [
             {"let": [{"relation": "a:"}, {"section": [
                 {"let": [{"relation": "b:"}, {"section": [
@@ -83,8 +97,7 @@ let e:
 
 g:
 G :foo
-    :bar count :bar_id
-`
+    :bar count :bar_id`
         assert.deepEqual(expected, astToString.astToString(in_))
     })
 })
