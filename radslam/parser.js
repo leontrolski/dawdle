@@ -10,7 +10,7 @@ section              ::= (let | def)* (relation_literal | line | aggregator | ma
 Block                ::= NEWLINE INDENT section DE_INDENT
 let                  ::= SPACE* "let" SPACE (relation | var) Block END
 def                  ::= SPACE* "def" SPACE operator (SPACE (relation | var))* Block END
-line                 ::= SPACE* ((to_many | to_one) SPACE relation | ((operator (SPACE Value)*) | Value)) ((Block END?) | END)
+line                 ::= SPACE* (((to_many | to_one | operator) (SPACE Value)*) | Value) ((Block END?) | END)
 aggregator           ::= SPACE* header SPACE var (SPACE Value)* END
 map_macro            ::= SPACE* "(" "map" SPACE Value ")" SPACE template END
 
