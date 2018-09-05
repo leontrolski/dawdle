@@ -142,7 +142,8 @@ JoinClone
     U joined:
 
 let not_foo
-    [:left_id :l]
+    [:left_id]
+    U [:l]
 
 let left:
     | :left_id | :l | :nah |

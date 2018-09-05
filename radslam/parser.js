@@ -6,11 +6,11 @@ const inspect = o=>util.inspect(o, {depth: 6, colors: true, breakLength: 100})
 
 // Capital words are kept but passed through, must resolve to one named token
 const grammar = `
-section              ::= (let | def)* (relation_literal | line | aggregator | map_macro | Block)+
+section              ::= (let | def)* (relation_literal | line | aggregator | map_macro)+
 Block                ::= INDENT section DE_INDENT
 let                  ::= SPACE* "let" SPACE (relation | var) NEWLINE Block END
 def                  ::= SPACE* "def" SPACE operator (SPACE (relation | var))* NEWLINE Block END
-line                 ::= SPACE* ((operator (SPACE Value)*) | Value) END
+line                 ::= SPACE* ((operator (SPACE Value)*) | Value) ((NEWLINE Block END?) | END)
 aggregator           ::= SPACE* header SPACE var (SPACE Value)* END
 map_macro            ::= SPACE* "(" "map" SPACE Value ")" SPACE template END
 

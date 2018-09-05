@@ -121,23 +121,27 @@ def Namespace relation: namespace ignore
 Design choices:
 - Each line of dawdle should map deterministically both ways to the JSON AST
 - Given an environment, it should always be possible to determine the schema at any line
-- Given test values, it should always be possible to determine the value at any line
-- Custom operators can only be composed of the base operators and other functions
+- Given test values, it should always be possible to determine the value at any line of a top level let or section
+- Composite operators can only be composed of the base operators and other functions
 - Sets are always splatted in place
-- (map some_set) is a macro
 - make error messages nice
 
 TODO
+- add -- comments to parser
+- typescriptify
+- add multirelations
+
+- allow vars called > < = etc
+- allow `let` for types other than sets and relations
+
 - generate html from ast
 - handle named vars
-- allow `let` for types other than sets and relations
-- add -- comments to parser
 - write more comprehensive tests
-- write docstrings for compiler
+- finish off `doSetOperations`
+
 - should these return multiple tables instead?
 - think about the join problem more..
 - what about update/insert etc
-- finish off `doSetOperations`
 
 
 df:

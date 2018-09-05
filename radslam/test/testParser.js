@@ -104,7 +104,35 @@ Custom other_other_rel:*
         ]}]}
         assert.deepEqual(expected, parser.parser(in_))
     })
-    it('should parse sections', ()=>{
+    it('should parse a section', ()=>{
+        const in_ = `a:
+    42
+`
+        const expected = {section: [
+            {line: [
+                {relation: "a:"},
+                {section: [
+                    {line: [{number: "42"}]}]}]},
+        ]}
+        assert.deepEqual(expected, parser.parser(in_))
+    })
+    it('should parse 2 sections', ()=>{
+        const in_ = `a:
+    J
+        7
+`
+        const expected = {section: [
+            {line: [
+                {relation: "a:"},
+                {section: [
+                    {line: [
+                        {operator: "J"},
+                        {section: [
+                            {line: [{number: "7"}]}]}]}]}]},
+        ]}
+        assert.deepEqual(expected, parser.parser(in_))
+    })
+    it('should parse loads of sections', ()=>{
         const in_ = `let a:
     let b:
         5
@@ -123,14 +151,14 @@ g:
 G :foo
     :bar count :bar_id
 `
-        const expected = [
+        const expected = {"section": [
             {"let": [{"relation": "a:"}, {"section": [
                 {"let": [{"relation": "b:"}, {"section": [
                     {"line": [{"number": "5"}]}]}]
                 },
                 {"line": [{"relation": "c:"}]},
-                {"line": [{"operator": "U"}, {"relation": "d:"}]}, {"section": [
-                    {"line": [{"relation": "e:"}]}]}]}]
+                {"line": [{"operator": "U"}, {"relation": "d:"}, {"section": [
+                    {"line": [{"relation": "e:"}]}]}]}]}]
             },
             {"def": [{"operator": "Foo"}, {"relation": "relation:"}, {"var": "bar"}, {"section": [
                 {"line": [{"relation": "i:"}]}]}]
@@ -139,10 +167,9 @@ G :foo
                 {"line": [{"relation": "f:"}]}]}]
             },
             {"line": [{"relation": "g:"}]},
-            {"line": [{"operator": "G"}, {"header": ":foo"}]},
-            {"section": [
-                {"aggregator": [{"header": ":bar"}, {"var": "count"}, {"header": ":bar_id"}]}]}]
-        assert.deepEqual(expected, parser.parser(in_).section)
+            {"line": [{"operator": "G"}, {"header": ":foo"}, {"section": [
+                {"aggregator": [{"header": ":bar"}, {"var": "count"}, {"header": ":bar_id"}]}]}]}]}
+        assert.deepEqual(expected, parser.parser(in_))
     })
     it('should parse a relation literal', ()=>{
         const in_ = `| :a    |:b|
@@ -190,10 +217,10 @@ foo`
                 {relation_literal: [
                     {rl_headers: [{header: ':left'}]},
                     {rl_row: [{bool: 'true'}]}]},
-                {line: [{operator: 'J'}]}, {section: [
+                {line: [{operator: 'J'}, {section: [
                     {relation_literal: [
                         {rl_headers: [{header: ':right'}]},
-                        {rl_row: [{bool: 'false'}]}]}]}]},
+                        {rl_row: [{bool: 'false'}]}]}]}]}]},
             ]},
             {line: [{var: 'foo'}]}]}
         assert.deepEqual(expected, parser.parser(in_))
@@ -247,7 +274,7 @@ describe('parser.fullParser', ()=>{
         assert.deepEqual(expected, parser.fullParser(in_).errors[0].message)
     })
     xit('should give a useful error when unable to parse a particular line')
-    xit('should correct for one indent', ()=>{
+    xit('should (maybe) correct for one indent', ()=>{
         const in_ = "a:\nU\n    b:\n"
         //           012 34 5678901
         const expected = {
@@ -303,5 +330,5 @@ describe('parser.fullParser', ()=>{
         }
         assert.deepEqual(expected, parser.fullParser(in_))
     })
-    xit('should correct for multiple indents')
+    xit('should (maybe) correct for multiple indents')
 })

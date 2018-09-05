@@ -49,37 +49,6 @@ const determineSet = {
 }
 
 /**
- * For a section of set operations, return the calculated set values.
- *
- * TODO: handle indented sections.
- * TODO: handle macros.
- * TODO: handle composite operators.
- * TODO: assert the arguments to the operator match its signature.
- * TODO: handle named_var.
- *
- * See `doRelationOperations` for examples of the above.
- */
-const doSetOperations = (env, firstSet, lines)=>{
-    const accum = [firstSet]
-    let nextLineIndex = 0
-    for(let line of lines){
-        nextLineIndex += 1
-        if(is.section(line)) continue  // these will be handled below
-        let [operator, ...args] = line[types.line]
-        // resolve args and splat sets
-        args = splatSets(args.map(o=>resolve(env, o))).map(o=>resolve(env, o))
-        // prepend args with the previous value
-        args = [R.last(accum)].concat(args)
-
-        assertIs.baseOperator(operator)
-        const operatorName = baseOperatorInverseMap[operator[types.operator]]
-        const newSet = {[types.set]: determineSet[operatorName](...args)}
-        accum.push(newSet)
-    }
-    return R.merge(R.last(accum), {accum: R.init(accum)})
-}
-
-/**
  * For a section of relation operations, return the calculated headers.
  *
  * TODO: handle named_var.
@@ -93,7 +62,7 @@ const doRelationHeaderOperations = (env, firstRelation, lines)=>{
         if(is.map_macro(line)){
             const expanded = expandAndRegisterMacro(env, line)
             line = expanded.line
-            env = R.mergeDeepRight(env, expanded.registration)
+            env = addRegistration(env, expanded.registration)
         }
         let [operator, ...args] = line[types.line]
         // resolve args and splat sets
@@ -115,12 +84,42 @@ const doRelationHeaderOperations = (env, firstRelation, lines)=>{
             // contruct env for operator, then compile its section with it
             let operatorEnv = env
             for(let [operatorArg, arg] of R.zip(operator_.args, args)){
-                operatorEnv = R.mergeDeepRight(operatorEnv, registerOperatorArg(operatorArg, arg))
+                operatorEnv = addRegistration(operatorEnv, registerOperatorArg(operatorArg, arg))
             }
             newHeaders = compileHeaders(operatorEnv, operator_.operator_section)
         }
         const newValue = R.merge(unnamedRelation, newHeaders)
         accum.push(newValue)
+    }
+    return R.merge(R.last(accum), {accum: R.init(accum)})
+}
+/**
+ * For a section of set operations, return the calculated set values.
+ *
+ * TODO: handle indented sections.
+ * TODO: handle macros.
+ * TODO: handle composite operators.
+ * TODO: assert the arguments to the operator match its signature.
+ * TODO: handle named_var.
+ *
+ * See `doRelationHeaderOperations` for examples of the above.
+ */
+const doSetOperations = (env, firstSet, lines)=>{
+    const accum = [firstSet]
+    let nextLineIndex = 0
+    for(let line of lines){
+        nextLineIndex += 1
+        if(is.section(line)) continue  // these will be handled below
+        let [operator, ...args] = line[types.line]
+        // resolve args and splat sets
+        args = splatSets(args.map(o=>resolve(env, o))).map(o=>resolve(env, o))
+        // prepend args with the previous value
+        args = [R.last(accum)].concat(args)
+
+        assertIs.baseOperator(operator)
+        const operatorName = baseOperatorInverseMap[operator[types.operator]]
+        const newSet = {[types.set]: determineSet[operatorName](...args)}
+        accum.push(newSet)
     }
     return R.merge(R.last(accum), {accum: R.init(accum)})
 }
@@ -148,12 +147,14 @@ const resolve = (env, o)=>{
     if(is.template(o)) return populateTemplate(env, o)
     return o
 }
+const addRegistration = (env, registration)=>{
+    const type = Object.keys(registration)[0]
+    const name = Object.keys(registration[type])[0]
+    return R.assocPath([type, name], registration[type][name], env)
+}
 /**
  * Return a `registration` that can be deep merged with an
  * existing `env` to add a definition (of type def or let).
- *
- * TODO: are there cases where `R.mergeDeepRight(env, registration)`
- *   will accidentally not overwrite data?
  */
 const registerDefinition = (env, definition)=>{
     if(is.def(definition)){
@@ -231,7 +232,7 @@ const compileHeaders = (env, section)=>{
 
     let envWithDefs = env
     for(let definition of defs){
-        envWithDefs = R.mergeDeepRight(envWithDefs, registerDefinition(envWithDefs, definition))
+        envWithDefs = addRegistration(envWithDefs, registerDefinition(envWithDefs, definition))
     }
 
     let [first, ...lines] = body
@@ -244,6 +245,10 @@ const compileHeaders = (env, section)=>{
     } else if(is.aggregator(first)){
         return {aggregators: null, headers: body.map(o=>o[types.aggregator][0])}
     }
+}
+
+const compileTopLevelHeaders = (env, ast)=>{
+
 }
 
 const astToValue = {
