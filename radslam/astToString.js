@@ -27,7 +27,14 @@ const typeStringMap = {
         const section = args.pop()
         return `def ${args.map(o=>nodeToString(o, i)).join(' ')}\n${nodeToString(section, i + 1)}\n`
     },
-    line: (o, i)=>o[types.line].map(o=>nodeToString(o, i)).join(' '),
+    line: (o, i)=>{
+        const args = o[types.line]
+        if(args.length > 0 && is.section(R.last(args))){
+            section = args.pop()
+            return `${o[types.line].map(o=>nodeToString(o, i)).join(' ')}\n${nodeToString(section, i + 1)}`
+        }
+        return o[types.line].map(o=>nodeToString(o, i)).join(' ')
+    },
     aggregator: (o, i)=>o[types.aggregator].map(o=>nodeToString(o, i)).join(' '),
     map_macro: (o, i)=>{
         const [var_, template] = o[types.map_macro]

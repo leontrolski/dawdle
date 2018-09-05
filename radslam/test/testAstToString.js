@@ -49,11 +49,11 @@ Custom other_other_rel:*
     })
     it('should stringify nested sections', ()=>{
         const in_ = {section:
-            [{line: [{number: "1"}]}, {section:
-                [{line: [{number: "2"}]}, {section:
-                    [{line: [{number: "3"}]}, {section:
-                            [{line: [{number: "4"}]}, {section:
-                                [{line: [{number: "5"}]}]}]}]}]}]}
+            [{line: [{number: "1"}, {section:
+                [{line: [{number: "2"}, {section:
+                    [{line: [{number: "3"}, {section:
+                            [{line: [{number: "4"}, {section:
+                                [{line: [{number: "5"}]}]}]}]}]}]}]}]}]}]}
         const expected = `1
     2
         3
@@ -68,8 +68,8 @@ Custom other_other_rel:*
                     {"line": [{"number": "5"}]}]}]
                 },
                 {"line": [{"relation": "c:"}]},
-                {"line": [{"operator": "U"}, {"relation": "d:"}]}, {"section": [
-                    {"line": [{"relation": "e:"}]}]}]}]
+                {"line": [{"operator": "U"}, {"relation": "d:"}, {"section": [
+                    {"line": [{"relation": "e:"}]}]}]}]}]
             },
             {"def": [{"operator": "Foo"}, {"relation": "relation:"}, {"var": "bar"}, {"section": [
                 {"line": [{"relation": "i:"}]}]}]
@@ -78,9 +78,8 @@ Custom other_other_rel:*
                 {"line": [{"relation": "f:"}]}]}]
             },
             {"line": [{"relation": "g:"}]},
-            {"line": [{"operator": "G"}, {"header": ":foo"}]},
-            {"section": [
-                {"aggregator": [{"header": ":bar"}, {"var": "count"}, {"header": ":bar_id"}]}]}]}
+            {"line": [{"operator": "G"}, {"header": ":foo"}, {"section": [
+                {"aggregator": [{"header": ":bar"}, {"var": "count"}, {"header": ":bar_id"}]}]}]}]}
         const expected = `let a:
     let b:
         5

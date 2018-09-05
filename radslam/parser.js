@@ -108,6 +108,7 @@ const parser = s=>munge(basicParser(s), null)
 const fullParser = s=>munge(basicParser(s), -9)
 
 const getType = o=>{
+    if(R.isNil(o)) throw new UnableToDetermineTypeError(o)
     const intersection = R.intersection(Object.keys(o), Object.keys(types))
     if(intersection.length != 1) throw new UnableToDetermineTypeError(o)
     return intersection[0]

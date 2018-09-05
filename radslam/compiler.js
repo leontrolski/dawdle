@@ -55,23 +55,23 @@ const determineSet = {
  */
 const doRelationHeaderOperations = (env, firstRelation, lines)=>{
     const accum = [firstRelation]
-    let nextLineIndex = 0
     for(let line of lines){
-        nextLineIndex += 1
-        if(is.section(line)) continue  // these are handled below
         if(is.map_macro(line)){
             const expanded = expandAndRegisterMacro(env, line)
             line = expanded.line
             env = addRegistration(env, expanded.registration)
         }
         let [operator, ...args] = line[types.line]
+
+        let finalSection
+        if(args.length > 0 && is.section(R.last(args))) finalSection = args.pop()
+
         // resolve args and splat sets
         args = splatSets(args.map(o=>resolve(env, o))).map(o=>resolve(env, o))
         // prepend args with the previous value
         args = [R.last(accum)].concat(args)
         // append next section to args if it exists
-        const nextSection = lines[nextLineIndex]
-        if(!R.isNil(nextSection) && is.section(nextSection)) args.push(compileHeaders(env, nextSection))
+        if(!R.isNil(finalSection)) args.push(compileHeaders(env, finalSection))
 
         let newHeaders
         if(is.baseOperator(operator)){
@@ -106,9 +106,7 @@ const doRelationHeaderOperations = (env, firstRelation, lines)=>{
  */
 const doSetOperations = (env, firstSet, lines)=>{
     const accum = [firstSet]
-    let nextLineIndex = 0
     for(let line of lines){
-        nextLineIndex += 1
         if(is.section(line)) continue  // these will be handled below
         let [operator, ...args] = line[types.line]
         // resolve args and splat sets

@@ -127,8 +127,8 @@ Design choices:
 - make error messages nice
 
 TODO
+- have compiled shape relfect AST
 - add -- comments to parser
-- typescriptify
 - add multirelations
 
 - allow vars called > < = etc
