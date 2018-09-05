@@ -138,6 +138,7 @@ TODO
 - handle named vars
 - write more comprehensive tests
 - finish off `doSetOperations`
+- remove offset malarkey in parser
 
 - should these return multiple tables instead?
 - think about the join problem more..

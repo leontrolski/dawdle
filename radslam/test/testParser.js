@@ -226,7 +226,7 @@ foo`
         assert.deepEqual(expected, parser.parser(in_))
     })
 })
-describe('parser.fullParser', ()=>{
+xdescribe('parser.fullParser', ()=>{
     it('should parse two vars in a set with their positions', ()=>{
         const in_ = "[foo bar]"
         //           012345678
@@ -273,8 +273,8 @@ describe('parser.fullParser', ()=>{
         const expected = "Unexpected end of input: \n["
         assert.deepEqual(expected, parser.fullParser(in_).errors[0].message)
     })
-    xit('should give a useful error when unable to parse a particular line')
-    xit('should (maybe) correct for one indent', ()=>{
+    it('should give a useful error when unable to parse a particular line')
+    it('should (maybe) correct for one indent', ()=>{
         const in_ = "a:\nU\n    b:\n"
         //           012 34 5678901
         const expected = {
@@ -330,5 +330,5 @@ describe('parser.fullParser', ()=>{
         }
         assert.deepEqual(expected, parser.fullParser(in_))
     })
-    xit('should (maybe) correct for multiple indents')
+    it('should (maybe) correct for multiple indents')
 })

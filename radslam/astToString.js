@@ -1,5 +1,5 @@
-const {parser, types, getType, multiple, is, assertIs, baseOperatorInverseMap} = require('./parser')
-const {errors, asserters, log} = require('./errorsAndAsserters')
+const {types, getType, multiple, is} = require('./parser')
+const {log} = require('./errorsAndAsserters')
 
 const R = require('ramda')
 

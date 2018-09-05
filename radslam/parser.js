@@ -104,8 +104,15 @@ const munge = (o, offset)=>{
         errors: o.errors || []
     })
 }
+const deMunge = o =>{
+    const type = getType(o)
+    return multiple.includes(type)?
+        {type: type, value: o[type].map(deMunge)}
+        : {type: type, value: o[type]}
+}
 const parser = s=>munge(basicParser(s), null)
-const fullParser = s=>munge(basicParser(s), -9)
+const fullParser = s =>deMunge(munge(basicParser(s), null))
+
 
 const getType = o=>{
     if(R.isNil(o)) throw new UnableToDetermineTypeError(o)
