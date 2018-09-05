@@ -3,8 +3,6 @@ const {errors, asserters, log} = require('./errorsAndAsserters')
 
 const R = require('ramda')
 
-const unnamedRelation = {type: types.relation}
-
 /**
  * Given a list of values, return the list, but with the
  * sets splatted in place.
@@ -88,7 +86,7 @@ const doRelationHeaderOperations = (env, firstRelation, lines)=>{
             }
             newHeaders = compileHeaders(operatorEnv, operator_.operator_section)
         }
-        const newValue = {type: types.relation, headers: newHeaders}
+        const newValue = R.merge({type: types.relation}, newHeaders)
         accum.push(newValue)
     }
     return R.merge(R.last(accum), {accum: R.init(accum)})
@@ -135,7 +133,7 @@ const resolve = (env, o)=>{
     if(!R.isNil(o.headers)) return o  // already been resolved
     if(is.var(o) || is.relation(o)) return env.vars[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
     if(is.operator(o)) return env.operators[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
-    if(is.relation_literal(o)) return R.merge(unnamedRelation, {headers: o.value[0].value})
+    if(is.relation_literal(o)) return {type: types.relation, headers: o.value[0].value}
     if(is.all_headers(o)){
         const relation = {type: types.relation, value: R.init(o.value)}
         return {type: types.set, value: resolve(env, relation).headers}
