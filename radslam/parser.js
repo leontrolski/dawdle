@@ -190,50 +190,50 @@ const multiple = [
     types.set,
 ]
 const is = {
-    section: o=>getType(o) === types.section,
-    let: o=>getType(o) === types.let,
-    def: o=>getType(o) === types.def,
-    line: o=>getType(o) === types.line,
-    aggregator: o=>getType(o) === types.aggregator,
-    map_macro: o=>getType(o) === types.map_macro,
-    all_headers: o=>getType(o) === types.all_headers,
-    relation: o=>getType(o) === types.relation,
-    header: o=>getType(o) === types.header,
-    named_value: o=>getType(o) === types.named_value,
-    var: o=>getType(o) === types.var,
-    operator: o=>getType(o) === types.operator,
-    set: o=>getType(o) === types.set,
-    relation_literal: o=>getType(o) === types.relation_literal,
-    rl_headers: o=>getType(o) === types.rl_headers,
-    rl_row: o=>getType(o) === types.rl_row,
-    bool: o=>getType(o) === types.bool,
-    null: o=>getType(o) === types.null,
-    number: o=>getType(o) === types.number,
-    string: o=>getType(o) === types.string,
-    template: o=>getType(o) === types.template,
-    decimal: o=>getType(o) === types.decimal,
-    datetime: o=>getType(o) === types.datetime,
-    function: o=>getType(o) === types.function,
+    section: o=>o.type === types.section,
+    let: o=>o.type === types.let,
+    def: o=>o.type === types.def,
+    line: o=>o.type === types.line,
+    aggregator: o=>o.type === types.aggregator,
+    map_macro: o=>o.type === types.map_macro,
+    all_headers: o=>o.type === types.all_headers,
+    relation: o=>o.type === types.relation,
+    header: o=>o.type === types.header,
+    named_value: o=>o.type === types.named_value,
+    var: o=>o.type === types.var,
+    operator: o=>o.type === types.operator,
+    set: o=>o.type === types.set,
+    relation_literal: o=>o.type === types.relation_literal,
+    rl_headers: o=>o.type === types.rl_headers,
+    rl_row: o=>o.type === types.rl_row,
+    bool: o=>o.type === types.bool,
+    null: o=>o.type === types.null,
+    number: o=>o.type === types.number,
+    string: o=>o.type === types.string,
+    template: o=>o.type === types.template,
+    decimal: o=>o.type === types.decimal,
+    datetime: o=>o.type === types.datetime,
+    function: o=>o.type === types.function,
     // compound
     letOrDef: o=>is.let(o) || is.def(o),
     singleRelationOrVarOrSet: o=>
         is.line(o) &&
-        o[types.line].length === 1 &&
+        o.value.length === 1 &&
         (
-            is.relation(o[types.line][0]) ||
-            is.var(o[types.line][0]) ||
-            is.set(o[types.line][0]) ||
-            is.all_headers(o[types.line][0])
+            is.relation(o.value[0]) ||
+            is.var(o.value[0]) ||
+            is.set(o.value[0]) ||
+            is.all_headers(o.value[0])
         ),
     baseOperator: o=>
         is.operator(o) &&
-        Object.keys(baseOperatorInverseMap).includes(o[types.operator]),
+        Object.keys(baseOperatorInverseMap).includes(o.value),
     groupOperator: o=>
         is.operator(o) &&
-        o[types.operator] === baseOperatorMap.group,
+        o.value === baseOperatorMap.group,
     aggregatorSection: o=>
         is.section(o) &&
-        is.aggregator(o[types.section][0]),
+        is.aggregator(o.value[0]),
 }
 class TypeError extends Error {constructor(type, node) {
     super(`Type error, node is not type ${type}: ${inspect(node)}`)

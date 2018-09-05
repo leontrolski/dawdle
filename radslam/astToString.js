@@ -1,4 +1,4 @@
-const {types, getType, multiple, is} = require('./parser')
+const {types, getType, multiple} = require('./parser')
 const {log} = require('./errorsAndAsserters')
 
 const R = require('ramda')
@@ -13,7 +13,7 @@ const nodeToString = (o, i)=>{
     return o[type_]
 }
 const typeStringMap = {
-    section: (o, i)=>o[types.section].map(o=>is.section(o)?
+    section: (o, i)=>o[types.section].map(o=>getType(o) === 'section'?
         nodeToString(o, i + 1)
         : '    '.repeat(i) + nodeToString(o, i)
     ).join('\n'),
@@ -29,7 +29,7 @@ const typeStringMap = {
     },
     line: (o, i)=>{
         const args = o[types.line]
-        if(args.length > 0 && is.section(R.last(args))){
+        if(args.length > 0 && getType(R.last(args)) === 'section'){
             section = args.pop()
             return `${o[types.line].map(o=>nodeToString(o, i)).join(' ')}\n${nodeToString(section, i + 1)}`
         }
@@ -74,7 +74,7 @@ const typeStringMap = {
 const nodeToJson = (o, i)=>{
     const type_ = getType(o)
     const indent = '    '.repeat(i)
-    if(is.section(o)) return `{"section":[\n${indent}${o[type_].map(o=>nodeToJson(o, i + 1)).join(',\n' + indent)}]}`
+    if(getType(o) === 'section') return `{"section":[\n${indent}${o[type_].map(o=>nodeToJson(o, i + 1)).join(',\n' + indent)}]}`
     if(multiple.includes(type_)) return `{"${type_}":[${o[type_].map(o=>nodeToJson(o, i)).join(',')}]}`
     return JSON.stringify(o)
 }

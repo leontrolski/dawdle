@@ -7,20 +7,30 @@ const assert = chai.assert
 chai.config.includeStack = true
 chai.config.truncateThreshold = 1000
 
+// helper
+const makeHeaders = (...headers) => headers.map(h=>({type: 'header', value: h}))
 
 describe('compiler.compileHeaders', ()=>{
     it('should get the headers of a table literal', ()=>{
         const env = compiler.emptyEnv
         const in_ = `| :a | :b |`
-        const ast = parser.parser(in_)
-        const expected = {relation: null, headers: [{header: ':a'}, {header: ':b'}], accum: []}
+        const ast = parser.fullParser(in_)
+        const expected = {
+            type: 'relation',
+            headers: [{type: 'header', value: ':a'}, {type: 'header', value: ':b'}],
+            accum: []
+        }
         assert.deepEqual(expected, compiler.compileHeaders(env, ast))
     })
     it('should get the headers in a set literal', ()=>{
         const env = compiler.emptyEnv
         const in_ = `[:foo :bar]`
-        const ast = parser.parser(in_)
-        const expected = {set: [{header: ':foo'}, {header: ':bar'}], accum: []}
+        const ast = parser.fullParser(in_)
+        const expected = {
+            type: 'set',
+            value: [{type: 'header', value: ':foo'}, {type: 'header', value: ':bar'}],
+            accum: [],
+        }
         assert.deepEqual(expected, compiler.compileHeaders(env, ast))
     })
     it('should handle let assignment of a relation', ()=>{
@@ -30,8 +40,12 @@ describe('compiler.compileHeaders', ()=>{
 
 some_rel:
 `
-        const ast = parser.parser(in_)
-        const expected = {relation: null, headers: [{header: ':a'}, {header: ':b'}], accum: []}
+        const ast = parser.fullParser(in_)
+        const expected = {
+            type: 'relation',
+            headers: [{type: 'header', value: ':a'}, {type: 'header', value: ':b'}],
+            accum: []
+        }
         assert.deepEqual(expected, compiler.compileHeaders(env, ast))
     })
     it('should handle base operators at each step on a set', ()=>{
@@ -39,12 +53,13 @@ some_rel:
         const in_ = `[1 2]
 U [2 3 4]
 - [2 4]`
-        const ast = parser.parser(in_)
+        const ast = parser.fullParser(in_)
         const expected = {
-            set: [{number: '1'}, {number: '3'}],
+            type: 'set',
+            value: [{type: 'number', value: '1'}, {type: 'number', value: '3'}],
             accum: [
-                {set: [{number: '1'}, {number: '2'}]},
-                {set: [{number: '1'}, {number: '2'}, {number: '3'}, {number: '4'}]},
+                {type: 'set', value: [{type: 'number', value: '1'}, {type: 'number', value: '2'}]},
+                {type: 'set', value: [{type: 'number', value: '1'}, {type: 'number', value: '2'}, {type: 'number', value: '3'}, {type: 'number', value: '4'}]},
             ],
         }
         assert.deepEqual(expected, compiler.compileHeaders(env, ast))
@@ -67,18 +82,19 @@ G :a
 U
     | :a | :g | :h |
 `
-        const ast = parser.parser(in_)
+        const ast = parser.fullParser(in_)
         const expected = {
-            relation: null, headers: [{header: ':a'}, {header: ':g'}, {header: ':h'}],
+            type: 'relation',
+            headers: makeHeaders(':a', ':g', ':h'),
             accum: [
-                {relation: null, headers: [{header: ':a'}, {header: ':b'}, {header: ':c'}]},
-                {relation: null, headers: [{header: ':a'}, {header: ':b'}, {header: ':c'}, {header: ':d'}]},
-                {relation: null, headers: [{header: ':a'}, {header: ':b'}, {header: ':c'}, {header: ':d'}]},
-                {relation: null, headers: [{header: ':a'}, {header: ':b'}, {header: ':c'}, {header: ':d'}, {header: ':e'}]},
-                {relation: null, headers: [{header: ':a'}, {header: ':e'}]},
-                {relation: null, headers: [{header: ':a'}, {header: ':e'}, {header: ':f'}]},
-                {relation: null, headers: [{header: ':a'}, {header: ':g'}, {header: ':h'}]},
-                {relation: null, headers: [{header: ':a'}, {header: ':g'}, {header: ':h'}]},
+                {type: 'relation', headers: makeHeaders(':a', ':b', ':c')},
+                {type: 'relation', headers: makeHeaders(':a', ':b', ':c', ':d')},
+                {type: 'relation', headers: makeHeaders(':a', ':b', ':c', ':d')},
+                {type: 'relation', headers: makeHeaders(':a', ':b', ':c', ':d', ':e')},
+                {type: 'relation', headers: makeHeaders(':a', ':e')},
+                {type: 'relation', headers: makeHeaders(':a', ':e', ':f')},
+                {type: 'relation', headers: makeHeaders(':a', ':g', ':h')},
+                {type: 'relation', headers: makeHeaders(':a', ':g', ':h')},
             ],
         }
         assert.deepEqual(expected, compiler.compileHeaders(env, ast))
@@ -93,11 +109,12 @@ U
 JoinClone
     | :a | :c |
 `
-        const ast = parser.parser(in_)
+        const ast = parser.fullParser(in_)
         const expected = {
-            relation: null, headers: [{header: ':a'}, {header: ':b'}, {header: ':c'}],
+            type: 'relation',
+            headers: makeHeaders(':a', ':b', ':c'),
             accum: [
-                {relation: null, headers: [{header: ':a'}, {header: ':b'}]},
+                {type: 'relation', headers: makeHeaders(':a', ':b')},
             ],
         }
         assert.deepEqual(expected, compiler.compileHeaders(env, ast))
@@ -106,18 +123,19 @@ JoinClone
         const env = {vars: {fake_function: {function: ()=>null}}}
         const in_ = `| :a |
 (map [:foo :bar]) \`^ :{{_}} fake_function\``
-        const ast = parser.parser(in_)
+        const ast = parser.fullParser(in_)
         const expected = {
-            relation: null, headers: [{header: ':a'}, {header: ':foo'}, {header: ':bar'}],
+            type: 'relation',
+            headers: makeHeaders(':a', ':foo', ':bar'),
             accum: [
-                {relation: null, headers: [{header: ':a'}]},
+                {type: 'relation', headers: makeHeaders(':a')},
             ],
         }
         assert.deepEqual(expected, compiler.compileHeaders(env, ast))
     })
     it('should do a load of nested stuff', ()=>{
         const env = {vars: {
-            make_null: {function: (row, relation, ..._)=>({null: 'null'})},
+            make_null: {function: (row, relation, ..._)=>({type: 'null', value: 'null'})},
             first: {function: (row, relation, ..._)=>relation.rows[0]},
             value: {function: (row, relation, value)=>value},
         }}
@@ -172,23 +190,29 @@ Outer
         // | 1        | 10 | 2         | 12   | 9           |
         // | 2        | 20 | 3         | 23   | 9           |
         // | 3        | 30 | null      | null | 9           |
-        const ast = parser.parser(in_)
+        const ast = parser.fullParser(in_)
         const expected = {
-            relation: null,
-            headers: [{header: ':left_id' }, {header: ':l' }, {header: ':right_id' }, {header: ':r' }, {header: ':new_header' }],
+            type: 'relation',
+            headers: makeHeaders(':left_id', ':l', ':right_id', ':r', ':new_header'),
             accum: [
-               {relation: null, headers: [{header: ':left_id'}, {header: ':l'}, {header: ':nah'}, {header: ':foo'}],
-                accum: [
-                    {relation: null, headers: [{header: ':left_id'}, {header: ':l'}, {header: ':nah'}]}
-                ]},
-               {relation: null, headers: [{header: ':left_id'}, {header: ':l'}, {header: ':foo'}]},
-               {relation: null, headers: [{header: ':left_id'}, {header: ':l'}]},
-               {relation: null, headers: [{header: ':left_id'}, {header: ':l'}, {header: ':right_id'}, {header: ':r'}],
-                accum: [
-                    {relation: null, headers: [{header: ':left_id'}, {header: ':l'}]},
-                    {relation: null, headers: [{header: ':left_id'}, {header: ':l'}]},
-                    {relation: null, headers: [{header: ':left_id'}, {header: ':l'}, {header: ':right_id'}, {header: ':r'}]}
-                ]},
+                {
+                    type: 'relation',
+                    headers: makeHeaders(':left_id', ':l', ':nah', ':foo'),
+                    accum: [
+                        {type: 'relation', headers: makeHeaders(':left_id', ':l', ':nah')}
+                    ]
+                },
+                {type: 'relation', headers: makeHeaders(':left_id', ':l', ':foo')},
+                {type: 'relation', headers: makeHeaders(':left_id', ':l')},
+                {
+                    type: 'relation',
+                    headers: makeHeaders(':left_id', ':l', ':right_id', ':r'),
+                    accum: [
+                        {type: 'relation', headers: makeHeaders(':left_id', ':l')},
+                        {type: 'relation', headers: makeHeaders(':left_id', ':l')},
+                        {type: 'relation', headers: makeHeaders(':left_id', ':l', ':right_id', ':r')},
+                    ]
+                },
             ]
         }
         assert.deepEqual(expected, compiler.compileHeaders(env, ast))

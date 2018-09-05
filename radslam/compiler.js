@@ -1,9 +1,9 @@
-const {parser, types, getType, is, assertIs, baseOperatorInverseMap} = require('./parser')
+const {fullParser, types, is, assertIs, baseOperatorInverseMap} = require('./parser')
 const {errors, asserters, log} = require('./errorsAndAsserters')
 
 const R = require('ramda')
 
-const unnamedRelation = {[types.relation]: null}
+const unnamedRelation = {type: types.relation}
 
 /**
  * Given a list of values, return the list, but with the
@@ -14,7 +14,7 @@ const unnamedRelation = {[types.relation]: null}
 const splatSets = list=>{
     let listOut = []
     for(let o of list){
-        if(is.set(o)) listOut = listOut.concat(o[types.set])
+        if(is.set(o)) listOut = listOut.concat(o.value)
         else listOut.push(o)
     }
     return listOut
@@ -44,8 +44,8 @@ const determineHeaders = {
  * TODO: maybe implement cross product.
  */
 const determineSet = {
-    union: (set, ...rest)=>R.union(set[types.set], rest),
-    difference: (set, ...rest)=>R.difference(set[types.set], rest),
+    union: (set, ...rest)=>R.union(set.value, rest),
+    difference: (set, ...rest)=>R.difference(set.value, rest),
 }
 
 /**
@@ -61,7 +61,7 @@ const doRelationHeaderOperations = (env, firstRelation, lines)=>{
             line = expanded.line
             env = addRegistration(env, expanded.registration)
         }
-        let [operator, ...args] = line[types.line]
+        let [operator, ...args] = line.value
 
         let finalSection
         if(args.length > 0 && is.section(R.last(args))) finalSection = args.pop()
@@ -75,7 +75,7 @@ const doRelationHeaderOperations = (env, firstRelation, lines)=>{
 
         let newHeaders
         if(is.baseOperator(operator)){
-            const operatorName = baseOperatorInverseMap[operator[types.operator]]
+            const operatorName = baseOperatorInverseMap[operator.value]
             asserters.assertArgs[operatorName](...args)
             newHeaders = {headers: determineHeaders[operatorName](...args)}
         } else {
@@ -108,15 +108,15 @@ const doSetOperations = (env, firstSet, lines)=>{
     const accum = [firstSet]
     for(let line of lines){
         if(is.section(line)) continue  // these will be handled below
-        let [operator, ...args] = line[types.line]
+        let [operator, ...args] = line.value
         // resolve args and splat sets
         args = splatSets(args.map(o=>resolve(env, o))).map(o=>resolve(env, o))
         // prepend args with the previous value
         args = [R.last(accum)].concat(args)
 
         assertIs.baseOperator(operator)
-        const operatorName = baseOperatorInverseMap[operator[types.operator]]
-        const newSet = {[types.set]: determineSet[operatorName](...args)}
+        const operatorName = baseOperatorInverseMap[operator.value]
+        const newSet = {type: types.set, value: determineSet[operatorName](...args)}
         accum.push(newSet)
     }
     return R.merge(R.last(accum), {accum: R.init(accum)})
@@ -133,15 +133,15 @@ const emptyEnv = {relations: {}, vars: {}, operators: {}}
  */
 const resolve = (env, o)=>{
     if(!R.isNil(o.headers)) return o  // already been resolved
-    if(is.var(o)) return env.vars[o[types.var]] || (()=>{throw new errors.ScopeError(o, env)})()
-    if(is.relation(o)) return env.relations[o[types.relation]] || (()=>{throw new errors.ScopeError(o, env)})()
-    if(is.operator(o)) return env.operators[o[types.operator]] || (()=>{throw new errors.ScopeError(o, env)})()
-    if(is.relation_literal(o)) return R.merge(unnamedRelation, {headers: o[types.relation_literal][0][types.rl_headers]})
+    if(is.var(o)) return env.vars[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
+    if(is.relation(o)) return env.relations[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
+    if(is.operator(o)) return env.operators[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
+    if(is.relation_literal(o)) return R.merge(unnamedRelation, {headers: o.value[0].value})
     if(is.all_headers(o)){
-        const relation = {[types.relation]: R.init(o[types.all_headers])}
-        return {[types.set]: resolve(env, relation).headers}
+        const relation = {type: types.relation, value: R.init(o.value)}
+        return {type: types.set, value: resolve(env, relation).headers}
     }
-    if(is.set(o)) return {[types.set]: o[types.set].map(o=>resolve(env, o))}
+    if(is.set(o)) return {type: types.set, value: o.value.map(o=>resolve(env, o))}
     if(is.template(o)) return populateTemplate(env, o)
     return o
 }
@@ -156,15 +156,15 @@ const addRegistration = (env, registration)=>{
  */
 const registerDefinition = (env, definition)=>{
     if(is.def(definition)){
-        const [operator, ...args] = definition[types.def]  // args here is [arg, arg ... section]
+        const [operator, ...args] = definition.value  // args here is [arg, arg ... section]
         const nestedOperator = R.merge(operator, {operator_section: args.pop(), args: args})
-        return {operators: {[operator[types.operator]]: nestedOperator}}
+        return {operators: {[operator.value]: nestedOperator}}
     }
     // else is.let(definition)
-    const [let_, section] = definition[types.let]
-    if(is.var(let_)) return {vars: {[let_[types.var]]: compileHeaders(env, section)}}
+    const [let_, section] = definition.value
+    if(is.var(let_)) return {vars: {[let_.value]: compileHeaders(env, section)}}
     // else is.relation(let_)
-    return {relations: {[let_[types.relation]]: compileHeaders(env, section)}}
+    return {relations: {[let_.value]: compileHeaders(env, section)}}
 }
 /**
  * Return a `registration` that can be deep merged with an
@@ -172,9 +172,9 @@ const registerDefinition = (env, definition)=>{
  * to add an arg.
  */
 const registerOperatorArg = (operatorArg, arg)=>{
-    if(is.var(operatorArg)) return {vars: {[operatorArg[types.var]]: arg}}
+    if(is.var(operatorArg)) return {vars: {[operatorArg.value]: arg}}
     // else is.relation(operatorArg)
-    return {relations: {[operatorArg[types.relation]]: arg}}
+    return {relations: {[operatorArg.value]: arg}}
 }
 let macroOperatorIndex = 0
 /**
@@ -185,24 +185,25 @@ let macroOperatorIndex = 0
  *   parser fails here.
  */
 const expandAndRegisterMacro = (env, line)=>{
-    const [headers, template] = line[types.map_macro]
+    const [headers, template] = line.value
     const set = assertIs.set(resolve(env, headers))
-    const resolved = set[types.set]
+    const resolved = set.value
         .map(value=>resolve(R.merge(env, {vars: {_: value}}), template))
     const lines = resolved
-        .map(parser)
+        .map(fullParser)
         .map(asserters.assertMacroShape)
-        .map(o=>o[types.section][0])
+        .map(o=>o.value[0])  // o.type === section
 
     const operatorName = `macroOperator${macroOperatorIndex}`
     macroOperatorIndex += 1
 
-    const operatorLine = {[types.line]: [{[types.operator]: operatorName}]}
+    const operatorLine = {type: types.line, value: [{type: types.operator, value: operatorName}]}
     const registration = {operators: {[operatorName]: {
-        [types.operator]: operatorName,
-        operator_section: {[types.section]: [{[types.line]:
-            [{[types.relation]: 'relation:'}]}].concat(lines)},
-        args: [{[types.relation]: 'relation:'}],
+        type: types.operator,
+        value: operatorName,
+        operator_section: {type: types.section, value: [{type: types.line, value:
+            [{type: types.relation, value: 'relation:'}]}].concat(lines)},
+        args: [{type: types.relation, value: 'relation:'}],
     }}}
     return {line: operatorLine, registration: registration}
 }
@@ -212,12 +213,12 @@ const expandAndRegisterMacro = (env, line)=>{
  */
 const populateTemplate = (env, o)=>{
     let out = ''
-    let string = o[types.template].slice(1, -1)
+    let string = o.value.slice(1, -1)
     for(let match of string.match(/{{[a-zA-Z0-9\.\:_]+}}/g)){
         const varName = match.slice(2, -2)
         const index = string.search(match)
         out += string.slice(0, index)  // the head
-        out += toString(resolve(env, {[types.var]: varName}))
+        out += toString(resolve(env, {type: types.var, value: varName}))
         string = string.slice(index + match.length)  // the tail
     }
     return out + string
@@ -225,8 +226,8 @@ const populateTemplate = (env, o)=>{
 
 const compileHeaders = (env, section)=>{
     asserters.assertSectionShape(section)
-    const defs = section[types.section].filter(is.letOrDef)
-    const body = section[types.section].filter(R.complement(is.letOrDef))
+    const defs = section.value.filter(is.letOrDef)
+    const body = section.value.filter(R.complement(is.letOrDef))
 
     let envWithDefs = env
     for(let definition of defs){
@@ -234,14 +235,14 @@ const compileHeaders = (env, section)=>{
     }
 
     let [first, ...lines] = body
-    if(is.singleRelationOrVarOrSet(first)) first = first[types.line][0]
+    if(is.singleRelationOrVarOrSet(first)) first = first.value[0]  // first.type == line
 
     if(is.relation(first) || is.relation_literal(first)){
         return doRelationHeaderOperations(envWithDefs, resolve(envWithDefs, first), lines)
     } else if(is.var(first) || is.set(first) || is.all_headers(first)){
         return doSetOperations(envWithDefs, resolve(envWithDefs, first), lines)
     } else if(is.aggregator(first)){
-        return {aggregators: null, headers: body.map(o=>o[types.aggregator][0])}
+        return {aggregators: null, headers: body.map(o=>o.value[0])}
     }
 }
 
@@ -250,16 +251,16 @@ const compileTopLevelHeaders = (env, ast)=>{
 }
 
 const astToValue = {
-    [types.bool]: node=>JSON.parse(node[types.bool]),
-    [types.null]: node=>JSON.parse(node[types.null]),
-    [types.number]: node=>JSON.parse(node[types.number]),
-    [types.string]: node=>JSON.parse(node[types.string]),
-    [types.header]: node=>node[types.header].slice(1),
-    [types.relation]: node=>node[types.relation].slice(-1),
+    [types.bool]: node=>JSON.parse(node.value),
+    [types.null]: node=>JSON.parse(node.value),
+    [types.number]: node=>JSON.parse(node.value),
+    [types.string]: node=>JSON.parse(node.value),
+    [types.header]: node=>node.value.slice(1),
+    [types.relation]: node=>node.value.slice(-1),
     // TODO: implement these
     // [types.decimal]: node=>JSON.parse(node[types.decimal]),
     // [types.datetime]: node=>JSON.parse(node[types.datetime]),
 }
-const toString = o=>astToValue[getType(o)](o)
+const toString = o=>astToValue[o.type](o)
 
 module.exports = {compileHeaders, emptyEnv}

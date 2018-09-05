@@ -1,4 +1,4 @@
-const {types, is, assertIs, getType, inspect, ParserError, TypeError, UnableToDetermineTypeError} = require('./parser')
+const {is, assertIs, inspect, ParserError, TypeError, UnableToDetermineTypeError} = require('./parser')
 
 const R = require('ramda')
 const log = o=>console.log(inspect(o))
@@ -41,15 +41,15 @@ class NotImplemented extends Error {constructor(message) {
 }}
 
 const assertSectionShape = section=>{
-    if(R.isNil(section[types.section])) throw new ParserError()
-    if(is.aggregator(section[types.section][0])){
+    if(R.isNil(section.value)) throw new ParserError()
+    if(is.aggregator(section.value[0])){
         // if the first node is an aggregator, assert that the rest are
-        section[types.section].forEach(assertIs.aggregator)
+        section.value.forEach(assertIs.aggregator)
         return section
     }
-    const defs = section[types.section].filter(is.letOrDef)
-    const body = section[types.section].filter(R.complement(is.letOrDef))
-    if(!R.equals(section[types.section], [...defs, ...body])) throw new SectionOrderIncorrect(section)
+    const defs = section.value.filter(is.letOrDef)
+    const body = section.value.filter(R.complement(is.letOrDef))
+    if(!R.equals(section.value, [...defs, ...body])) throw new SectionOrderIncorrect(section)
     assertBodyShape(body)
     return section
 }
@@ -69,8 +69,8 @@ const assertBodyShape = body=>{
 
 const assertMacroShape = section=>{
     assertIs.section(section)
-    if(section[types.section].length != 1) throw new MacroLineNotSingleLine(section)
-    assertIs.operator(section[types.section][0][types.line][0])
+    if(section.value.length != 1) throw new MacroLineNotSingleLine(section)
+    assertIs.operator(section.value[0].value[0])
     return section
 }
 
@@ -116,7 +116,7 @@ const assertArgs = {
     group: (rel, ...headers_allAggregator)=>null, // assert none of the aggregator headers are in the headers
 }
 const assertOperatorArgsMatch = (operatorArgs, args)=>{
-    if(!R.equals(operatorArgs.map(getType), args.map(getType))) throw new OperatorArgsError(operatorArgs, args)
+    if(!R.equals(operatorArgs.map(o=>o.type), args.map(o=>o.type))) throw new OperatorArgsError(operatorArgs, args)
 }
 
 module.exports = {
