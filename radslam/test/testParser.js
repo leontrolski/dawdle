@@ -225,7 +225,47 @@ foo`
             {line: [{var: 'foo'}]}]}
         assert.deepEqual(expected, parser.parser(in_))
     })
+    it('should parse multirelation syntax', ()=>{
+        const in_ = `let oliver:
+    user:
+    > equals :name "oliver"
+    > one
+
+def AllUserJoins relation:
+    relation:
+    -[multirelation]-
+        -[basket basket_discount:
+            ]-join basket__discount:
+                -[discount discount:
+            -[purchase purchase:
+                -[product product:
+
+oliver:
+AllUserJoins
+`
+        const expected = {section:
+            [
+                {let: [{relation:'oliver:'}, {section: [
+                    {line: [{relation: 'user:' }]},
+                    {line: [{ operator: '>'}, {var: 'equals'}, {header: ':name'}, {string: '"oliver"'}]},
+                    {line: [{ operator: '>'}, {var: 'one'}]}]}]},
+                {def: [{operator: 'AllUserJoins' }, {relation: 'relation:'}, {section: [
+                    {line: [{ relation: 'relation:'}]},
+                    {line: [{operator: '-[multirelation]-'}, {section: [
+                        {multirelation_line: [{to_many: "-[basket"}, {relation: 'basket_discount:'}, {section: [
+                            {multirelation_line: [{to_one: "]-join"}, {relation: 'basket__discount:'}, {section: [
+                                {multirelation_line: [{to_many: "-[discount"}, {relation: "discount:"}]}]}]},
+                            {multirelation_line: [{to_many: "-[purchase"}, {relation: 'purchase:'}, { section: [
+                                {multirelation_line: [{to_many: "-[product"}, {relation: "product:"}]}]}]}]}]}]}]}]}]},
+              {line: [{relation: 'oliver:' }]},
+              {line: [{operator: 'AllUserJoins'}]}]}
+        assert.deepEqual(expected, parser.parser(in_))
+    })
 })
+
+
+
+
 xdescribe('parser.fullParser', ()=>{
     it('should parse two vars in a set with their positions', ()=>{
         const in_ = "[foo bar]"

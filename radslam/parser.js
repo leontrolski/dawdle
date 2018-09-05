@@ -2,25 +2,28 @@ const util = require('util')
 const ebnf = require('ebnf')
 const jsYaml = require('js-yaml')
 const R = require('ramda')
-const inspect = o=>util.inspect(o, {depth: 6, colors: true, breakLength: 100})
+const inspect = o=>util.inspect(o, {depth: 16, colors: true, breakLength: 100})
 
 // Capital words are kept but passed through, must resolve to one named token
 const grammar = `
-section              ::= (let | def)* (relation_literal | line | aggregator | map_macro)+
+section              ::= (let | def)* (relation_literal | multirelation_line | line | aggregator | map_macro)+
 Block                ::= NEWLINE INDENT section DE_INDENT
 let                  ::= SPACE* "let" SPACE (relation | var) Block END
 def                  ::= SPACE* "def" SPACE operator (SPACE (relation | var))* Block END
 line                 ::= SPACE* ((operator (SPACE Value)*) | Value) ((Block END?) | END)
 aggregator           ::= SPACE* header SPACE var (SPACE Value)* END
+multirelation_line   ::= SPACE* (to_many | to_one) SPACE relation ((Block END?) | END)
 map_macro            ::= SPACE* "(" "map" SPACE Value ")" SPACE template END
 
 Value                ::= Literal | all_headers | relation | header | named_value | var | set
 all_headers          ::= NAME ":*"
 relation             ::= NAME ":"
+to_many              ::= "-[" NAME
+to_one               ::= "]-" NAME
 header               ::= ":" NAME
 named_value          ::= var "=" Value
 var                  ::= NAME
-operator             ::= CAPITALISED_NAME | ">" | "v" | "^" | "X" | "U" | "-" | "J" | "G"
+operator             ::= CAPITALISED_NAME | "-[multirelation]-" | ">" | "v" | "^" | "X" | "U" | "-" | "J" | "G"
 set                  ::= "[" (Value (SPACE Value)*)* "]"
 
 relation_literal     ::= rl_headers (SPACE* RULE END rl_row+)?
@@ -150,6 +153,7 @@ const types = {
     def: 'def',
     line: 'line',
     aggregator: 'aggregator',
+    multirelation_line: 'multirelation_line',
     map_macro: 'map_macro',
 
     all_headers: 'all_headers',
@@ -180,6 +184,7 @@ const multiple = [
     types.def,
     types.line,
     types.aggregator,
+    types.multirelation_line,
     types.map_macro,
 
     types.named_value,

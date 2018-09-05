@@ -248,8 +248,8 @@ const astToValue = {
     [types.null]: node=>JSON.parse(node.value),
     [types.number]: node=>JSON.parse(node.value),
     [types.string]: node=>JSON.parse(node.value),
-    [types.header]: node=>node.value.slice(1),
-    [types.relation]: node=>node.value.slice(-1),
+    [types.header]: node=>node.value,
+    [types.relation]: node=>node.value,
     // TODO: implement these
     // [types.decimal]: node=>JSON.parse(node[types.decimal]),
     // [types.datetime]: node=>JSON.parse(node[types.datetime]),

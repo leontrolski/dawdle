@@ -145,6 +145,18 @@ TODO
 - what about update/insert etc
 
 
+def AllUserJoins relation:
+    relation:
+    -[multirelation]-
+        -[basket basket_discount:
+            ]-join basket__discount:
+                -[discount discount:
+            -[purchase purchase:
+                -[product product:
+
+user:
+AllUserJoins
+
 df:
     a | b | c | d
     ---------------

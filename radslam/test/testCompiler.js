@@ -122,7 +122,7 @@ JoinClone
     it('should expand map macros', ()=>{
         const env = {vars: {fake_function: {function: ()=>null}}}
         const in_ = `| :a |
-(map [:foo :bar]) \`^ :{{_}} fake_function\``
+(map [:foo :bar]) \`^ {{_}} fake_function\``
         const ast = parser.fullParser(in_)
         const expected = {
             type: 'relation',
@@ -156,7 +156,7 @@ JoinClone
         right:
         > first
         v just_right_headers
-        (map just_right_headers) \`^ :{{_}} make_null\`
+        (map just_right_headers) \`^ {{_}} make_null\`
     U joined:
 
 let not_foo
