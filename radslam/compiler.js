@@ -124,7 +124,7 @@ const doSetOperations = (env, firstSet, lines)=>{
 
 // functions to register and resolve from an env
 
-const emptyEnv = {relations: {}, vars: {}, operators: {}}
+const emptyEnv = {vars: {}, operators: {}}
 /**
  * Given an resolve a variable in a given scope, else
  * return the object itself.
@@ -133,8 +133,7 @@ const emptyEnv = {relations: {}, vars: {}, operators: {}}
  */
 const resolve = (env, o)=>{
     if(!R.isNil(o.headers)) return o  // already been resolved
-    if(is.var(o)) return env.vars[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
-    if(is.relation(o)) return env.relations[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
+    if(is.var(o) || is.relation(o)) return env.vars[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
     if(is.operator(o)) return env.operators[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
     if(is.relation_literal(o)) return R.merge(unnamedRelation, {headers: o.value[0].value})
     if(is.all_headers(o)){
@@ -162,9 +161,7 @@ const registerDefinition = (env, definition)=>{
     }
     // else is.let(definition)
     const [let_, section] = definition.value
-    if(is.var(let_)) return {vars: {[let_.value]: compileHeaders(env, section)}}
-    // else is.relation(let_)
-    return {relations: {[let_.value]: compileHeaders(env, section)}}
+    return {vars: {[let_.value]: compileHeaders(env, section)}}
 }
 /**
  * Return a `registration` that can be deep merged with an
@@ -172,9 +169,7 @@ const registerDefinition = (env, definition)=>{
  * to add an arg.
  */
 const registerOperatorArg = (operatorArg, arg)=>{
-    if(is.var(operatorArg)) return {vars: {[operatorArg.value]: arg}}
-    // else is.relation(operatorArg)
-    return {relations: {[operatorArg.value]: arg}}
+    return {vars: {[operatorArg.value]: arg}}
 }
 let macroOperatorIndex = 0
 /**
