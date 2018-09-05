@@ -88,7 +88,7 @@ const doRelationHeaderOperations = (env, firstRelation, lines)=>{
             }
             newHeaders = compileHeaders(operatorEnv, operator_.operator_section)
         }
-        const newValue = R.merge(unnamedRelation, newHeaders)
+        const newValue = {type: types.relation, headers: newHeaders}
         accum.push(newValue)
     }
     return R.merge(R.last(accum), {accum: R.init(accum)})
