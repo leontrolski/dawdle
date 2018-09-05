@@ -33,7 +33,7 @@ const typeStringMap = {
             section = args.pop()
             return `${o[types.line].map(o=>nodeToString(o, i)).join(' ')}\n${nodeToString(section, i + 1)}`
         }
-        return o[types.line].map(o=>nodeToString(o, i)).join(' ')
+        return args.map(o=>nodeToString(o, i)).join(' ')
     },
     aggregator: (o, i)=>o[types.aggregator].map(o=>nodeToString(o, i)).join(' '),
     map_macro: (o, i)=>{

@@ -252,11 +252,11 @@ AllUserJoins
                 {def: [{operator: 'AllUserJoins' }, {relation: 'relation:'}, {section: [
                     {line: [{ relation: 'relation:'}]},
                     {line: [{operator: '-[multirelation]-'}, {section: [
-                        {multirelation_line: [{to_many: "-[basket"}, {relation: 'basket_discount:'}, {section: [
-                            {multirelation_line: [{to_one: "]-join"}, {relation: 'basket__discount:'}, {section: [
-                                {multirelation_line: [{to_many: "-[discount"}, {relation: "discount:"}]}]}]},
-                            {multirelation_line: [{to_many: "-[purchase"}, {relation: 'purchase:'}, { section: [
-                                {multirelation_line: [{to_many: "-[product"}, {relation: "product:"}]}]}]}]}]}]}]}]}]},
+                        {line: [{to_many: "-[basket"}, {relation: 'basket_discount:'}, {section: [
+                            {line: [{to_one: "]-join"}, {relation: 'basket__discount:'}, {section: [
+                                {line: [{to_many: "-[discount"}, {relation: "discount:"}]}]}]},
+                            {line: [{to_many: "-[purchase"}, {relation: 'purchase:'}, { section: [
+                                {line: [{to_many: "-[product"}, {relation: "product:"}]}]}]}]}]}]}]}]}]},
               {line: [{relation: 'oliver:' }]},
               {line: [{operator: 'AllUserJoins'}]}]}
         assert.deepEqual(expected, parser.parser(in_))

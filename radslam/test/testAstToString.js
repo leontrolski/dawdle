@@ -79,7 +79,10 @@ Custom other_other_rel:*
             },
             {"line": [{"relation": "g:"}]},
             {"line": [{"operator": "G"}, {"header": ":foo"}, {"section": [
-                {"aggregator": [{"header": ":bar"}, {"var": "count"}, {"header": ":bar_id"}]}]}]}]}
+                {"aggregator": [{"header": ":bar"}, {"var": "count"}, {"header": ":bar_id"}]}]}]},
+            {"line": [{"operator": "-[multirelation]-"}, {"section": [
+                {"line": [{"to_many": "-[h"}, {"relation": "h:"}]}]}]},
+        ]}
         const expected = `let a:
     let b:
         5
@@ -96,7 +99,9 @@ let e:
 
 g:
 G :foo
-    :bar count :bar_id`
+    :bar count :bar_id
+-[multirelation]-
+    -[h h:`
         assert.deepEqual(expected, astToString.astToString(in_))
     })
     it('should stringify a relation literal', ()=>{
