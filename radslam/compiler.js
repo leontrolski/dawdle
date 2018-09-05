@@ -56,8 +56,8 @@ const doRelationHeaderOperations = (env, firstRelation, lines)=>{
     for(let line of lines){
         if(is.map_macro(line)){
             const expanded = expandAndRegisterMacro(env, line)
-            line = expanded.line
-            env = addRegistration(env, expanded.registration)
+            {line, registration} = expanded
+            env = addRegistration(env, registration)
         }
         let [operator, ...args] = line.value
 
