@@ -56,19 +56,19 @@ const doRelationHeaderOperations = (env, firstRelation, lines)=>{
     for(let line of lines){
         if(is.map_macro(line)){
             const expanded = expandAndRegisterMacro(env, line)
-            {line, registration} = expanded
-            env = addRegistration(env, registration)
+            line = expanded.line
+            env = addRegistration(env, expanded.registration)
         }
         let [operator, ...args] = line.value
 
-        let finalSection
+        let finalSection  // if the line ends with a section
         if(args.length > 0 && is.section(R.last(args))) finalSection = args.pop()
 
         // resolve args and splat sets
         args = splatSets(args.map(o=>resolve(env, o))).map(o=>resolve(env, o))
         // prepend args with the previous value
         args = [R.last(accum)].concat(args)
-        // append next section to args if it exists
+        // append final section to args if it exists
         if(!R.isNil(finalSection)) args.push(compileHeaders(env, finalSection))
 
         let newHeaders
@@ -194,9 +194,13 @@ const expandAndRegisterMacro = (env, line)=>{
     const registration = {operators: {[operatorName]: {
         type: types.operator,
         value: operatorName,
-        operator_section: {type: types.section, value: [{type: types.line, value:
-            [{type: types.relation, value: 'relation:'}]}].concat(lines)},
         args: [{type: types.relation, value: 'relation:'}],
+        operator_section: {
+            type: types.section,
+            value: [
+                {type: types.line, value: [{type: types.relation, value: 'relation:'}]}
+            ].concat(lines)
+        },
     }}}
     return {line: operatorLine, registration: registration}
 }
@@ -237,10 +241,6 @@ const compileHeaders = (env, section)=>{
     } else if(is.aggregator(first)){
         return {aggregators: null, headers: body.map(o=>o.value[0])}
     }
-}
-
-const compileTopLevelHeaders = (env, ast)=>{
-
 }
 
 const astToValue = {
