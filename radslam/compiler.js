@@ -95,14 +95,14 @@ const resolveSet = (env, o)=>{
     if(is.var(o)) return env.lets[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
     if(is.all_headers(o)){
         const relation = {type: types.relation, value: R.init(o.value)}
-        return {type: types.set, value: resolveHeaders(env, relation).headers}
+        return {type: types.set, value: resolveHeaders(env, relation)}
     }
     throw new errors.ScopeError(o, env)
 }
 const resolveHeaders = (env, o)=>{
-    if(!R.isNil(o.headers)) return o  // already been resolved
-    if(is.relation(o)) return env.lets[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
-    if(is.relation_literal(o)) return {type: types.relation, headers: o.value[0].value}
+    if(!R.isNil(o.headers)) return o.headers  // already been resolved
+    if(is.relation(o)) return env.lets[o.value].headers || (()=>{throw new errors.ScopeError(o, env)})()
+    if(is.relation_literal(o)) return o.value[0].value
     throw new errors.ScopeError(o, env)
 }
 
@@ -111,20 +111,7 @@ const addRegistration = (env, registration)=>{
     const name = Object.keys(registration[type])[0]
     return R.assocPath([type, name], registration[type][name], env)
 }
-/**
- * Return a `registration` that can be deep merged with an
- * existing `env` to add a definition (of type def or let).
- */
-const registerDefinition = (env, definition, compiler)=>{
-    if(is.def(definition)){
-        const [operator, ...args] = definition.value  // args here is [arg, arg ... section]
-        const nestedOperator = R.merge(operator, {operator_section: args.pop(), args: args})
-        return {defs: {[operator.value]: nestedOperator}}
-    }
-    // else is.let(definition)
-    const [let_, section] = definition.value
-    return {lets: {[let_.value]: compiler(env, section)}}
-}
+
 /**
  * Return a `registration` that can be deep merged with an
  * existing `operatorEnv` (an `env` specifically for an operator)
@@ -186,13 +173,12 @@ const populateTemplate = (env, o)=>{
     return out + string
 }
 
-const reflectAst = (env, section)=>{
+const compiler = (env, section)=>{
     asserters.assertSectionShape(section)
     const defs = section.value.filter(is.letOrDef)
     const body = section.value.filter(R.complement(is.letOrDef))
 
     const defsWith = []
-    const linesWith = []
 
     for(let definition of defs){
         // first = operator | relation | var
@@ -204,78 +190,86 @@ const reflectAst = (env, section)=>{
         let info, def
         if(is.def(definition)){
             info = {args, section}
-            defsWith.push(R.merge(definition, info))
+            defsWith.push(definition)
             // old bit
             info = R.merge(first, {operator_section: info.section, args: info.args})
             def = {defs: {[first.value]: info}}
         }
         else{  // is.let(definition)
-            preInfo = reflectAst(env, section)
-            info = {headers: preInfo.headers}
-            defsWith.push(R.merge(definition, info))
+            info = compiler(env, section)
+            defsWith.push(info)
             // old bit
-            info = preInfo
             def = {lets: {[first.value]: info}}
         }
         env = addRegistration(env, def)
     }
-    // log(defsWith)
 
-    let [first, ...lines] = body
-    if(is.singleRelationOrVarOrSet(first)) first = first.value[0]  // first.type == line
+    const [firstLine, ...lines] = body
+    const first = is.line(firstLine)? firstLine.value[0] : firstLine
 
     if(is.relation(first) || is.relation_literal(first)){
-        const firstRelation = resolveHeaders(env, first)
-        const toOld = o=>R.merge({type: o.compiledType, headers: o.headers}, o.accum? {accum: o.accum} : {})
-        linesWith.push(R.mergeAll([first, {headers: firstRelation.headers}, {compiledType: types.relation}]))
-        for(let line of lines){
-            if(is.map_macro(line)){
-                const expanded = expandAndRegisterMacro(env, line)
-                line = expanded.line
-                env = addRegistration(env, expanded.registration)
-            }
-            let [operator, ...args] = line.value
-
-            let finalSection  // if the line ends with a section
-            if(args.length > 0 && is.section(R.last(args))) finalSection = args.pop()
-
-            // resolve args and splat sets
-            const resolveAll = o=>{
-                if(is.relation(o)) return resolveHeaders(env, o)
-                if(is.set(o) || is.var(o) || is.all_headers(o)) return resolveSet(env, o)
-                return resolveValue(env, o)
-            }
-            args = splatSets(args.map(resolveAll)).map(resolveAll)
-            // prepend args with the previous value
-            args = [toOld(R.last(linesWith))].concat(args)
-            // append final section to args if it exists
-            if(!R.isNil(finalSection)) args.push(reflectAst(env, finalSection))
-
-            let newHeaders
-            if(is.baseOperator(operator)){
-                const operatorName = baseOperatorInverseMap[operator.value]
-                asserters.assertArgs[operatorName](...args)
-                newHeaders = {headers: determineHeaders[operatorName](...args)}
-            } else {
-                const operator_ = resolveValue(env, operator)
-                asserters.assertOperatorArgsMatch(operator_.args, args)
-                // contruct env for operator, then compile its section with it
-                let operatorEnv = env
-                for(let [operatorArg, arg] of R.zip(operator_.args, args)){
-                    operatorEnv = addRegistration(operatorEnv, registerOperatorArg(operatorArg, arg))
-                }
-                newHeaders = reflectAst(operatorEnv, operator_.operator_section)
-                log(newHeaders)
-            }
-            const newValue = R.merge({type: types.relation}, newHeaders)
-            linesWith.push(R.mergeAll([line, newHeaders, {compiledType: types.relation}]))
-        }
-        return R.merge(toOld(R.last(linesWith)), {accum: R.init(linesWith).map(toOld)})
+        return doRelationHeaderOperations(env, body, defsWith)
     } else if(is.var(first) || is.set(first) || is.all_headers(first)){
         return doSetOperations(env, resolveSet(env, first), lines)
     } else if(is.aggregator(first)){
         return {aggregators: null, headers: body.map(o=>o.value[0])}
     }
+}
+
+const doRelationHeaderOperations = (env, body, defsWith)=>{
+    const [firstLine, ...lines] = body
+    let headers
+    headers = resolveHeaders(env, is.line(firstLine)? firstLine.value[0] : firstLine)
+    const linesWith = [R.merge(firstLine, {headers: headers})]
+
+    for(let line of lines){
+        if(is.map_macro(line)){
+            const expanded = expandAndRegisterMacro(env, line)
+            line = expanded.line
+            env = addRegistration(env, expanded.registration)
+        }
+        let [operator, ...args] = line.value
+
+        let finalSection  // if the line ends with a section
+        if(args.length > 0 && is.section(R.last(args))) finalSection = args.pop()
+
+        // resolve args and splat sets
+        const resolveAll = o=>{
+            if(is.relation(o)) return {headers: resolveHeaders(env, o)}
+            if(is.set(o) || is.var(o) || is.all_headers(o)) return resolveSet(env, o)
+            return resolveValue(env, o)
+        }
+        args = splatSets(args.map(resolveAll)).map(resolveAll)
+        // prepend args with the previous value
+        args = [{type: types.relation, headers: headers}].concat(args)
+        // append final section to args if it exists
+        if(!R.isNil(finalSection)) args.push(compiler(env, finalSection))
+
+        if(is.baseOperator(operator)){
+            const operatorName = baseOperatorInverseMap[operator.value]
+            asserters.assertArgs[operatorName](...args)
+            headers = determineHeaders[operatorName](...args)
+        } else {
+            const operator_ = resolveValue(env, operator)
+            // TODO: make this work again
+            // asserters.assertOperatorArgsMatch(operator_.args, args)
+            // contruct env for operator, then compile its section with it
+            let operatorEnv = env
+            for(let [operatorArg, arg] of R.zip(operator_.args, args)){
+                operatorEnv = addRegistration(operatorEnv, registerOperatorArg(operatorArg, arg))
+            }
+            headers = compiler(operatorEnv, operator_.operator_section).headers
+        }
+        linesWith.push(R.merge(
+            line,
+            {headers: headers},
+        ))
+    }
+    const sectionWith = R.merge(section, {value: defsWith.concat(linesWith)})
+    return R.merge(
+        sectionWith,
+        {headers: headers},
+    )
 }
 
 const astToValue = {
@@ -291,4 +285,4 @@ const astToValue = {
 }
 const toString = o=>astToValue[o.type](o)
 
-module.exports = {compileHeaders: reflectAst, reflectAst: reflectAst, emptyEnv: emptyEnv}
+module.exports = {compiler, emptyEnv}

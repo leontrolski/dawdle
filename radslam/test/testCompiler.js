@@ -215,22 +215,22 @@ Outer
                 },
             ]
         }
-        assert.deepEqual(expected, compiler.compileHeaders(env, ast))
+        console.log(parser.inspect(compiler.compiler(env, ast)))
+        // assert.deepEqual(big, drop(compiler.compileHeaders(env, ast)))
+        // assert.deepEqual(expected, compiler.compileHeaders(env, ast))
     })
-    it('should reflect the shape of the ast', ()=>{
+    it('fooo', ()=>{
         const env = compiler.emptyEnv
         const in_ = `let some_rel:
     | :a | :b |
+    v :a
 
 some_rel:
 `
         const ast = parser.fullParser(in_)
-        // console.log(parser.inspect(ast))
-        const expected = {
-            type: 'relation',
-            headers: [{type: 'header', value: ':a'}, {type: 'header', value: ':b'}],
-            accum: []
-        }
-        assert.deepEqual(expected, compiler.reflectAst(env, ast))
+        console.log(parser.inspect(
+            compiler.compileHeaders(env, ast)
+        ))
+        // assert.deepEqual(expected, compiler.compileHeaders(env, ast))
     })
 })

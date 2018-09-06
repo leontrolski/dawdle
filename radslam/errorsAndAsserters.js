@@ -116,7 +116,7 @@ const assertArgs = {
     group: (rel, ...headers_allAggregator)=>null, // assert none of the aggregator headers are in the headers
 }
 const assertOperatorArgsMatch = (operatorArgs, args)=>{
-    if(!R.equals(operatorArgs.map(o=>o.type), args.map(o=>o.type))) throw new OperatorArgsError(operatorArgs, args)
+    if(!R.equals(operatorArgs.map(o=>o.type), args.map(o=>o.compiledType))) throw new OperatorArgsError(operatorArgs, args)
 }
 
 module.exports = {
