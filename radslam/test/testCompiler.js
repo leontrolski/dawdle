@@ -65,7 +65,7 @@ U [2 3 4]
         assert.deepEqual(expected, compiler.compileHeaders(env, ast))
     })
     it('should handle base operators at each step on a relation', ()=>{
-        const env = {vars: {fake_function: {function: ()=>null}}}
+        const env = {lets: {fake_function: {function: ()=>null}}}
         const in_ = `| :a | :b | :c |
 J
     | :d | :a |
@@ -120,7 +120,7 @@ JoinClone
         assert.deepEqual(expected, compiler.compileHeaders(env, ast))
     })
     it('should expand map macros', ()=>{
-        const env = {vars: {fake_function: {function: ()=>null}}}
+        const env = {lets: {fake_function: {function: ()=>null}}}
         const in_ = `| :a |
 (map [:foo :bar]) \`^ {{_}} fake_function\``
         const ast = parser.fullParser(in_)
@@ -134,7 +134,7 @@ JoinClone
         assert.deepEqual(expected, compiler.compileHeaders(env, ast))
     })
     it('should do a load of nested stuff', ()=>{
-        const env = {vars: {
+        const env = {lets: {
             make_null: {function: (row, relation, ..._)=>({type: 'null', value: 'null'})},
             first: {function: (row, relation, ..._)=>relation.rows[0]},
             value: {function: (row, relation, value)=>value},
@@ -216,5 +216,21 @@ Outer
             ]
         }
         assert.deepEqual(expected, compiler.compileHeaders(env, ast))
+    })
+    it('should reflect the shape of the ast', ()=>{
+        const env = compiler.emptyEnv
+        const in_ = `let some_rel:
+    | :a | :b |
+
+some_rel:
+`
+        const ast = parser.fullParser(in_)
+        // console.log(parser.inspect(ast))
+        const expected = {
+            type: 'relation',
+            headers: [{type: 'header', value: ':a'}, {type: 'header', value: ':b'}],
+            accum: []
+        }
+        assert.deepEqual(expected, compiler.reflectAst(env, ast))
     })
 })

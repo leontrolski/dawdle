@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "test": "mocha",
-    "parse": "node index.js"
+    "parse": "node index.js",
+    "strip-color": "strip-ansi"
   },
   "author": "ojhrussell@gmail.com",
   "license": "MIT",
@@ -15,6 +16,7 @@
     "ebnf": "^1.6.2",
     "js-yaml": "^3.12.0",
     "mocha": "^5.2.0",
-    "ramda": "^0.25.0"
+    "ramda": "^0.25.0",
+    "strip-ansi-cli": "^2.0.0"
   }
 }

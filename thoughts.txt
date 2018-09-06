@@ -128,14 +128,13 @@ Design choices:
 
 TODO
 - have compiled shape relfect AST
-- add -- comments to parser
-- add multirelations
+- add // comments to parser
 
-- allow vars called > < = etc
 - allow `let` for types other than sets and relations
 
 - generate html from ast
 - handle named vars
+- allow vars called > < = etc..?
 - write more comprehensive tests
 - finish off `doSetOperations`
 - remove offset malarkey in parser
@@ -144,18 +143,6 @@ TODO
 - think about the join problem more..
 - what about update/insert etc
 
-
-def AllUserJoins relation:
-    relation:
-    -[multirelation]-
-        -[basket basket_discount:
-            ]-join basket__discount:
-                -[discount discount:
-            -[purchase purchase:
-                -[product product:
-
-user:
-AllUserJoins
 
 df:
     a | b | c | d

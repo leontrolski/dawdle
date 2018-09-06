@@ -243,14 +243,13 @@ def AllUserJoins relation:
 oliver:
 AllUserJoins
 `
-        const expected = {section:
-            [
+        const expected = {section: [
                 {let: [{relation:'oliver:'}, {section: [
                     {line: [{relation: 'user:' }]},
-                    {line: [{ operator: '>'}, {var: 'equals'}, {header: ':name'}, {string: '"oliver"'}]},
-                    {line: [{ operator: '>'}, {var: 'one'}]}]}]},
+                    {line: [{operator: '>'}, {var: 'equals'}, {header: ':name'}, {string: '"oliver"'}]},
+                    {line: [{operator: '>'}, {var: 'one'}]}]}]},
                 {def: [{operator: 'AllUserJoins' }, {relation: 'relation:'}, {section: [
-                    {line: [{ relation: 'relation:'}]},
+                    {line: [{relation: 'relation:'}]},
                     {line: [{operator: '-[multirelation]-'}, {section: [
                         {line: [{to_many: "-[basket"}, {relation: 'basket_discount:'}, {section: [
                             {line: [{to_one: "]-join"}, {relation: 'basket__discount:'}, {section: [
