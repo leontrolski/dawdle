@@ -1,4 +1,5 @@
 const {fullParser, types, is, assertIs, baseOperatorInverseMap} = require('./parser')
+const {determineHeaders, determineSet} = require('./operations')
 const {errors, asserters, log} = require('./errorsAndAsserters')
 
 const R = require('ramda')
@@ -19,42 +20,13 @@ const splatSets = list=>{
     return listOut
 }
 
-/**
- * Map of base operator type to a function that determines
- * the headers for that type. Function signatures are useful
- * in that they specll out the operator's signature.
- */
-const determineHeaders = {
-    filter: (rel, func, ...values)=>rel.headers,
-    select: (rel, ...headers)=>headers,
-    extend: (rel, header, func, ...values)=>R.union(rel.headers, [header]),
-    cross: (rel, value)=>rel.headers.concat(value.headers),
-    union: (rel, value)=>rel.headers,
-    difference: (rel, value)=>rel.headers,
-    join: (rel, value)=>R.union(rel.headers, value.headers),
-    group: (rel, ...headers_aggregators)=>{
-        const [aggregators, ...headers] = headers_aggregators.reverse()
-        return headers.reverse().concat(aggregators.headers)
-    }
-}
-/**
- * Similar to determineHeaders, but for sets.
- *
- * TODO: maybe implement cross product.
- */
-const determineSet = {
-    union: (set, ...rest)=>R.union(set.setValues, rest),
-    difference: (set, ...rest)=>R.difference(set.setValues, rest),
-}
-
 // functions to register and resolve from an env
-
 const emptyEnv = {lets: {}, defs: {}}
 /**
  * Given an resolve a variable in a given scope, else
  * return the object itself.
  *
- * TODO: make reolving stuff more consistent.
+ * TODO: make resolving stuff more consistent.
  */
 const resolveValue = (env, o)=>{
     if(is.operator(o)) return env.defs[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
@@ -77,20 +49,10 @@ const resolveHeaders = (env, o)=>{
     if(is.relation_literal(o)) return o.value[0].value
     throw new errors.ScopeError(o, env)
 }
-
 const addRegistration = (env, registration)=>{
     const type = Object.keys(registration)[0]
     const name = Object.keys(registration[type])[0]
     return R.assocPath([type, name], registration[type][name], env)
-}
-
-/**
- * Return a `registration` that can be deep merged with an
- * existing `operatorEnv` (an `env` specifically for an operator)
- * to add an arg.
- */
-const registerOperatorArg = (operatorArg, arg)=>{
-    return {lets: {[operatorArg.value]: arg}}
 }
 let macroOperatorIndex = 0
 /**
@@ -128,7 +90,6 @@ const expandAndRegisterMacro = (env, line)=>{
     }}}
     return {line: operatorLine, registration: registration}
 }
-
 /**
  * Populate a template with resolved vars.
  */
@@ -149,8 +110,8 @@ const compiler = (env, section)=>{
     asserters.assertSectionShape(section)
     const defs = section.value.filter(is.letOrDef)
     const body = section.value.filter(R.complement(is.letOrDef))
+    const withCompiled = []  // we will append to this
 
-    const defsWith = []
     for(let definition of defs){
         const [first, ...argsAndSection] = definition.value
         const section = argsAndSection.pop()
@@ -159,14 +120,14 @@ const compiler = (env, section)=>{
         let info, def
         if(is.def(definition)){
             info = {args, section}
-            defsWith.push(definition)
+            withCompiled.push(definition)
             // old bit
             info = R.merge(first, {operator_section: info.section, args: info.args})
             def = {defs: {[first.value]: info}}
         }
         else{  // is.let(definition)
             info = compiler(env, section)
-            defsWith.push(info)
+            withCompiled.push(info)
             // old bit
             def = {lets: {[first.value]: info}}
         }
@@ -184,7 +145,7 @@ const compiler = (env, section)=>{
     if(isSet) setValues = resolveSet(env, first).setValues
     else headers = resolveHeaders(env, first)
 
-    const linesWith = [R.merge(firstLine, isSet? {setValues} : {headers})]
+    withCompiled.push(R.merge(firstLine, isSet? {setValues} : {headers}))
 
     for(let line of lines){
         if(is.map_macro(line)){
@@ -204,39 +165,35 @@ const compiler = (env, section)=>{
             return resolveValue(env, o)
         }
         args = splatSets(args.map(resolveAll)).map(resolveAll)
-
-
         // prepend args with the previous value
         if(isSet) args = [{type: types.set, setValues: setValues}].concat(args)
         else args = [{type: types.relation, headers: headers}].concat(args)
         // append final section to args if it exists
         if(!R.isNil(finalSection)) args.push(compiler(env, finalSection))
 
-
-        if(isSet){
-            assertIs.baseOperator(operator)
+        if(is.baseOperator(operator)){
             const operatorName = baseOperatorInverseMap[operator.value]
-            setValues = determineSet[operatorName](...args)
+            // TODO: make this work again
+            // asserters.assertArgs[operatorName](...args)
+            if(isSet) setValues = determineSet[operatorName](...args)
+            else headers = determineHeaders[operatorName](...args)
         } else {
-            if(is.baseOperator(operator)){
-                const operatorName = baseOperatorInverseMap[operator.value]
-                asserters.assertArgs[operatorName](...args)
-                headers = determineHeaders[operatorName](...args)
-            } else {
-                const operator_ = resolveValue(env, operator)
-                // TODO: make this work again
-                // asserters.assertOperatorArgsMatch(operator_.args, args)
-                // contruct env for operator, then compile its section with it
-                let operatorEnv = env
-                for(let [operatorArg, arg] of R.zip(operator_.args, args)){
-                    operatorEnv = addRegistration(operatorEnv, registerOperatorArg(operatorArg, arg))
-                }
-                headers = compiler(operatorEnv, operator_.operator_section).headers
+            const operator_ = resolveValue(env, operator)
+            // TODO: make this work again
+            // asserters.assertOperatorArgsMatch(operator_.args, args)
+
+            // contruct env for operator, then compile its section with it
+            let operatorEnv = env
+            for(let [operatorArg, arg] of R.zip(operator_.args, args)){
+                const registration = {lets: {[operatorArg.value]: arg}}
+                operatorEnv = addRegistration(operatorEnv, registration)
             }
+            if(isSet) throw errors.NotImplemented('sorry')
+            else headers = compiler(operatorEnv, operator_.operator_section).headers
         }
-        linesWith.push(R.merge(line, isSet? {setValues} : {headers}))
+        withCompiled.push(R.merge(line, isSet? {setValues} : {headers}))
     }
-    const sectionWith = {type: types.section, value: defsWith.concat(linesWith)}
+    const sectionWith = {type: types.section, value: withCompiled}
     return R.merge(sectionWith, isSet? {setValues} : {headers})
 }
 
