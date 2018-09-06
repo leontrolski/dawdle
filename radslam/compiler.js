@@ -12,7 +12,8 @@ const R = require('ramda')
 const splatSets = list=>{
     let listOut = []
     for(let o of list){
-        if(is.set(o)) listOut = listOut.concat(o.value)
+        // TODO: is the `is.section` a mega hack?
+        if(is.set(o) || is.section(o)) listOut = listOut.concat(o.setValues)
         else listOut.push(o)
     }
     return listOut
@@ -42,8 +43,8 @@ const determineHeaders = {
  * TODO: maybe implement cross product.
  */
 const determineSet = {
-    union: (set, ...rest)=>R.union(set.value, rest),
-    difference: (set, ...rest)=>R.difference(set.value, rest),
+    union: (set, ...rest)=>R.union(set.setValues, rest),
+    difference: (set, ...rest)=>R.difference(set.setValues, rest),
 }
 
 // functions to register and resolve from an env
@@ -62,11 +63,11 @@ const resolveValue = (env, o)=>{
     return o
 }
 const resolveSet = (env, o)=>{
-    if(is.set(o)) return o
+    if(is.set(o)) return R.merge(o, {setValues: o.value})
     if(is.var(o)) return env.lets[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
     if(is.all_headers(o)){
         const relation = {type: types.relation, value: R.init(o.value)}
-        return {type: types.set, value: resolveHeaders(env, relation)}
+        return {type: types.set, setValues: resolveHeaders(env, relation)}
     }
     throw new errors.ScopeError(o, env)
 }
@@ -102,7 +103,7 @@ let macroOperatorIndex = 0
 const expandAndRegisterMacro = (env, line)=>{
     const [headers, template] = line.value
     const set = assertIs.set(resolveSet(env, headers))
-    const resolved = set.value
+    const resolved = set.setValues
         .map(value=>R.merge(env, {lets: {_: value}}))
         .map(envWithValue=>resolveValue(envWithValue, template))
     const lines = resolved
@@ -150,10 +151,7 @@ const compiler = (env, section)=>{
     const body = section.value.filter(R.complement(is.letOrDef))
 
     const defsWith = []
-
     for(let definition of defs){
-        // first = operator | relation | var
-        // args  = [ relation | var ]
         const [first, ...argsAndSection] = definition.value
         const section = argsAndSection.pop()
         const args = argsAndSection
@@ -174,65 +172,19 @@ const compiler = (env, section)=>{
         }
         env = addRegistration(env, def)
     }
-
     const [firstLine, ...lines] = body
     const first = is.line(firstLine)? firstLine.value[0] : firstLine
+    // handle aggregators
+    if(is.aggregator(first)) return R.merge(line, {headers: body.map(o=>o.value[0])})
 
-    if(is.relation(first) || is.relation_literal(first)){
-        return doRelationHeaderOperations(env, body, defsWith)
-    } else if(is.var(first) || is.set(first) || is.all_headers(first)){
-        return doSetOperations(env, body)
-    } else if(is.aggregator(first)){
-        return {aggregators: null, headers: body.map(o=>o.value[0])}
-    }
-}
-
-/**
- * For a section of set operations, return the calculated set values.
- *
- * TODO: handle indented sections.
- * TODO: handle macros.
- * TODO: handle composite operators.
- * TODO: assert the arguments to the operator match its signature.
- * TODO: handle named_var.
- *
- * See `doRelationHeaderOperations` for examples of the above.
- */
-const doSetOperations = (env, body)=>{
-    const [firstLine, ...lines] = body
-    const first = is.line(firstLine)? firstLine.value[0] : firstLine
-    const firstSet = resolveSet(env, first)
-
-    const accum = [firstSet]
-    for(let line of lines){
-        if(is.section(line)) continue  // these will be handled below
-        let [operator, ...args] = line.value
-        // resolve args and splat sets
-        args = splatSets(args.map(o=>resolveSet(env, o))).map(o=>resolveValue(env, o))
-        // prepend args with the previous value
-        args = [R.last(accum)].concat(args)
-
-        assertIs.baseOperator(operator)
-        const operatorName = baseOperatorInverseMap[operator.value]
-        const newSet = {type: types.set, value: determineSet[operatorName](...args)}
-        accum.push(newSet)
-    }
-    return R.merge(R.last(accum), {accum: R.init(accum)})
-}
-
-const doRelationHeaderOperations = (env, body, defsWith)=>{
-    const [firstLine, ...lines] = body
-    const first = is.line(firstLine)? firstLine.value[0] : firstLine
-    let isSet
-    if(is.relation(first) || is.relation_literal(first)){
-        isSet = false
-    } else if(is.var(first) || is.set(first) || is.all_headers(first)){
-        isSet = true
-    }
-
+    const isSet = is.var(first) || is.set(first) || is.all_headers(first)
+    let setValues
     let headers
-    headers = resolveHeaders(env, first)
-    const linesWith = [R.merge(firstLine, {headers: headers})]
+
+    if(isSet) setValues = resolveSet(env, first).setValues
+    else headers = resolveHeaders(env, first)
+
+    const linesWith = [R.merge(firstLine, isSet? {setValues} : {headers})]
 
     for(let line of lines){
         if(is.map_macro(line)){
@@ -252,36 +204,40 @@ const doRelationHeaderOperations = (env, body, defsWith)=>{
             return resolveValue(env, o)
         }
         args = splatSets(args.map(resolveAll)).map(resolveAll)
+
+
         // prepend args with the previous value
-        args = [{type: types.relation, headers: headers}].concat(args)
+        if(isSet) args = [{type: types.set, setValues: setValues}].concat(args)
+        else args = [{type: types.relation, headers: headers}].concat(args)
         // append final section to args if it exists
         if(!R.isNil(finalSection)) args.push(compiler(env, finalSection))
 
-        if(is.baseOperator(operator)){
+
+        if(isSet){
+            assertIs.baseOperator(operator)
             const operatorName = baseOperatorInverseMap[operator.value]
-            asserters.assertArgs[operatorName](...args)
-            headers = determineHeaders[operatorName](...args)
+            setValues = determineSet[operatorName](...args)
         } else {
-            const operator_ = resolveValue(env, operator)
-            // TODO: make this work again
-            // asserters.assertOperatorArgsMatch(operator_.args, args)
-            // contruct env for operator, then compile its section with it
-            let operatorEnv = env
-            for(let [operatorArg, arg] of R.zip(operator_.args, args)){
-                operatorEnv = addRegistration(operatorEnv, registerOperatorArg(operatorArg, arg))
+            if(is.baseOperator(operator)){
+                const operatorName = baseOperatorInverseMap[operator.value]
+                asserters.assertArgs[operatorName](...args)
+                headers = determineHeaders[operatorName](...args)
+            } else {
+                const operator_ = resolveValue(env, operator)
+                // TODO: make this work again
+                // asserters.assertOperatorArgsMatch(operator_.args, args)
+                // contruct env for operator, then compile its section with it
+                let operatorEnv = env
+                for(let [operatorArg, arg] of R.zip(operator_.args, args)){
+                    operatorEnv = addRegistration(operatorEnv, registerOperatorArg(operatorArg, arg))
+                }
+                headers = compiler(operatorEnv, operator_.operator_section).headers
             }
-            headers = compiler(operatorEnv, operator_.operator_section).headers
         }
-        linesWith.push(R.merge(
-            line,
-            {headers: headers},
-        ))
+        linesWith.push(R.merge(line, isSet? {setValues} : {headers}))
     }
-    const sectionWith = R.merge(section, {value: defsWith.concat(linesWith)})
-    return R.merge(
-        sectionWith,
-        {headers: headers},
-    )
+    const sectionWith = {type: types.section, value: defsWith.concat(linesWith)}
+    return R.merge(sectionWith, isSet? {setValues} : {headers})
 }
 
 const astToValue = {
