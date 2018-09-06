@@ -227,7 +227,7 @@ const reflectAst = (env, section)=>{
     if(is.relation(first) || is.relation_literal(first)){
         const firstRelation = resolveHeaders(env, first)
         const toOld = o=>R.merge({type: o.compiledType, headers: o.headers}, o.accum? {accum: o.accum} : {})
-        linesWith.push(R.mergeAll([first, firstRelation, {compiledType: types.relation}]))
+        linesWith.push(R.mergeAll([first, {headers: firstRelation.headers}, {compiledType: types.relation}]))
         for(let line of lines){
             if(is.map_macro(line)){
                 const expanded = expandAndRegisterMacro(env, line)
