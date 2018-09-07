@@ -120,6 +120,7 @@ const compiler = (env, section)=>{
 
         let registration
         if(is.def(definition)){
+            // TODO: would be nicer if this munging didn't happen here, but on retreival
             const structured = R.merge(first, {section, args})
             registration = {defs: {[first.value]: structured}}
             withCompiled.push(definition)
