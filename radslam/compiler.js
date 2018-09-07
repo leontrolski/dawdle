@@ -1,5 +1,5 @@
-const {fullParser, types, is, assertIs, baseOperatorInverseMap} = require('./parser')
-const {determineHeaders, determineSet} = require('./operations')
+const {fullParser, types, is, baseOperatorInverseMap} = require('./parser')
+const operations = require('./operations')
 const {errors, asserters, log} = require('./errorsAndAsserters')
 
 const R = require('ramda')
@@ -14,11 +14,7 @@ const splatSets = list=>{
     let listOut = []
     for(let o of list){
         if(is.set(o)) listOut = listOut.concat(o.value)
-        // TODO: mega hack alert
-        else if(is.section(o)) {
-            if(R.isNil(o.setValues)) listOut.push(o)
-            else listOut = listOut.concat(o.setValues)
-        }
+        else if(o.compiledType === types.set) listOut = listOut.concat(o.compiledValue)
         else listOut.push(o)
     }
     return listOut
@@ -38,16 +34,20 @@ const resolveValue = (env, o)=>{
     return o
 }
 const getSetValues = (env, o)=>{
-    if(!R.isNil(o.setValues)) return o.setValues  // already been resolved
+    if(o.compiledType === types.set) return o.compiledValue
     if(is.set(o)) return o.value
     if(is.all_headers(o)) return getHeaders(env, {type: types.relation, value: R.init(o.value)})
     throw new errors.ScopeError(o, env)
 }
 const getHeaders = (env, o)=>{
-    if(!R.isNil(o.headers)) return o.headers  // already been resolved
-    if(is.relation(o)) return resolveValue(env, o).headers
+    if(o.compiledType === types.headers) return o.compiledValue
+    if(is.relation(o)) return resolveValue(env, o).compiledValue
     if(is.relation_literal(o)) return o.value[0].value
     throw new errors.ScopeError(o, env)
+}
+const getValue = {
+    [types.set]: getSetValues,
+    [types.headers]: getHeaders,
 }
 const addRegistration = (env, registration)=>{
     const type = Object.keys(registration)[0]
@@ -119,39 +119,43 @@ const compiler = (env, section)=>{
 
         let def
         if(is.def(definition)){
-            withCompiled.push(definition)
             const structured = R.merge(first, {section, args})
             def = {defs: {[first.value]: structured}}
+            withCompiled.push(definition)
         }
         else{  // is.let(definition)
-            const compiled = compiler(env, section)
-            withCompiled.push(compiled)
-            def = {lets: {[first.value]: compiled}}
+            const compiledSection = compiler(env, section)
+            def = {lets: {[first.value]: compiledSection}}
+            const letWithCompiledSection = R.assocPath(
+                ['value', definition.value.length - 1], compiledSection, definition)
+            withCompiled.push(letWithCompiledSection)
         }
         env = addRegistration(env, def)
     }
 
     const [firstLine, ...lines] = body
     const first = is.line(firstLine)? firstLine.value[0] : firstLine
-    // handle aggregators
-    if(is.aggregator(first)) return R.merge(firstLine, {headers: body.map(o=>o.value[0])})
+    // TODO: handle aggregators properly
+    if(is.aggregator(first)) return R.merge(firstLine, {compiledValue: body.map(o=>o.value[0])})
 
     const isSet = is.var(first) || is.set(first) || is.all_headers(first)
-    const valuesType = isSet? 'setValues' : 'headers'
-    const resolve = isSet? getSetValues : getHeaders
-    const operators = isSet? determineSet : determineHeaders
-    let values
+    const compiledType = isSet? types.set : types.headers
+    let compiledValue
 
-    values = resolve(env, first)
-    withCompiled.push(R.merge(firstLine, {[valuesType]: values}))
+    compiledValue = getValue[compiledType](env, first)
+    withCompiled.push(R.merge(firstLine, {compiledType, compiledValue}))
 
     for(let line of lines){
+        // these two lets are a bit mucky
+        let lineWithCompiledSection = line
+        let macroLine = line
+
         if(is.map_macro(line)){
             const expanded = expandAndRegisterMacro(env, line)
-            line = expanded.line
+            macroLine = expanded.line
             env = addRegistration(env, expanded.registration)
         }
-        let [operator, ...args] = line.value
+        let [operator, ...args] = macroLine.value
 
         let finalSection  // if the line ends with a section
         if(args.length > 0 && is.section(R.last(args))) finalSection = args.pop()
@@ -159,15 +163,20 @@ const compiler = (env, section)=>{
         // resolve args and splat sets
         args = splatSets(args.map(o=>resolveValue(env, o))).map(o=>resolveValue(env, o))
         // prepend args with the previous value
-        args = [{type: types.set, [valuesType]: values}].concat(args)
+        args = [R.merge({type: types.set}, {compiledType, compiledValue})].concat(args)
         // append final section to args if it exists
-        if(!R.isNil(finalSection)) args.push(compiler(env, finalSection))
+        if(!R.isNil(finalSection)){
+            const compiledSection = compiler(env, finalSection)
+            args.push(compiledSection)
+            lineWithCompiledSection = R.assocPath(
+                ['value', line.value.length - 1], compiledSection, line)
+        }
 
         if(is.baseOperator(operator)){
             const operatorName = baseOperatorInverseMap[operator.value]
             // TODO: make this work again
             // asserters.assertArgs[operatorName](...args)
-            values = operators[operatorName](...args)
+            compiledValue = operations[compiledType][operatorName](...args)
         } else {
             const operator_ = resolveValue(env, operator)
             // TODO: make this work again
@@ -178,12 +187,12 @@ const compiler = (env, section)=>{
                 const registration = {lets: {[operatorArg.value]: arg}}
                 operatorEnv = addRegistration(operatorEnv, registration)
             }
-            values = compiler(operatorEnv, operator_.section)[valuesType]
+            compiledValue = compiler(operatorEnv, operator_.section).compiledValue
         }
-        withCompiled.push(R.merge(line, {[valuesType]: values}))
+        withCompiled.push(R.merge(lineWithCompiledSection, {compiledType, compiledValue}))
     }
     const sectionWith = {type: types.section, value: withCompiled}
-    return R.merge(sectionWith, {[valuesType]: values})
+    return R.merge(sectionWith, {compiledType, compiledValue})
 }
 
 const astToValue = {

@@ -1,3 +1,5 @@
+const {types} = require('./parser')
+
 const R = require('ramda')
 
 /**
@@ -6,16 +8,16 @@ const R = require('ramda')
  * in that they spell out the operator's signature.
  */
 const determineHeaders = {
-    filter: (rel, func, ...values)=>rel.headers,
+    filter: (rel, func, ...values)=>rel.compiledValue,
     select: (rel, ...headers)=>headers,
-    extend: (rel, header, func, ...values)=>R.union(rel.headers, [header]),
-    cross: (rel, value)=>rel.headers.concat(value.headers),
-    union: (rel, value)=>rel.headers,
-    difference: (rel, value)=>rel.headers,
-    join: (rel, value)=>R.union(rel.headers, value.headers),
+    extend: (rel, header, func, ...values)=>R.union(rel.compiledValue, [header]),
+    cross: (rel, value)=>rel.compiledValue.concat(value.compiledValue),
+    union: (rel, value)=>rel.compiledValue,
+    difference: (rel, value)=>rel.compiledValue,
+    join: (rel, value)=>R.union(rel.compiledValue, value.compiledValue),
     group: (rel, ...headers_aggregators)=>{
         const [aggregators, ...headers] = headers_aggregators.reverse()
-        return headers.reverse().concat(aggregators.headers)
+        return headers.reverse().concat(aggregators.compiledValue)
     }
 }
 /**
@@ -24,8 +26,11 @@ const determineHeaders = {
  * TODO: maybe implement cross product.
  */
 const determineSet = {
-    union: (set, ...rest)=>R.union(set.setValues, rest),
-    difference: (set, ...rest)=>R.difference(set.setValues, rest),
+    union: (set, ...rest)=>R.union(set.compiledValue, rest),
+    difference: (set, ...rest)=>R.difference(set.compiledValue, rest),
 }
 
-module.exports = {determineHeaders, determineSet}
+module.exports = {
+    [types.set]: determineSet,
+    [types.headers]: determineHeaders,
+}

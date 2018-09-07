@@ -177,7 +177,9 @@ const types = {
     decimal: 'decimal',
     datetime: 'datetime',
 
+    // types used outside of parser
     function: 'function',
+    headers: 'headers',
 }
 const multiple = [
     types.section,
