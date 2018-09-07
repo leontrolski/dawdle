@@ -3,7 +3,7 @@ release str
 
 jira_ticket:
 > like :ticket "INTEG%"
-> = :issuetype "Task"
+> equals :issuetype "Task"
 > ilike :summary `%{{oem}}%{{release}}%tracking ticket%`
 ^ :rank order :created
 
@@ -17,9 +17,9 @@ groups [header]
 let run_end_times:
     run:
     J result:
-    > = :exit_status 0
+    > eq :exit_status 0
     > bool :is_integrated_release
-    > = :pack sniff_pack
+    > eq :pack sniff_pack
     > in :jenkins_result all_success
     ^ :duration make_interval :duration
     ^ :end_time + :timestamp :duration
@@ -31,8 +31,8 @@ run:
 J
     run_end_times:
     v :run_id :end_time
-> > :end_time after
-> < :end_time before
+> gt :end_time after
+> lt :end_time before
 J result:
 J pre_post_events:
 J report:
@@ -41,7 +41,7 @@ J report:
 let previous_to_release_id:
     run:
     v :run_id :release
-    > = :release previous_to_release
+    > eq :release previous_to_release
     G :release
         :min_run_id min :run_id
     v :run_id
@@ -55,10 +55,10 @@ let all_possible_groups:
 
 let reverse_indexed_in_groups:
     run:
-    ^ :n order :run_id desc=True partition_by=groups
+    ^ :n order :run_id desc=true partition_by=groups
     > bool :is_integrated_release
     > not :building
-    > < :run_id previous_to_release_id:
+    > lt :run_id previous_to_release_id:
     v :run_id :n
 
 let counts_seen:
@@ -66,7 +66,7 @@ let counts_seen:
     v :run_id groups
     > in :run_id
         reverse_indexed_in_groups:
-        > <= :n max_n_runs
+        > lte :n max_n_runs
         v :run_id
     J
         result:
@@ -127,20 +127,17 @@ Design choices:
 - make error messages nice
 
 TODO
-- have compiled shape relfect AST
-- add // comments to parser
 
-- allow `let` for types other than sets and relations
 
 - generate html from ast
 - handle named vars
+- allow `let` for types other than sets and relations
 - allow vars called > < = etc..?
-- write more comprehensive tests
-- finish off `doSetOperations`
+- write more comprehensive tests, esp errors and composite operators on sets
+- add // comments to parser
 - remove offset malarkey in parser
 
-- should these return multiple tables instead?
-- think about the join problem more..
+- work on -[multirelation]-
 - what about update/insert etc
 
 

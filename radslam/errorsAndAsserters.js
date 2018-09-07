@@ -1,4 +1,4 @@
-const {is, assertIs, inspect, ParserError, TypeError, UnableToDetermineTypeError} = require('./parser')
+const {types, is, assertIs, inspect, ParserError, TypeError, UnableToDetermineTypeError} = require('./parser')
 
 const R = require('ramda')
 const log = o=>console.log(inspect(o))
@@ -75,18 +75,18 @@ const assertMacroShape = section=>{
 }
 
 const assertHasHeaders = rel=>{
-    if(R.isNil(rel.headers)) throw new MissingHeaders(rel)
-    rel.headers.forEach(o=>assertIs.header(o))
+    if(!(rel.compiledType === types.headers) || !rel.compiledValue.length) throw new MissingHeaders(rel)
+    rel.compiledValue.forEach(o=>assertIs.header(o))
     return rel
 }
-const assertArgs = {
+const assertHeadersArgs = {
     filter: (rel, func, ...values)=>{
         assertHasHeaders(rel)
         assertIs.var(func)
     },
     select: (rel, ...headers)=>{
         assertHasHeaders(rel)
-        if(!R.equals(R.intersection(rel.headers, headers), headers)) throw new SelectError(rel.headers, headers)
+        if(!R.equals(R.intersection(rel.compiledValue, headers), headers)) throw new SelectError(rel.compiledValue, headers)
     },
     extend: (rel, header, func, ...values)=>{
         assertHasHeaders(rel)
@@ -96,27 +96,33 @@ const assertArgs = {
     cross: (rel, value)=>{
         assertHasHeaders(rel)
         assertHasHeaders(value)
-        if(!R.isEmpty(R.intersection(rel.headers, value.headers))) throw new CrossError(rel.headers, value.headers)
+        if(!R.isEmpty(R.intersection(rel.compiledValue, value.compiledValue))) throw new CrossError(rel.compiledValue, value.compiledValue)
     },
     union: (rel, value)=>{
         assertHasHeaders(rel)
         assertHasHeaders(value)
-        if(!R.equals(rel.headers, value.headers)) throw new UnionOrDifferenceError(rel.headers, value.headers)
+        if(!R.equals(rel.compiledValue, value.compiledValue)) throw new UnionOrDifferenceError(rel.compiledValue, value.compiledValue)
     },
     difference: (rel, value)=>{
         assertHasHeaders(rel)
         assertHasHeaders(value)
-        if(!R.equals(rel.headers, value.headers)) throw new UnionOrDifferenceError(rel.headers, value.headers)
+        if(!R.equals(rel.compiledValue, value.compiledValue)) throw new UnionOrDifferenceError(rel.compiledValue, value.compiledValue)
     },
     join: (rel, value)=>{
         assertHasHeaders(rel)
         assertHasHeaders(value)
-        if(R.isEmpty(R.intersection(rel.headers, value.headers))) throw new JoinError(rel.headers, value.headers)
+        if(R.isEmpty(R.intersection(rel.compiledValue, value.compiledValue))) throw new JoinError(rel.compiledValue, value.compiledValue)
     },
     group: (rel, ...headers_allAggregator)=>null, // assert none of the aggregator headers are in the headers
 }
+// TODO: fill these in
+const assertSetArgs = {
+    union: (rel, value)=>{},
+    difference: (rel, value)=>{},
+}
 const assertOperatorArgsMatch = (operatorArgs, args)=>{
-    if(!R.equals(operatorArgs.map(o=>o.type), args.map(o=>o.compiledType))) throw new OperatorArgsError(operatorArgs, args)
+    if(operatorArgs.length !== args.length) throw new OperatorArgsError(operatorArgs, args)
+    // TODO: do some type checking stuff as well
 }
 
 module.exports = {
@@ -139,7 +145,10 @@ module.exports = {
         assertSectionShape,
         assertBodyShape,
         assertMacroShape,
-        assertArgs,
+        assertArgs: {
+            [types.set]: assertSetArgs,
+            [types.headers]: assertHeadersArgs,
+        },
         assertOperatorArgsMatch,
     },
     log,

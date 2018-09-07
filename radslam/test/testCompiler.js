@@ -481,7 +481,8 @@ Outer
                             value: [ { type: 'number', value: '3' }, { type: 'number', value: '30' }, { type: 'number', value: '9' } ] } ],
                        compiledType: 'headers',
                        compiledValue:
-                        [ { type: 'header', value: ':left_id' },
+                        [
+                          { type: 'header', value: ':left_id' },
                           { type: 'header', value: ':l' },
                           { type: 'header', value: ':nah' } ] },
                      { type: 'line',
@@ -524,7 +525,9 @@ Outer
            { type: 'line',
              value: [ { type: 'operator', value: 'v' }, { type: 'var', value: 'not_foo' } ],
              compiledType: 'headers',
-             compiledValue: [ { type: 'header', value: ':left_id' }, { type: 'header', value: ':l' } ] },
+             compiledValue: [
+               { type: 'header', value: ':left_id' },
+               { type: 'header', value: ':l' } ] },
            { type: 'line',
              value:
               [ { type: 'operator', value: 'Outer' },
@@ -582,7 +585,6 @@ Outer
               [ { type: 'header', value: ':left_id' },
                 { type: 'header', value: ':l' },
                 { type: 'header', value: ':right_id' },
-                { type: 'header', value: ':left_id' },
                 { type: 'header', value: ':r' } ] },
            { type: 'line',
              value:

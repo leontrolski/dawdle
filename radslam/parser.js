@@ -116,7 +116,6 @@ const deMunge = o =>{
 const parser = s=>munge(basicParser(s), null)
 const fullParser = s =>deMunge(munge(basicParser(s), null))
 
-
 const getType = o=>{
     if(R.isNil(o)) throw new UnableToDetermineTypeError(o)
     const intersection = R.intersection(Object.keys(o), Object.keys(types))
@@ -238,9 +237,6 @@ const is = {
     groupOperator: o=>
         is.operator(o) &&
         o.value === baseOperatorMap.group,
-    aggregatorSection: o=>
-        is.section(o) &&
-        is.aggregator(o.value[0]),
 }
 class TypeError extends Error {constructor(type, node) {
     super(`Type error, node is not type ${type}: ${inspect(node)}`)
@@ -293,6 +289,7 @@ module.exports = {
     basicParser,
     parser,
     fullParser,
+    deMunge,
     types,
     multiple,
     getType,

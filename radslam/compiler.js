@@ -30,6 +30,10 @@ const resolveValue = (env, o)=>{
     if(is.var(o)) return env.lets[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
     if(is.relation(o)) return env.lets[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
     if(is.operator(o)) return env.defs[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
+    if(is.all_headers(o)) return {
+        compiledType: types.set,
+        compiledValue: getHeaders(env, {type: types.relation, value: R.init(o.value)})
+    }
     if(is.template(o)) return populateTemplate(env, o)
     return o
 }
@@ -57,9 +61,6 @@ const addRegistration = (env, registration)=>{
 /**
  * Create a `registration` as above for a macro that is
  * a composite operator containing the expanded macro lines.
- *
- * TODO: provide more specific error messages when the
- *   parser fails here.
  */
 let macroOperatorIndex = 0  // global counter
 const expandAndRegisterMacro = (env, line)=>{
@@ -117,27 +118,27 @@ const compiler = (env, section)=>{
         const section = argsAndSection.pop()
         const args = argsAndSection
 
-        let def
+        let registration
         if(is.def(definition)){
             const structured = R.merge(first, {section, args})
-            def = {defs: {[first.value]: structured}}
+            registration = {defs: {[first.value]: structured}}
             withCompiled.push(definition)
         }
         else{  // is.let(definition)
             const compiledSection = compiler(env, section)
-            def = {lets: {[first.value]: compiledSection}}
+            registration = {lets: {[first.value]: compiledSection}}
             const letWithCompiledSection = R.assocPath(
                 ['value', definition.value.length - 1], compiledSection, definition)
             withCompiled.push(letWithCompiledSection)
         }
-        env = addRegistration(env, def)
+        env = addRegistration(env, registration)
     }
 
     const [firstLine, ...lines] = body
     const first = is.line(firstLine)? firstLine.value[0] : firstLine
-    // TODO: handle aggregators properly
-    if(is.aggregator(first)) return R.merge(firstLine, {compiledValue: body.map(o=>o.value[0])})
 
+    // TODO: handle aggregators consistently with everything else
+    if(is.aggregator(first)) return R.merge(firstLine, {compiledValue: body.map(o=>o.value[0])})
     const isSet = is.var(first) || is.set(first) || is.all_headers(first)
     const compiledType = isSet? types.set : types.headers
     let compiledValue
@@ -147,23 +148,23 @@ const compiler = (env, section)=>{
 
     for(let line of lines){
         // these two lets are a bit mucky
-        let lineWithCompiledSection = line
-        let macroLine = line
+        let lineWithCompiledSection = null
+        let macroLine = null
+        let finalSection = null
 
         if(is.map_macro(line)){
             const expanded = expandAndRegisterMacro(env, line)
             macroLine = expanded.line
             env = addRegistration(env, expanded.registration)
         }
-        let [operator, ...args] = macroLine.value
 
-        let finalSection  // if the line ends with a section
+        let [operator, ...args] = (macroLine || line).value
         if(args.length > 0 && is.section(R.last(args))) finalSection = args.pop()
 
         // resolve args and splat sets
         args = splatSets(args.map(o=>resolveValue(env, o))).map(o=>resolveValue(env, o))
         // prepend args with the previous value
-        args = [R.merge({type: types.set}, {compiledType, compiledValue})].concat(args)
+        args = [{compiledType, compiledValue}].concat(args)
         // append final section to args if it exists
         if(!R.isNil(finalSection)){
             const compiledSection = compiler(env, finalSection)
@@ -174,13 +175,11 @@ const compiler = (env, section)=>{
 
         if(is.baseOperator(operator)){
             const operatorName = baseOperatorInverseMap[operator.value]
-            // TODO: make this work again
-            // asserters.assertArgs[operatorName](...args)
+            asserters.assertArgs[compiledType][operatorName](...args)
             compiledValue = operations[compiledType][operatorName](...args)
         } else {
             const operator_ = resolveValue(env, operator)
-            // TODO: make this work again
-            // asserters.assertOperatorArgsMatch(operator_.args, args)
+            asserters.assertOperatorArgsMatch(operator_.args, args)
             // contruct env for operator, then compile its section with it
             let operatorEnv = env
             for(let [operatorArg, arg] of R.zip(operator_.args, args)){
@@ -189,7 +188,7 @@ const compiler = (env, section)=>{
             }
             compiledValue = compiler(operatorEnv, operator_.section).compiledValue
         }
-        withCompiled.push(R.merge(lineWithCompiledSection, {compiledType, compiledValue}))
+        withCompiled.push(R.merge(lineWithCompiledSection || line, {compiledType, compiledValue}))
     }
     const sectionWith = {type: types.section, value: withCompiled}
     return R.merge(sectionWith, {compiledType, compiledValue})
