@@ -66,7 +66,7 @@ U [2 3 4]
         // assert.deepEqual(expected, compiler.compiler(env, ast))
     })
     it('should handle base operators at each step on a relation', ()=>{
-        const env = {lets: {fake_function: {function: ()=>null}}}
+        const env = {lets: {fake_function: {type: 'function', value: ()=>null}}}
         const in_ = `| :a | :b | :c |
 J
     | :d | :a |
@@ -121,7 +121,7 @@ JoinClone
         assert.deepEqual(expected, compiler.compileHeaders(env, ast))
     })
     it('should expand map macros', ()=>{
-        const env = {lets: {fake_function: {function: ()=>null}}}
+        const env = {lets: {fake_function: {type: 'function', value: ()=>null}}}
         const in_ = `| :a |
 (map [:foo :bar]) \`^ {{_}} fake_function\``
         const ast = parser.fullParser(in_)
@@ -136,9 +136,9 @@ JoinClone
     })
     it('should do a load of nested stuff', ()=>{
         const env = {lets: {
-            make_null: {function: (row, relation, ..._)=>({type: 'null', value: 'null'})},
-            first: {function: (row, relation, ..._)=>relation.rows[0]},
-            value: {function: (row, relation, value)=>value},
+            make_null: {type: 'function', value: (row, relation, ..._)=>({type: 'null', value: 'null'})},
+            first: {type: 'function', value: (row, relation, ..._)=>relation.rows[0]},
+            value: {type: 'function', value: (row, relation, value)=>value},
         }}
         const in_ = `def Outer relation: right:
     let joined:

@@ -13,8 +13,12 @@ const R = require('ramda')
 const splatSets = list=>{
     let listOut = []
     for(let o of list){
-        // TODO: is the `is.section` a mega hack?
-        if(is.set(o) || is.section(o)) listOut = listOut.concat(o.setValues)
+        if(is.set(o)) listOut = listOut.concat(o.value)
+        // TODO: mega hack alert
+        else if(is.section(o)) {
+            if(R.isNil(o.setValues)) listOut.push(o)
+            else listOut = listOut.concat(o.setValues)
+        }
         else listOut.push(o)
     }
     return listOut
@@ -25,27 +29,23 @@ const emptyEnv = {lets: {}, defs: {}}
 /**
  * Given an resolve a variable in a given scope, else
  * return the object itself.
- *
- * TODO: make resolving stuff more consistent.
  */
 const resolveValue = (env, o)=>{
+    if(is.var(o)) return env.lets[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
+    if(is.relation(o)) return env.lets[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
     if(is.operator(o)) return env.defs[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
     if(is.template(o)) return populateTemplate(env, o)
-    if(is.var(o)) return env.lets[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
     return o
 }
-const resolveSet = (env, o)=>{
-    if(is.set(o)) return R.merge(o, {setValues: o.value})
-    if(is.var(o)) return env.lets[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
-    if(is.all_headers(o)){
-        const relation = {type: types.relation, value: R.init(o.value)}
-        return {type: types.set, setValues: resolveHeaders(env, relation)}
-    }
+const getSetValues = (env, o)=>{
+    if(!R.isNil(o.setValues)) return o.setValues  // already been resolved
+    if(is.set(o)) return o.value
+    if(is.all_headers(o)) return getHeaders(env, {type: types.relation, value: R.init(o.value)})
     throw new errors.ScopeError(o, env)
 }
-const resolveHeaders = (env, o)=>{
+const getHeaders = (env, o)=>{
     if(!R.isNil(o.headers)) return o.headers  // already been resolved
-    if(is.relation(o)) return env.lets[o.value].headers || (()=>{throw new errors.ScopeError(o, env)})()
+    if(is.relation(o)) return resolveValue(env, o).headers
     if(is.relation_literal(o)) return o.value[0].value
     throw new errors.ScopeError(o, env)
 }
@@ -54,7 +54,6 @@ const addRegistration = (env, registration)=>{
     const name = Object.keys(registration[type])[0]
     return R.assocPath([type, name], registration[type][name], env)
 }
-let macroOperatorIndex = 0
 /**
  * Create a `registration` as above for a macro that is
  * a composite operator containing the expanded macro lines.
@@ -62,10 +61,11 @@ let macroOperatorIndex = 0
  * TODO: provide more specific error messages when the
  *   parser fails here.
  */
+let macroOperatorIndex = 0  // global counter
 const expandAndRegisterMacro = (env, line)=>{
     const [headers, template] = line.value
-    const set = assertIs.set(resolveSet(env, headers))
-    const resolved = set.setValues
+    const setValues = getSetValues(env, resolveValue(env, headers))
+    const resolved = setValues
         .map(value=>R.merge(env, {lets: {_: value}}))
         .map(envWithValue=>resolveValue(envWithValue, template))
     const lines = resolved
@@ -81,7 +81,7 @@ const expandAndRegisterMacro = (env, line)=>{
         type: types.operator,
         value: operatorName,
         args: [{type: types.relation, value: 'relation:'}],
-        operator_section: {
+        section: {
             type: types.section,
             value: [
                 {type: types.line, value: [{type: types.relation, value: 'relation:'}]}
@@ -117,35 +117,33 @@ const compiler = (env, section)=>{
         const section = argsAndSection.pop()
         const args = argsAndSection
 
-        let info, def
+        let def
         if(is.def(definition)){
-            info = {args, section}
             withCompiled.push(definition)
-            // old bit
-            info = R.merge(first, {operator_section: info.section, args: info.args})
-            def = {defs: {[first.value]: info}}
+            const structured = R.merge(first, {section, args})
+            def = {defs: {[first.value]: structured}}
         }
         else{  // is.let(definition)
-            info = compiler(env, section)
-            withCompiled.push(info)
-            // old bit
-            def = {lets: {[first.value]: info}}
+            const compiled = compiler(env, section)
+            withCompiled.push(compiled)
+            def = {lets: {[first.value]: compiled}}
         }
         env = addRegistration(env, def)
     }
+
     const [firstLine, ...lines] = body
     const first = is.line(firstLine)? firstLine.value[0] : firstLine
     // handle aggregators
-    if(is.aggregator(first)) return R.merge(line, {headers: body.map(o=>o.value[0])})
+    if(is.aggregator(first)) return R.merge(firstLine, {headers: body.map(o=>o.value[0])})
 
     const isSet = is.var(first) || is.set(first) || is.all_headers(first)
-    let setValues
-    let headers
+    const valuesType = isSet? 'setValues' : 'headers'
+    const resolve = isSet? getSetValues : getHeaders
+    const operators = isSet? determineSet : determineHeaders
+    let values
 
-    if(isSet) setValues = resolveSet(env, first).setValues
-    else headers = resolveHeaders(env, first)
-
-    withCompiled.push(R.merge(firstLine, isSet? {setValues} : {headers}))
+    values = resolve(env, first)
+    withCompiled.push(R.merge(firstLine, {[valuesType]: values}))
 
     for(let line of lines){
         if(is.map_macro(line)){
@@ -159,15 +157,9 @@ const compiler = (env, section)=>{
         if(args.length > 0 && is.section(R.last(args))) finalSection = args.pop()
 
         // resolve args and splat sets
-        const resolveAll = o=>{
-            if(is.relation(o)) return {headers: resolveHeaders(env, o)}
-            if(is.set(o) || is.var(o) || is.all_headers(o)) return resolveSet(env, o)
-            return resolveValue(env, o)
-        }
-        args = splatSets(args.map(resolveAll)).map(resolveAll)
+        args = splatSets(args.map(o=>resolveValue(env, o))).map(o=>resolveValue(env, o))
         // prepend args with the previous value
-        if(isSet) args = [{type: types.set, setValues: setValues}].concat(args)
-        else args = [{type: types.relation, headers: headers}].concat(args)
+        args = [{type: types.set, [valuesType]: values}].concat(args)
         // append final section to args if it exists
         if(!R.isNil(finalSection)) args.push(compiler(env, finalSection))
 
@@ -175,26 +167,23 @@ const compiler = (env, section)=>{
             const operatorName = baseOperatorInverseMap[operator.value]
             // TODO: make this work again
             // asserters.assertArgs[operatorName](...args)
-            if(isSet) setValues = determineSet[operatorName](...args)
-            else headers = determineHeaders[operatorName](...args)
+            values = operators[operatorName](...args)
         } else {
             const operator_ = resolveValue(env, operator)
             // TODO: make this work again
             // asserters.assertOperatorArgsMatch(operator_.args, args)
-
             // contruct env for operator, then compile its section with it
             let operatorEnv = env
             for(let [operatorArg, arg] of R.zip(operator_.args, args)){
                 const registration = {lets: {[operatorArg.value]: arg}}
                 operatorEnv = addRegistration(operatorEnv, registration)
             }
-            if(isSet) throw errors.NotImplemented('sorry')
-            else headers = compiler(operatorEnv, operator_.operator_section).headers
+            values = compiler(operatorEnv, operator_.section)[valuesType]
         }
-        withCompiled.push(R.merge(line, isSet? {setValues} : {headers}))
+        withCompiled.push(R.merge(line, {[valuesType]: values}))
     }
     const sectionWith = {type: types.section, value: withCompiled}
-    return R.merge(sectionWith, isSet? {setValues} : {headers})
+    return R.merge(sectionWith, {[valuesType]: values})
 }
 
 const astToValue = {

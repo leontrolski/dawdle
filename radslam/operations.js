@@ -1,11 +1,9 @@
-const {errors, asserters, log} = require('./errorsAndAsserters')
-
 const R = require('ramda')
 
 /**
  * Map of base operator type to a function that determines
  * the headers for that type. Function signatures are useful
- * in that they specll out the operator's signature.
+ * in that they spell out the operator's signature.
  */
 const determineHeaders = {
     filter: (rel, func, ...values)=>rel.headers,
