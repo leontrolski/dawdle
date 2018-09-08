@@ -4,18 +4,27 @@
   "description": "ra",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
     "test": "mocha",
-    "parse": "node index.js",
-    "strip-color": "strip-ansi"
+    "strip-color": "strip-ansi",
+    "ts": "ts-node -O '{\"module\": \"commonjs\"}'",
+    "bundle": "webpack"
   },
   "author": "ojhrussell@gmail.com",
   "license": "MIT",
   "dependencies": {
-    "chai": "^4.1.2",
-    "ebnf": "^1.6.2",
-    "mocha": "^5.2.0",
-    "ramda": "^0.25.0",
-    "strip-ansi-cli": "^2.0.0"
+    "@types/mithril": "1.1.12",
+    "@types/ramda": "0.25.37",
+    "browserify": "16.2.2",
+    "chai": "4.1.2",
+    "ebnf": "1.6.2",
+    "mithril": "1.1.6",
+    "mocha": "5.2.0",
+    "ramda": "0.25.0",
+    "strip-ansi-cli": "2.0.0",
+    "ts-loader": "5.0.0",
+    "ts-node": "7.0.1",
+    "typescript": "3.0.3",
+    "webpack": "4.17.2",
+    "webpack-command": "0.4.1"
   }
 }

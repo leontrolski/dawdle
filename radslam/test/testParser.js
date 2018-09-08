@@ -1,6 +1,6 @@
 const chai = require('chai')
 
-const parser = require('../parser')
+const parser = require('../src/parser')
 
 const assert = chai.assert
 chai.config.includeStack = true
