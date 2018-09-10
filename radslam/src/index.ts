@@ -21,23 +21,28 @@ J another:`
 const pythonSource2 = `)
 
 and_then = (`
-const dawdleSource2 = `table:
-> value true`
+const dawdleSource2 = `def JoinClone relation: right:
+    relation:
+    J right:
+
+| :a | :b |
+JoinClone
+    | :a | :c |`
 const pythonSource3 = `)`
 const dawdleInfo1 = `some
 -------
 foo
 bar`
 const serverBlocks = [
-    {type: 'python', source: pythonSource1, info: ''},
-    {type: 'dawdle', source: dawdleSource1, info: dawdleInfo1},
-    {type: 'python', source: pythonSource2, info: ''},
-    {type: 'dawdle', source: dawdleSource2, info: ''},
-    {type: 'python', source: pythonSource3, info: ''},
+    {language: 'python', source: pythonSource1, info: ''},
+    {language: 'dawdle', source: dawdleSource1, info: dawdleInfo1},
+    {language: 'python', source: pythonSource2, info: ''},
+    {language: 'dawdle', source: dawdleSource2, info: ''},
+    {language: 'python', source: pythonSource3, info: ''},
 ]
 
 type ServerBlock = {
-    type: string,
+    language: string,
     source: string,
     info: string,
 }
@@ -59,9 +64,6 @@ function serverRead(): Promise<State>{
     // actually f(fileState.source)
 }
 function serverWrite(){}// f(fileState.source)}
-function sleep<T>(x: T): Promise<T>{
-    return new Promise(resolve=>setTimeout(()=>resolve(x), 1000))
-}
 
 // empty state to start with
 let state: State = {
@@ -71,7 +73,7 @@ function setState(s: State): void{state = s}
 
 // deriving functions
 function deriveIds(state: State): Array<string>{
-    return state.serverBlocks.map((block, i)=>`editor-${block.type}-${i}`)
+    return state.serverBlocks.map((_, i)=>`editor-${i}`)
 }
 function deriveState(state: State): DerivedState{
     const ids = deriveIds(state).map(id=>({id}))
@@ -79,7 +81,8 @@ function deriveState(state: State): DerivedState{
     return {blocks}
 }
 // UI components
-const OriginalBlock = (block: Block)=>m('.source.left', m('', {id: block.id}, block.source))
+const OriginalBlock = (block: Block)=>m(
+    '.source.left', m('', {id: block.id, language: block.language}, block.source))
 
 const InfoBlock = (info: string)=>m('.source.pre.right', info)
 
@@ -92,14 +95,18 @@ const View = ()=>m('div',
 
 
 function loadEditors(ids: Array<string>): Array<AceAjax.Editor>{
-    const editors = ids.map(id=>ace.edit(id, {
-        maxLines: Infinity,
-        mode: 'ace/mode/python',
-        // turn off highlighting until focused
-        showGutter: false,
-        showPrintMargin: false,
-        highlightActiveLine: false,
-    }))
+    const editors = ids.map(id=>{
+        const editorElement = document.getElementById(id)
+        const language = editorElement.getAttribute('language')
+        return ace.edit(editorElement, {
+            maxLines: Infinity,
+            mode: `ace/mode/${language}`,  // live in dist/mode-${language}.js
+            // turn off highlighting until focused
+            showGutter: false,
+            showPrintMargin: false,
+            highlightActiveLine: false,
+        })
+    })
     zip(editors, ids).forEach(([editor, id])=>{
         editor.renderer.$cursorLayer.element.style.display = 'none'
         const otherEditors = editors.filter(e=>e !== editor)
