@@ -12,6 +12,7 @@
   "author": "ojhrussell@gmail.com",
   "license": "MIT",
   "dependencies": {
+    "@types/ace": "0.0.40",
     "@types/mithril": "1.1.12",
     "@types/ramda": "0.25.37",
     "ace-builds": "1.4.1",

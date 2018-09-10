@@ -1,5 +1,5 @@
 import { foo, bar } from './server'
-import { zip } from 'ramda'
+import { zip, merge } from 'ramda'
 import * as m from 'mithril'
 import * as ace from 'ace-builds/src-noconflict/ace'
 
@@ -26,41 +26,90 @@ const dawdleInfo1 = `some
 -------
 foo
 bar`
-const allSource = [
-    [pythonSource1, ''],
-    [dawdleSource1, dawdleInfo1],
-    [pythonSource2, ''],
-    [dawdleSource2, ''],
-    [pythonSource3, ''],
+const serverBlocks = [
+    {type: 'original', source: pythonSource1, info: ''},
+    {type: 'dawdle', source: dawdleSource1, info: dawdleInfo1},
+    {type: 'original', source: pythonSource2, info: ''},
+    {type: 'dawdle', source: dawdleSource2, info: ''},
+    {type: 'original', source: pythonSource3, info: ''},
 ]
-type State = {allSource: Array<Array<string>>}
-const state: State = {allSource}
 
-const OriginalBlock = (source: string, i: number)=>m(
+type ServerBlock = {
+    type: string,
+    source: string,
+    info: string,
+}
+type Block = ServerBlock & {id: string}
+
+type State = {
+    serverBlocks: Array<ServerBlock>
+}
+type DerivedState = {
+    blocks: Array<Block>
+}
+
+
+// server
+const fileState = {source: ''}
+const serverAst = {}
+function serverRead(): Promise<State>{
+    return new Promise((resolve, reject)=>resolve({serverBlocks}))//, serverAst})
+    // actually f(fileState.source)
+}
+function serverWrite(){}// f(fileState.source)}
+function sleep<T>(x: T): Promise<T>{
+    return new Promise(resolve=>setTimeout(()=>resolve(x), 1000))
+}
+
+// empty state to start with
+let state: State = {
+    serverBlocks: []
+}
+function setState(s: State): void{state = s}
+
+// deriving functions
+function deriveIds(state: State): Array<string>{
+    return state.serverBlocks.map((block, i)=>`editor-${block.type}-${i}`)
+}
+function deriveState(state: State): DerivedState{
+    const ids = deriveIds(state).map(id=>({id}))
+    const blocks = zip(state.serverBlocks, ids).map(([a, b])=>merge(a, b))
+    return {blocks}
+}
+// UI components
+const OriginalBlock = (block: Block)=>m(
     '.source.pre.left',
-    m('', {id: `editor-${i}`},
-    source))
+    m('', {id: block.id},
+    block.source))
 const DawdleBlock = OriginalBlock
 
 const InfoBlock = (info: string)=>m('.source.pre.right', info)
 
-type DerivedState = State
-function deriveState(state: State): DerivedState{
-    return state
-}
-
 const View = ()=>m('div',
-    allSource.map(([source, info], i)=>
+    deriveState(state).blocks.map((block, i)=>
         m('.block',
-            OriginalBlock(source, i),
-            InfoBlock(info)),
+            OriginalBlock(block),
+            InfoBlock(block.info)),
 ))
 
 m.mount(document.body, {view: View})
 
-const editor = ace.edit("editor-0", {
-    showGutter: false,
-    showPrintMargin: false,
-    maxLines: Infinity,
-})
+function loadEditors(ids: Array<string>): Array<AceAjax.Editor>{
+    return ids.map(id =>
+        ace.edit(id, {
+            showGutter: false,
+            showPrintMargin: false,
+            // highlightActiveLine: false,
+            maxLines: Infinity,
+        })
+    )
+}
 
+async function init(){
+    const newState = await serverRead()
+    setState(newState)
+    m.redraw()
+    let editors: Array<AceAjax.Editor> = []
+    await requestAnimationFrame(()=>{window.editors = loadEditors(deriveIds(newState))})
+}
+init()
