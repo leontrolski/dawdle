@@ -18,6 +18,7 @@
     "ace-builds": "1.4.1",
     "browserify": "16.2.2",
     "chai": "4.1.2",
+    "copy-webpack-plugin": "^4.5.2",
     "ebnf": "1.6.2",
     "mithril": "1.1.6",
     "mocha": "5.2.0",

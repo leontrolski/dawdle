@@ -2,6 +2,8 @@ import { foo, bar } from './server'
 import { zip, merge } from 'ramda'
 import * as m from 'mithril'
 import * as ace from 'ace-builds/src-noconflict/ace'
+ace.config.set('basePath', './')
+
 
 const pythonSource1 = `import foo
 
@@ -27,11 +29,11 @@ const dawdleInfo1 = `some
 foo
 bar`
 const serverBlocks = [
-    {type: 'original', source: pythonSource1, info: ''},
+    {type: 'python', source: pythonSource1, info: ''},
     {type: 'dawdle', source: dawdleSource1, info: dawdleInfo1},
-    {type: 'original', source: pythonSource2, info: ''},
+    {type: 'python', source: pythonSource2, info: ''},
     {type: 'dawdle', source: dawdleSource2, info: ''},
-    {type: 'original', source: pythonSource3, info: ''},
+    {type: 'python', source: pythonSource3, info: ''},
 ]
 
 type ServerBlock = {
@@ -77,11 +79,7 @@ function deriveState(state: State): DerivedState{
     return {blocks}
 }
 // UI components
-const OriginalBlock = (block: Block)=>m(
-    '.source.pre.left',
-    m('', {id: block.id},
-    block.source))
-const DawdleBlock = OriginalBlock
+const OriginalBlock = (block: Block)=>m('.source.left', m('', {id: block.id}, block.source))
 
 const InfoBlock = (info: string)=>m('.source.pre.right', info)
 
@@ -92,24 +90,39 @@ const View = ()=>m('div',
             InfoBlock(block.info)),
 ))
 
-m.mount(document.body, {view: View})
 
 function loadEditors(ids: Array<string>): Array<AceAjax.Editor>{
-    return ids.map(id =>
-        ace.edit(id, {
-            showGutter: false,
-            showPrintMargin: false,
-            // highlightActiveLine: false,
-            maxLines: Infinity,
-        })
-    )
+    const editors = ids.map(id=>ace.edit(id, {
+        maxLines: Infinity,
+        mode: 'ace/mode/python',
+        // turn off highlighting until focused
+        showGutter: false,
+        showPrintMargin: false,
+        highlightActiveLine: false,
+    }))
+    zip(editors, ids).forEach(([editor, id])=>{
+        editor.renderer.$cursorLayer.element.style.display = 'none'
+        const otherEditors = editors.filter(e=>e !== editor)
+        function setHighlight(){
+            editor.setHighlightActiveLine(true)
+            editor.setHighlightSelectedWord(true)
+            editor.renderer.$cursorLayer.element.style.display = 'block'
+            otherEditors.forEach(editor=>editor.setHighlightActiveLine(false))
+            otherEditors.forEach(editor=>editor.setHighlightSelectedWord(false))
+            otherEditors.forEach(editor=>editor.selection.clearSelection())
+            otherEditors.forEach(editor=>editor.renderer.$cursorLayer.element.style.display = 'none')
+        }
+        editor.container.children[0].onfocus = setHighlight
+    })
+    return editors
 }
 
 async function init(){
+    m.mount(document.body, {view: View})
     const newState = await serverRead()
     setState(newState)
     m.redraw()
-    let editors: Array<AceAjax.Editor> = []
-    await requestAnimationFrame(()=>{window.editors = loadEditors(deriveIds(newState))})
+    const ids = deriveIds(state)
+    await requestAnimationFrame(()=>loadEditors(ids))
 }
 init()
