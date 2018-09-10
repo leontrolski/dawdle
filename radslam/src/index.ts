@@ -1,6 +1,7 @@
 import { foo, bar } from './server'
 import { zip } from 'ramda'
 import * as m from 'mithril'
+import * as ace from 'ace-builds/src-noconflict/ace'
 
 const pythonSource1 = `import foo
 
@@ -32,16 +33,34 @@ const allSource = [
     [dawdleSource2, ''],
     [pythonSource3, ''],
 ]
+type State = {allSource: Array<Array<string>>}
+const state: State = {allSource}
 
-// const OriginalBlock = (source: string)=>m('.source.pre.left', source)
-const OriginalBlock = (source: string)=>m('.source.pre.left', source, m('.cursor', ''))
+const OriginalBlock = (source: string, i: number)=>m(
+    '.source.pre.left',
+    m('', {id: `editor-${i}`},
+    source))
 const DawdleBlock = OriginalBlock
 
 const InfoBlock = (info: string)=>m('.source.pre.right', info)
 
-const View = ()=>m('div', allSource.map(([source, info])=>
-    m('.block',
-        OriginalBlock(source),
-        InfoBlock(info))))
+type DerivedState = State
+function deriveState(state: State): DerivedState{
+    return state
+}
+
+const View = ()=>m('div',
+    allSource.map(([source, info], i)=>
+        m('.block',
+            OriginalBlock(source, i),
+            InfoBlock(info)),
+))
 
 m.mount(document.body, {view: View})
+
+const editor = ace.edit("editor-0", {
+    showGutter: false,
+    showPrintMargin: false,
+    maxLines: Infinity,
+})
+
