@@ -1,8 +1,14 @@
-const util = require('util')
-const ebnf = require('ebnf')
-const jsYaml = require('js-yaml')
-const R = require('ramda')
-const inspect = o=>util.inspect(o, {depth: 16, colors: true, breakLength: 100})
+import * as util from 'util'
+import * as ebnf from 'ebnf'
+import * as jsYaml from 'js-yaml'
+import * as R from 'ramda'
+
+export const inspect = o=>util.inspect(o, {depth: 16, colors: true, breakLength: 100})
+
+export type Node = {
+    type: string,
+    value: string | Array<Node>,
+}
 
 // Capital words are kept but passed through, must resolve to one named token
 const grammar = `
@@ -50,15 +56,15 @@ DE_INDENT            ::= "</INDENT>" NEWLINE
 NAME                 ::= [a-z_][a-zA-Z_0-9.]*
 CAPITALISED_NAME     ::= [A-Z][a-zA-Z_0-9]+
 `
-const generatedParser = new ebnf.Grammars.W3C.Parser(grammar)
-const basicParser = s=>generatedParser.getAST(addIndents(s))
+const generatedParser = new ebnf.Grammars.W3C.Parser(grammar, {})
+export const basicParser = s=>generatedParser.getAST(addIndents(s))
 
 /**
  * Strip leading newlines
  * Add <INDENT> tags to indented sections
  * @param {string}  source string
  */
-const addIndents = s=>{
+export const addIndents = s=>{
     const getIndent = (line, lineNo)=>{
         if(line.trim() === '') return null
         const match = line.match(/^(    )*[^ ]/g)
@@ -66,7 +72,7 @@ const addIndents = s=>{
         return (match[0].length - 1) / 4
     }
     const split = s.split('\n')
-    lineNosIndents = split
+    const lineNosIndents = split
         .map(getIndent)
         .map((indent, lineNo)=>[lineNo, indent])
         .filter(([lineNo, indent])=>indent != null)
@@ -76,7 +82,7 @@ const addIndents = s=>{
     let lines = []
     split.forEach((line, lineNo)=>{
         lines.push(line)
-        const diff = diffs[lineNo] || 0
+        const diff = diffs[lineNo] as number || 0
         for (let i = 0; i < Math.abs(diff); i++){
             lines.push(diff > 0? '<INDENT>' : '</INDENT>')
         }
@@ -84,7 +90,7 @@ const addIndents = s=>{
     return lines.join('\n')
 }
 
-const munge = (o, offset)=>{
+export const munge = (o, offset)=>{
     if(R.isNil(o)) return {errors: [new ParserError()]}
 
     // do I even need to do this bit?
@@ -95,7 +101,7 @@ const munge = (o, offset)=>{
     // if starts with capital letter, pass through
     if(o.type.search(/^[A-Z]/) > -1) return munge(o.children[0], offset)
 
-    const defaultInfo = multiple.includes(o.type)?
+    const defaultInfo = R.contains(o.type, multiple)?
         {[o.type]: o.children.map(n=>munge(n, offset))}
         :{[o.type]: o.text}
 
@@ -107,25 +113,25 @@ const munge = (o, offset)=>{
         errors: o.errors || []
     })
 }
-const deMunge = o =>{
+export const deMunge = o =>{
     const type = getType(o)
-    return multiple.includes(type)?
+    return R.contains(type, multiple)?
         {type: type, value: o[type].map(deMunge)}
         : {type: type, value: o[type]}
 }
-const parser = s=>munge(basicParser(s), null)
-const fullParser = s =>deMunge(munge(basicParser(s), null))
+export const parser = s=>munge(basicParser(s), null)
+export const fullParser = s =>deMunge(munge(basicParser(s), null))
 
-const getType = o=>{
+export const getType = o=>{
     if(R.isNil(o)) throw new UnableToDetermineTypeError(o)
     const intersection = R.intersection(Object.keys(o), Object.keys(types))
     if(intersection.length != 1) throw new UnableToDetermineTypeError(o)
     return intersection[0]
 }
-const getValue = o=>o[getType(o)]
+export const getValue = o=>o[getType(o)]
 
 // repetitive enum-like definitions
-const baseOperators = {
+export const baseOperators = {
     filter: 'filter',
     select: 'select',
     extend: 'extend',
@@ -135,7 +141,7 @@ const baseOperators = {
     join: 'join',
     group: 'group',
 }
-const baseOperatorMap = {
+export const baseOperatorMap = {
     filter: '>',
     select: 'v',
     extend: '^',
@@ -145,8 +151,8 @@ const baseOperatorMap = {
     join: 'J',
     group: 'G',
 }
-const baseOperatorInverseMap = R.invertObj(baseOperatorMap)
-const types = {
+export const baseOperatorInverseMap = R.invertObj(baseOperatorMap)
+export const types = {
     section: 'section',
     let: 'let',
     def: 'def',
@@ -180,7 +186,7 @@ const types = {
     function: 'function',
     headers: 'headers',
 }
-const multiple = [
+export const multiple = [
     types.section,
     types.let,
     types.def,
@@ -195,7 +201,7 @@ const multiple = [
     types.rl_row,
     types.set,
 ]
-const is = {
+export const is = {
     section: o=>o.type === types.section,
     let: o=>o.type === types.let,
     def: o=>o.type === types.def,
@@ -233,25 +239,25 @@ const is = {
         ),
     baseOperator: o=>
         is.operator(o) &&
-        Object.keys(baseOperatorInverseMap).includes(o.value),
+        R.contains(o.value, Object.keys(baseOperatorInverseMap)),
     groupOperator: o=>
         is.operator(o) &&
         o.value === baseOperatorMap.group,
 }
-class TypeError extends Error {constructor(type, node) {
+export class TypeError extends Error {constructor(type, node) {
     super(`Type error, node is not type ${type}: ${inspect(node)}`)
 }}
-class ParserError extends Error {constructor() {
+export class ParserError extends Error {constructor() {
     super(`Parser fully failed`)
 }}
-class UnableToDetermineTypeError extends Error {constructor(node) {
+export class UnableToDetermineTypeError extends Error {constructor(node) {
     super(`Unable to determine type of node: ${inspect(node)}`)
 }}
 const makeAsserter = type=>o=>{
     if(!is[type]) throw new TypeError(type, o)
     return o
 }
-const assertIs = {
+export const assertIs = {
     section: makeAsserter(types.section),
     let: makeAsserter(types.let),
     def: makeAsserter(types.def),
@@ -279,25 +285,4 @@ const assertIs = {
     function: makeAsserter(types.function),
 
     baseOperator: makeAsserter('baseOperator'),  // TODO: make this less of a hack
-}
-
-module.exports = {
-    inspect,
-    baseOperators,
-    baseOperatorMap,
-    baseOperatorInverseMap,
-    basicParser,
-    parser,
-    fullParser,
-    deMunge,
-    types,
-    multiple,
-    getType,
-    getValue,
-    is,
-    assertIs,
-    addIndents,
-    TypeError,
-    ParserError,
-    UnableToDetermineTypeError,
 }

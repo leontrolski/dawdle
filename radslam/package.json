@@ -4,7 +4,7 @@
   "description": "ra",
   "main": "index.js",
   "scripts": {
-    "test": "mocha",
+    "test": "mocha -r ts-node/register test/**.ts",
     "strip-color": "strip-ansi",
     "ts": "ts-node -O '{\"module\": \"commonjs\"}'",
     "bundle": "webpack"
@@ -13,7 +13,9 @@
   "license": "MIT",
   "dependencies": {
     "@types/ace": "0.0.40",
+    "@types/chai": "^4.1.4",
     "@types/mithril": "1.1.12",
+    "@types/mocha": "^5.2.5",
     "@types/ramda": "0.25.37",
     "ace-builds": "1.4.1",
     "browserify": "16.2.2",

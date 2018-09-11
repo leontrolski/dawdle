@@ -1,7 +1,10 @@
-const {types, is, assertIs, inspect, ParserError, TypeError, UnableToDetermineTypeError} = require('./parser')
+import {
+    types, is, assertIs, inspect, ParserError, TypeError,
+    UnableToDetermineTypeError
+} from './parser'
 
-const R = require('ramda')
-const log = o=>console.log(inspect(o))
+import * as R from 'ramda'
+export const log = o=>console.log(inspect(o))
 
 class ScopeError extends Error {constructor(node, env) {
     super(`Scope doesn't contain var, relation or def: ${inspect(node)} \n in env: ${inspect(env)}`)
@@ -125,31 +128,28 @@ const assertOperatorArgsMatch = (operatorArgs, args)=>{
     // TODO: do some type checking stuff as well
 }
 
-module.exports = {
-    errors: {
-        TypeError,
-        UnableToDetermineTypeError,
-        ScopeError,
-        SectionOrderIncorrect,
-        FirstNodeNotARelationOrSet,
-        NodeNotValidBodyType,
-        SelectError,
-        CrossError,
-        UnionOrDifferenceError,
-        JoinError,
-        MissingHeaders,
-        OperatorArgsError,
-        NotImplemented,
+export const errors = {
+    TypeError,
+    UnableToDetermineTypeError,
+    ScopeError,
+    SectionOrderIncorrect,
+    FirstNodeNotARelationOrSet,
+    NodeNotValidBodyType,
+    SelectError,
+    CrossError,
+    UnionOrDifferenceError,
+    JoinError,
+    MissingHeaders,
+    OperatorArgsError,
+    NotImplemented,
+}
+export const asserters = {
+    assertSectionShape,
+    assertBodyShape,
+    assertMacroShape,
+    assertArgs: {
+        [types.set]: assertSetArgs,
+        [types.headers]: assertHeadersArgs,
     },
-    asserters: {
-        assertSectionShape,
-        assertBodyShape,
-        assertMacroShape,
-        assertArgs: {
-            [types.set]: assertSetArgs,
-            [types.headers]: assertHeadersArgs,
-        },
-        assertOperatorArgsMatch,
-    },
-    log,
+    assertOperatorArgsMatch,
 }

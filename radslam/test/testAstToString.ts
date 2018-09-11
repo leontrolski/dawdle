@@ -1,7 +1,7 @@
-const chai = require('chai')
+import * as chai from 'chai'
 
-const parser = require('../src/parser')
-const astToString = require('../src/astToString')
+import * as parser from '../src/parser'
+import * as astToString from '../src/astToString'
 
 const assert = chai.assert
 chai.config.includeStack = true

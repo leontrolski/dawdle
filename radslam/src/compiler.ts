@@ -1,8 +1,8 @@
-const {fullParser, types, is, baseOperatorInverseMap} = require('./parser')
-const operations = require('./operations')
-const {errors, asserters, log} = require('./errorsAndAsserters')
+import {Node, fullParser, types, is, baseOperatorInverseMap} from './parser'
+import * as operations from './operations'
+import {errors, asserters, log} from './errorsAndAsserters'
 
-const R = require('ramda')
+import * as R from 'ramda'
 
 /**
  * Given a list of values, return the list, but with the
@@ -21,7 +21,7 @@ const splatSets = list=>{
 }
 
 // functions to register and resolve from an env
-const emptyEnv = {lets: {}, defs: {}}
+export const emptyEnv = {lets: {}, defs: {}}
 /**
  * Given an resolve a variable in a given scope, else
  * return the object itself.
@@ -91,6 +91,7 @@ const expandAndRegisterMacro = (env, line)=>{
     }}}
     return {line: operatorLine, registration: registration}
 }
+
 /**
  * Populate a template with resolved vars.
  */
@@ -107,7 +108,7 @@ const populateTemplate = (env, o)=>{
     return out + string
 }
 
-const compiler = (env, section)=>{
+export const compiler = (env, section)=>{
     asserters.assertSectionShape(section)
     const defs = section.value.filter(is.letOrDef)
     const body = section.value.filter(R.complement(is.letOrDef))
@@ -184,7 +185,7 @@ const compiler = (env, section)=>{
             // contruct env for operator, then compile its section with it
             let operatorEnv = env
             for(let [operatorArg, arg] of R.zip(operator_.args, args)){
-                const registration = {lets: {[operatorArg.value]: arg}}
+                const registration = {lets: {[(operatorArg as Node).value as any]: arg}}
                 operatorEnv = addRegistration(operatorEnv, registration)
             }
             compiledValue = compiler(operatorEnv, operator_.section).compiledValue
@@ -207,5 +208,3 @@ const astToValue = {
     // [types.datetime]: node=>JSON.parse(node[types.datetime]),
 }
 const toString = o=>astToValue[o.type](o)
-
-module.exports = {compiler, emptyEnv}

@@ -1,13 +1,13 @@
-const {types} = require('./parser')
+import {types} from './parser'
 
-const R = require('ramda')
+import * as R from 'ramda'
 
 /**
  * Map of base operator type to a function that determines
  * the headers for that type. Function signatures are useful
  * in that they spell out the operator's signature.
  */
-const determineHeaders = {
+export const headers = {
     filter: (rel, func, ...values)=>rel.compiledValue,
     select: (rel, ...headers)=>headers,
     extend: (rel, header, func, ...values)=>R.union(rel.compiledValue, [header]),
@@ -25,12 +25,7 @@ const determineHeaders = {
  *
  * TODO: maybe implement cross product.
  */
-const determineSet = {
+export const set = {
     union: (set, ...rest)=>R.union(set.compiledValue, rest),
     difference: (set, ...rest)=>R.difference(set.compiledValue, rest),
-}
-
-module.exports = {
-    [types.set]: determineSet,
-    [types.headers]: determineHeaders,
 }

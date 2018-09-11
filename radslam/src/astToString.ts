@@ -1,14 +1,14 @@
-const {types, multiple, deMunge} = require('./parser')
-const {log} = require('./errorsAndAsserters')
+import {Node, types, multiple, deMunge} from './parser'
+import {log} from './errorsAndAsserters'
 
-const R = require('ramda')
+import * as R from 'ramda'
 
 /**
  * Convert an AST node to a source string.
  * `o` is a node, `i` is the indent level.
  */
 const nodeToString = (o, i)=>{
-    if(multiple.includes(o.type)) return typeStringMap[o.type](o, i)
+    if(R.contains(o.type, multiple)) return typeStringMap[o.type](o, i)
     return o.value
 }
 const typeStringMap = {
@@ -28,8 +28,8 @@ const typeStringMap = {
     },
     line: (o, i)=>{
         const args = o.value
-        if(args.length > 0 && R.last(args).type === 'section'){
-            section = args.pop()
+        if(args.length > 0 && (R.last(args) as Node).type === 'section'){
+            const section = args.pop()
             return `${o.value.map(o=>nodeToString(o, i)).join(' ')}\n${nodeToString(section, i + 1)}`
         }
         return args.map(o=>nodeToString(o, i)).join(' ')
@@ -49,12 +49,12 @@ const typeStringMap = {
         const headerStrings = headers.value.map(o=>nodeToString(o, i))
         const rowsStrings = rows.map(row=>row.value.map(o=>nodeToString(o, i)))
         const colWidths = R.transpose(rowsStrings.concat([headerStrings]))
-            .map(col=>col.map(cell=>cell.length))
+            .map(col=>col.map(cell=>(cell as {length}).length))
             .map(colLengths=>Math.max(...colLengths))
         const makeRow = strings=>
             '| ' +
             R.zip(strings, colWidths)
-            .map(([string, colWidth])=>string.padEnd(colWidth, ' ') + ' ')
+            .map(([string, colWidth])=>(string as {padEnd}).padEnd(colWidth, ' ') + ' ')
             .join('| ')
             + '|'
         const headerString = makeRow(headerStrings)
@@ -77,7 +77,5 @@ const nodeToJson = (o, i)=>{
         .replace(/{"line":/g, '\n    {"line":'))
 }
 
-const astToString = ast=>nodeToString(deMunge(ast), 0)
-const jsonifyAndIndent = ast=>nodeToJson(ast, 1)
-
-module.exports = {astToString, jsonifyAndIndent}
+export const astToString = ast=>nodeToString(deMunge(ast), 0)
+export const jsonifyAndIndent = ast=>nodeToJson(ast, 1)
