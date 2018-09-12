@@ -46,14 +46,15 @@ const typeStringMap: { [s: string]: (o: NodeMultiple, i: number)=>string } = {
             .map(col=>col.map(cell=>cell.length))
             .map(colLengths=>Math.max(...colLengths))
         function makeRow(strings: Array<string>): string{
-            return '| ' +
+            return '    '.repeat(i) +
+            '| ' +
             R.zip(strings, colWidths)
             .map(([string, colWidth])=>string.padEnd(colWidth, ' ') + ' ')
             .join('| ')
             + '|'
         }
-        const headerString = makeRow(headerStrings)
-        const divider =  rows.length > 0? '\n' + '-'.repeat(headerString.length) + '\n' : ''
+        const headerString = makeRow(headerStrings).trim()
+        const divider =  rows.length > 0? '\n' + '    '.repeat(i) + '-'.repeat(headerString.length) + '\n' : ''
         const rowsString = rowsStrings.map(makeRow).join('\n')
         return headerString + divider + rowsString
     },

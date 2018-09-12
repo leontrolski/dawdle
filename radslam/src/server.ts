@@ -24,9 +24,18 @@ const dawdleSource2 = `def JoinClone relation: right:
     relation:
     J right:
 
+let foo:
+    def Identity relation:
+        relation:
+
+    | :a | :b |
+    -----------
+    | 6  | 8  |
+
 | :a | :b |
 -----------
 | 1  | 5  |
+U foo:
 JoinClone
     | :a | :c |
 `

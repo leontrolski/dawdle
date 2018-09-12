@@ -2,7 +2,7 @@ import * as chai from 'chai'
 
 import * as parser from '../src/parser'
 import * as compiler from '../src/compiler'
-import { NodeCompiled } from '../src/compiler'
+import { NodeCompiled } from '../src/parser'
 
 const assert = chai.assert
 chai.config.includeStack = true

@@ -38,66 +38,85 @@ function deriveState(state: State): DerivedState{
     return {blocks}
 }
 // UI components
-function nodeToHyperscript(o: Node, i: number): m.Vnode {
-    if(is.multiple(o)) return typeStringMap[o.type](o, i)
-    return m('span', o.value)
+function nodeToHyperscript(o: Node): m.Vnode {
+    let lineI = 0
+    function getNewLineI(){
+        lineI += 1
+        return lineI.toString().padEnd(3)
+    }
+    function inner(o: Node, i: number): m.Vnode {
+        if(is.multiple(o)) return typeStringMap[o.type](o, i)
+        return m('span', o.value)
+    }
+    function many(o: NodeMultiple, i: number): m.Vnode[]{
+        const args = o.value
+        const section = args.pop()
+        return intersperse(space, args.map(o=>inner(o, i))).concat([newline, inner(section, i + 1)])
+    }
+    const tab = m('span', '    ')
+    const space = m('span', ' ')
+    const newline = m('span', '\n')
+    const typeStringMap: { [s: string]: (o: NodeMultiple, i: number)=>m.Vnode } = {
+        section: (o, i)=>m('span.section', intersperse(newline, o.value.map(o=>o.type === 'section'?
+            inner(o, i + 1)
+            : m('span', [repeat(tab, i), inner(o, i)])
+        ))),
+        let: (o, i)=>{
+            const let_ = m('span.let', getNewLineI(), 'let ', many(o, i), newline)
+            lineI += 1
+            return let_
+        },
+        def: (o, i)=>{
+            const def = m('span.def', getNewLineI(), 'def ', many(o, i), newline)
+            lineI += 1
+            return def
+        },
+        line: (o, i)=>{
+            if(is.section(last(o.value) || {})) return m('span.line', getNewLineI(), many(o, i))
+            return m('span.line', getNewLineI(), intersperse(space, o.value.map(o=>inner(o, i))))
+        },
+        aggregator: (o, i)=>m('span', o.value.map(o=>inner(o, i))),
+        map_macro: (o, i)=>{
+            const [var_, template] = o.value
+            return m('span', '(map ', inner(var_, i), space, inner(template, i))
+        },
+        named_value: (o, i)=>{
+            const [var_, value] = o.value
+            return m('span', inner(var_, i), '=', inner(value, i))
+        },
+        set: (o, i)=>m('span', '[', o.value.map(o=>inner(o, i)), ']'),
+        relation_literal: (o, i)=>{
+            const [headers, ...rows] = o.value as Array<NodeMultiple>
+            const toText = span=>typeof span.text == 'string'? span.text: ''
+            const headerStrings = headers.value.map(o=>inner(o, i)).map(toText)
+            const rowsStrings = rows.map(row=>row.value.map(o=>inner(o, i)).map(toText))
+            const colWidths = transpose(rowsStrings.concat([headerStrings]))
+                .map(col=>col.map(cell=>cell.length))
+                .map(colLengths=>Math.max(...colLengths))
+            function makeRow(strings: Array<string>): string{
+                return '    '.repeat(i) +
+                '| ' +
+                zip(strings, colWidths)
+                .map(([string, colWidth])=>string.padEnd(colWidth, ' ') + ' ')
+                .join('| ')
+                + '|'
+            }
+            const headerSpan = m('span', getNewLineI(), makeRow(headerStrings).trim())
+            const divider =  rows.length > 0?
+                m('span', newline, getNewLineI(), repeat(tab, i), '-'.repeat(toText(headerSpan).length), newline)
+                : null
+            const rowsSpans = intersperse(newline, rowsStrings.map(makeRow).map(s=>m('span', getNewLineI(), s)))
+            return m('span.relation_literal', headerSpan, divider, rowsSpans)
+        },
+    }
+    return inner(o as Node, 0)
 }
 
-function many(o: NodeMultiple, i: number): m.Vnode[]{
-    const args = o.value
-    const section = args.pop()
-    return intersperse(space, args.map(o=>nodeToHyperscript(o, i))).concat([newline, nodeToHyperscript(section, i + 1)])
-}
-const tab = m('span', '    ')
-const space = m('span', ' ')
-const newline = m('span', '\n')
-const typeStringMap: { [s: string]: (o: NodeMultiple, i: number)=>m.Vnode } = {
-    section: (o, i)=>m('span.section', intersperse(newline, o.value.map(o=>o.type === 'section'?
-        nodeToHyperscript(o, i + 1)
-        : m('span', [repeat(tab, i), nodeToHyperscript(o, i)])
-    ))),
-    let: (o, i)=>m('span.let', 'let ', many(o, i), newline),
-    def: (o, i)=>m('span.def', 'def ', many(o, i), newline),
-    line: (o, i)=>{
-        if(is.section(last(o.value) || {})) return m('span.line', many(o, i))
-        return m('span.line', intersperse(space, o.value.map(o=>nodeToHyperscript(o, i))))
-    },
-    aggregator: (o, i)=>m('span', o.value.map(o=>nodeToHyperscript(o, i))),
-    map_macro: (o, i)=>{
-        const [var_, template] = o.value
-        return m('span', '(map ', nodeToHyperscript(var_, i), space, nodeToHyperscript(template, i))
-    },
-    named_value: (o, i)=>{
-        const [var_, value] = o.value
-        return m('span', nodeToHyperscript(var_, i), '=', nodeToHyperscript(value, i))
-    },
-    set: (o, i)=>m('span', '[', o.value.map(o=>nodeToHyperscript(o, i)), ']'),
-    relation_literal: (o, i)=>{
-        const [headers, ...rows] = o.value as Array<NodeMultiple>
-        const toText = span=>typeof span.text == 'string'? span.text: ''
-        const headerStrings = headers.value.map(o=>nodeToHyperscript(o, i)).map(toText)
-        const rowsStrings = rows.map(row=>row.value.map(o=>nodeToHyperscript(o, i)).map(toText))
-        const colWidths = transpose(rowsStrings.concat([headerStrings]))
-            .map(col=>col.map(cell=>cell.length))
-            .map(colLengths=>Math.max(...colLengths))
-        function makeRow(strings: Array<string>): string{
-            return '| ' +
-            zip(strings, colWidths)
-            .map(([string, colWidth])=>string.padEnd(colWidth, ' ') + ' ')
-            .join('| ')
-            + '|'
-        }
-        const headerString = makeRow(headerStrings)
-        const divider =  rows.length > 0? '\n' + '-'.repeat(headerString.length) + '\n' : ''
-        const rowsString = rowsStrings.map(makeRow).join('\n')
-        return m('span.relation_literal', headerString + divider + rowsString)
-    },
-}
 const OriginalBlock = (block: Block)=>m(
     '.source.left', m('', {id: block.id, language: block.language}, block.source))
 
 const InfoBlock = (info: NodeCompiled | null)=>info === null? null :
-    m('.source.pre.right', nodeToHyperscript(info as Node, 0))
+    m('.source.pre.right', nodeToHyperscript(info as Node))
 
 const View = ()=>m('div',
     deriveState(state).blocks.map((block, i)=>
