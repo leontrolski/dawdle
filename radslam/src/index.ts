@@ -44,58 +44,57 @@ function nodeToHyperscript(o: Node): m.Vnode {
         lineI += 1
         return lineI.toString().padEnd(3)
     }
-    function inner(o: Node, i: number): m.Vnode {
-        if(is.multiple(o)) return typeStringMap[o.type](o, i)
+    function inner(o: Node): m.Vnode {
+        if(is.multiple(o)) return typeStringMap[o.type](o)
         return m('span', o.value)
     }
-    function many(o: NodeMultiple, i: number): m.Vnode[]{
+    function many(o: NodeMultiple): m.Vnode[]{
         const args = o.value
         const section = args.pop()
-        return intersperse(space, args.map(o=>inner(o, i))).concat([newline, inner(section, i + 1)])
+        return intersperse(space, args.map(o=>inner(o))).concat([newline, inner(section)])
     }
     const tab = m('span', '    ')
     const space = m('span', ' ')
     const newline = m('span', '\n')
-    const typeStringMap: { [s: string]: (o: NodeMultiple, i: number)=>m.Vnode } = {
-        section: (o, i)=>m('span.section', intersperse(newline, o.value.map(o=>o.type === 'section'?
-            inner(o, i + 1)
-            : m('span', [repeat(tab, i), inner(o, i)])
+    const typeStringMap: { [s: string]: (o: NodeMultiple)=>m.Vnode } = {
+        section: o=>m('span.section', intersperse(newline, o.value.map(o=>o.type === 'section'?
+            inner(o)
+            : m('span', [inner(o)])
         ))),
-        let: (o, i)=>{
-            const let_ = m('span.let', getNewLineI(), 'let ', many(o, i), newline)
-            lineI += 1
+        let: o=>{
+            const let_ = m('span.let', getNewLineI(), 'let ', many(o), newline)
+            getNewLineI()
             return let_
         },
-        def: (o, i)=>{
-            const def = m('span.def', getNewLineI(), 'def ', many(o, i), newline)
-            lineI += 1
+        def: o=>{
+            const def = m('span.def', getNewLineI(), 'def ', many(o), newline)
+            getNewLineI()
             return def
         },
-        line: (o, i)=>{
-            if(is.section(last(o.value) || {})) return m('span.line', getNewLineI(), many(o, i))
-            return m('span.line', getNewLineI(), intersperse(space, o.value.map(o=>inner(o, i))))
+        line: o=>{
+            if(is.section(last(o.value) || {})) return m('span.line', getNewLineI(), many(o))
+            return m('span.line', getNewLineI(), intersperse(space, o.value.map(o=>inner(o))))
         },
-        aggregator: (o, i)=>m('span', o.value.map(o=>inner(o, i))),
-        map_macro: (o, i)=>{
+        aggregator: o=>m('span', o.value.map(o=>inner(o))),
+        map_macro: o=>{
             const [var_, template] = o.value
-            return m('span', '(map ', inner(var_, i), space, inner(template, i))
+            return m('span', '(map ', inner(var_), space, inner(template))
         },
-        named_value: (o, i)=>{
+        named_value: o=>{
             const [var_, value] = o.value
-            return m('span', inner(var_, i), '=', inner(value, i))
+            return m('span', inner(var_), '=', inner(value))
         },
-        set: (o, i)=>m('span', '[', o.value.map(o=>inner(o, i)), ']'),
-        relation_literal: (o, i)=>{
+        set: o=>m('span', '[', o.value.map(o=>inner(o)), ']'),
+        relation_literal: o=>{
             const [headers, ...rows] = o.value as Array<NodeMultiple>
             const toText = span=>typeof span.text == 'string'? span.text: ''
-            const headerStrings = headers.value.map(o=>inner(o, i)).map(toText)
-            const rowsStrings = rows.map(row=>row.value.map(o=>inner(o, i)).map(toText))
+            const headerStrings = headers.value.map(o=>inner(o)).map(toText)
+            const rowsStrings = rows.map(row=>row.value.map(o=>inner(o)).map(toText))
             const colWidths = transpose(rowsStrings.concat([headerStrings]))
                 .map(col=>col.map(cell=>cell.length))
                 .map(colLengths=>Math.max(...colLengths))
             function makeRow(strings: Array<string>): string{
-                return '    '.repeat(i) +
-                '| ' +
+                return '| ' +
                 zip(strings, colWidths)
                 .map(([string, colWidth])=>string.padEnd(colWidth, ' ') + ' ')
                 .join('| ')
@@ -103,13 +102,13 @@ function nodeToHyperscript(o: Node): m.Vnode {
             }
             const headerSpan = m('span', getNewLineI(), makeRow(headerStrings).trim())
             const divider =  rows.length > 0?
-                m('span', newline, getNewLineI(), repeat(tab, i), '-'.repeat(toText(headerSpan).length), newline)
+                m('span.divider', newline, getNewLineI(), '-'.repeat(6), newline)//toText(headerSpan).length), newline)
                 : null
             const rowsSpans = intersperse(newline, rowsStrings.map(makeRow).map(s=>m('span', getNewLineI(), s)))
             return m('span.relation_literal', headerSpan, divider, rowsSpans)
         },
     }
-    return inner(o as Node, 0)
+    return inner(o as Node)
 }
 
 const OriginalBlock = (block: Block)=>m(
