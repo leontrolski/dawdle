@@ -1,6 +1,13 @@
 import {Node, NodeMultiple, NodeCompiled, parser, deMunge} from './parser'
 import {compiler, emptyEnv} from './compiler'
 
+export const languages = {
+    dawdle: 'dawdle',
+    python: 'python',
+    javascript: 'javascript',
+    typescript: 'typescript',
+}
+
 const pythonSource1 = `import foo
 
 d = [1, 2, 3]

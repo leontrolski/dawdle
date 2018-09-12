@@ -3,7 +3,7 @@ import * as m from 'mithril'
 import * as ace from 'ace-builds/src-noconflict/ace'
 ace.config.set('basePath', './')
 
-import { ServerBlock, serverBlocks } from './server'
+import { ServerBlock, serverBlocks, languages } from './server'
 import { Node, NodeMultiple, NodeCompiled, is } from './parser'
 
 // server
@@ -112,7 +112,10 @@ function nodeToHyperscript(o: Node): m.Vnode {
 }
 
 const OriginalBlock = (block: Block)=>m(
-    '.source.left', m('', {id: block.id, language: block.language}, block.source))
+    '.source.left',
+    {class: block.language === languages.dawdle? 'language-dawdle' : ''},
+    m('', {id: block.id, language: block.language}, block.source)
+)
 
 const InfoBlock = (info: NodeCompiled | null)=>info === null? null :
     m('.source.pre.right', nodeToHyperscript(info as Node))
