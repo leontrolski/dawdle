@@ -4,6 +4,7 @@
         // comment next line to disable source maps
         "sourceMap": true,
         "noImplicitAny": false,  // should be true
+        "lib": ["es2018", "dom"],
         "module": "commonjs", // or es6?
         "target": "es6",
         "allowJs": true

@@ -135,6 +135,7 @@ TODO
 - allow vars called > < = etc..?
 - write more comprehensive tests, esp errors and composite operators on sets
 - add // comments to parser
+- improve typing, maybe do some more stuff like:
 - remove offset malarkey in parser
 
 - work on -[multirelation]-

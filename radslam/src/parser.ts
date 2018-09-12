@@ -5,10 +5,22 @@ import * as R from 'ramda'
 
 export const inspect = o=>util.inspect(o, {depth: 16, colors: true, breakLength: 100})
 
-export type Node = {
+export type NodeMinimal = any
+export type NodeMultiple = {
     type: string,
-    value: string | Array<Node>,
+    value: Array<Node>,
 }
+export type NodeSingle = {
+    type: string,
+    value: string,
+}
+export type NodeCompiled = {
+    type: string,
+    value: string | Array<NodeCompiled>,
+    compiledType: string,
+    compiledValue: any,
+}
+export type Node = NodeMultiple | NodeSingle
 
 // Capital words are kept but passed through, must resolve to one named token
 const grammar = `
@@ -113,14 +125,18 @@ export const munge = (o, offset)=>{
         errors: o.errors || []
     })
 }
-export const deMunge = o =>{
+export function deMunge(o: NodeMinimal): Node {
     const type = getType(o)
     return R.contains(type, multiple)?
         {type: type, value: o[type].map(deMunge)}
         : {type: type, value: o[type]}
 }
-export const parser = s=>munge(basicParser(s), null)
-export const fullParser = s =>deMunge(munge(basicParser(s), null))
+export function parser(s: string): NodeMinimal {
+    return munge(basicParser(s), null)
+}
+export function fullParser(s: string): NodeMultiple {
+    return deMunge(munge(basicParser(s), null)) as NodeMultiple
+}
 
 export const getType = o=>{
     if(R.isNil(o)) throw new UnableToDetermineTypeError(o)
@@ -227,6 +243,9 @@ export const is = {
     datetime: o=>o.type === types.datetime,
     function: o=>o.type === types.function,
     // compound
+    multiple: function(o: Node): o is NodeMultiple {
+        return R.contains(o.type, multiple)
+    },
     letOrDef: o=>is.let(o) || is.def(o),
     singleRelationOrVarOrSet: o=>
         is.line(o) &&

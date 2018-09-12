@@ -1,6 +1,7 @@
 import * as chai from 'chai'
 
 import * as parser from '../src/parser'
+import { Node } from '../src/parser'
 import * as astToString from '../src/astToString'
 
 const assert = chai.assert
@@ -119,15 +120,15 @@ G :foo
     it('should stringify an empty relation literal with no rows', ()=>{
         const in_ = {section: [
             {relation_literal: [
-                {rl_headers: []}]}]}
+                {rl_headers: [] as Array<Node>}]}]}
         const expected = `| |`
         assert.deepEqual(expected, astToString.astToString(in_))
     })
     it('should stringify an empty relation literal with one row', ()=>{
         const in_ = {section: [
             {relation_literal: [
-                {rl_headers: []},
-                {rl_row: []}]}]}
+                {rl_headers: [] as Array<Node>},
+                {rl_row: [] as Array<Node>}]}]}
         const expected = `| |
 ---
 | |`

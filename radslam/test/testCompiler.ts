@@ -2,6 +2,7 @@ import * as chai from 'chai'
 
 import * as parser from '../src/parser'
 import * as compiler from '../src/compiler'
+import { NodeCompiled } from '../src/compiler'
 
 const assert = chai.assert
 chai.config.includeStack = true
@@ -11,6 +12,28 @@ chai.config.truncateThreshold = 1000
 const makeHeaders = (...headers) => headers.map(h=>({type: 'header', value: h}))
 
 describe('compiler.compileHeaders', ()=>{
+    it('preddy', ()=>{
+        // Discriminated Unions
+        type Square = {kind: "square", size: number}
+        type Circle = {kind: "circle", size: number}
+        type Rectangle = {kind: "rectangle", height: number}
+        type Shape =
+            Square |
+            Circle |
+            Rectangle
+        type SizeKinds =
+            Square |
+            Circle
+        const sizeKinds = [
+            'square',
+            'circle']
+        function isSizeKind(shape: Shape): shape is SizeKinds {
+          return sizeKinds.includes(shape.kind)
+        }
+        function area(s: Shape){
+          return isSizeKind(s)? s.size : s.height
+        }
+    })
     it('should get the headers of a table literal', ()=>{
         const env = compiler.emptyEnv
         const in_ = `| :a | :b |`
@@ -24,7 +47,7 @@ describe('compiler.compileHeaders', ()=>{
             compiledType: 'headers',
             compiledValue: [ { type: 'header', value: ':a' }, { type: 'header', value: ':b' } ] }
 
-        assert.deepEqual(expected, compiler.compiler(env, ast))
+        assert.deepEqual(expected as NodeCompiled, compiler.compiler(env, ast))
     })
     it('should get the headers in a set literal', ()=>{
         const env = compiler.emptyEnv
@@ -39,7 +62,7 @@ describe('compiler.compileHeaders', ()=>{
             compiledType: 'set',
             compiledValue: [ { type: 'header', value: ':foo' }, { type: 'header', value: ':bar' } ] }
 
-        assert.deepEqual(expected, compiler.compiler(env, ast))
+        assert.deepEqual(expected as NodeCompiled, compiler.compiler(env, ast))
     })
     it('should handle let assignment of a relation', ()=>{
         const env = compiler.emptyEnv
@@ -69,7 +92,7 @@ some_rel:
             compiledType: 'headers',
             compiledValue: [ { type: 'header', value: ':a' }, { type: 'header', value: ':b' } ] }
 
-        assert.deepEqual(expected, compiler.compiler(env, ast))
+        assert.deepEqual(expected as NodeCompiled, compiler.compiler(env, ast))
     })
     it('should handle base operators at each step on a set', ()=>{
         const env = compiler.emptyEnv
@@ -103,10 +126,10 @@ U [2 3 4]
             compiledType: 'set',
             compiledValue: [ { type: 'number', value: '1' }, { type: 'number', value: '3' } ] }
 
-        assert.deepEqual(expected, compiler.compiler(env, ast))
+        assert.deepEqual(expected as NodeCompiled, compiler.compiler(env, ast))
     })
     it('should handle base operators at each step on a relation', ()=>{
-        const env = {lets: {fake_function: {type: 'function', value: ()=>null}}}
+        const env = {lets: {fake_function: {type: 'function', value: ()=>null}}, defs: {}}
         const in_ = `| :a | :b | :c |
 J
     | :d | :a |
@@ -192,6 +215,7 @@ U
                 { type: 'header', value: ':a' },
                 { type: 'aggregator',
                   value: [ { type: 'header', value: ':g' }, { type: 'var', value: 'some_function' } ],
+                  compiledType: 'headers',
                   compiledValue: [ { type: 'header', value: ':g' }, { type: 'header', value: ':h' } ] } ],
              compiledType: 'headers',
              compiledValue: [ { type: 'header', value: ':a' }, { type: 'header', value: ':g' }, { type: 'header', value: ':h' } ] },
@@ -228,7 +252,7 @@ U
         compiledType: 'headers',
         compiledValue: [ { type: 'header', value: ':a' }, { type: 'header', value: ':g' }, { type: 'header', value: ':h' } ] }
 
-        assert.deepEqual(expected, compiler.compiler(env, ast))
+        assert.deepEqual(expected as NodeCompiled, compiler.compiler(env, ast))
     })
     it('should handle a simple composite operator', ()=>{
         const env = compiler.emptyEnv
@@ -272,10 +296,10 @@ JoinClone
         compiledType: 'headers',
         compiledValue: [ { type: 'header', value: ':a' }, { type: 'header', value: ':b' }, { type: 'header', value: ':c' } ] }
 
-        assert.deepEqual(expected, compiler.compiler(env, ast))
+        assert.deepEqual(expected as NodeCompiled, compiler.compiler(env, ast))
     })
     it('should expand map macros', ()=>{
-        const env = {lets: {fake_function: {type: 'function', value: ()=>null}}}
+        const env = {lets: {fake_function: {type: 'function', value: ()=>null}}, defs: {}}
         const in_ = `| :a |
 (map [:foo :bar]) \`^ {{_}} fake_function\`
 `
@@ -295,7 +319,7 @@ JoinClone
         compiledType: 'headers',
         compiledValue: [ { type: 'header', value: ':a' }, { type: 'header', value: ':foo' }, { type: 'header', value: ':bar' } ] }
 
-        assert.deepEqual(expected, compiler.compiler(env, ast))
+        assert.deepEqual(expected as NodeCompiled, compiler.compiler(env, ast))
     })
     it('should show the values for two nested joins', ()=>{
         const env = compiler.emptyEnv
@@ -341,14 +365,17 @@ J
         compiledType: 'headers',
         compiledValue: [ { type: 'header', value: ':a' }, { type: 'header', value: ':b' }, { type: 'header', value: ':c' } ] }
 
-        assert.deepEqual(expected, compiler.compiler(env, ast))
+        assert.deepEqual(expected as NodeCompiled, compiler.compiler(env, ast))
     })
     it('should do a load of nested stuff', ()=>{
-        const env = {lets: {
-            make_null: {type: 'function', value: (row, relation, ..._)=>({type: 'null', value: 'null'})},
-            first: {type: 'function', value: (row, relation, ..._)=>relation.rows[0]},
-            value: {type: 'function', value: (row, relation, value)=>value},
-        }}
+        const env = {
+            lets: {
+                make_null: {type: 'function', value: (row, relation, ..._)=>({type: 'null', value: 'null'})},
+                first: {type: 'function', value: (row, relation, ..._)=>relation.rows[0]},
+                value: {type: 'function', value: (row, relation, value)=>value},
+            },
+            defs: {},
+        }
         const in_ = `def Outer relation: right:
     let joined:
         relation:
@@ -606,6 +633,6 @@ Outer
            { type: 'header', value: ':right_id' },
            { type: 'header', value: ':r' },
            { type: 'header', value: ':new_header' } ] }
-        assert.deepEqual(expected, compiler.compiler(env, ast))
+        assert.deepEqual(expected as NodeCompiled, compiler.compiler(env, ast))
     })
 })

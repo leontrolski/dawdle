@@ -1,4 +1,4 @@
-import {parser, deMunge} from './parser'
+import {Node, NodeMultiple, NodeCompiled, parser, deMunge} from './parser'
 import {compiler, emptyEnv} from './compiler'
 
 const pythonSource1 = `import foo
@@ -25,10 +25,12 @@ const dawdleSource2 = `def JoinClone relation: right:
     J right:
 
 | :a | :b |
+-----------
+| 1  | 5  |
 JoinClone
     | :a | :c |
 `
-const ast = deMunge(parser(dawdleSource2))
+const ast = deMunge(parser(dawdleSource2)) as NodeMultiple
 
 const pythonSource3 = `)`
 
@@ -40,14 +42,16 @@ bar`
 export type ServerBlock = {
     language: string,
     source: string,
-    astWithHeaders: string,
+    astWithHeaders: NodeCompiled | null,
 }
 export const serverBlocks: Array<ServerBlock> = [
-    {language: 'python', source: pythonSource1, astWithHeaders: ''},
-    {language: 'dawdle', source: dawdleSource1, astWithHeaders: ''},
-    {language: 'python', source: pythonSource2, astWithHeaders: ''},
+    {language: 'python', source: pythonSource1, astWithHeaders: null},
+    {language: 'dawdle', source: dawdleSource1, astWithHeaders: null},
+    {language: 'python', source: pythonSource2, astWithHeaders: null},
     {language: 'dawdle', source: dawdleSource2, astWithHeaders: compiler(emptyEnv, ast)},
-    {language: 'python', source: pythonSource3, astWithHeaders: ''},
+    {language: 'python', source: pythonSource3, astWithHeaders: null},
 ]
 const fileState = {source: ''}
 const serverAst = {}
+
+export let test

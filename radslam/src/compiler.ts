@@ -1,4 +1,7 @@
-import {Node, fullParser, types, is, baseOperatorInverseMap} from './parser'
+import {
+    Node, NodeMultiple, NodeSingle, NodeCompiled,
+    fullParser, types, is, baseOperatorInverseMap
+} from './parser'
 import * as operations from './operations'
 import {errors, asserters, log} from './errorsAndAsserters'
 
@@ -21,7 +24,8 @@ const splatSets = list=>{
 }
 
 // functions to register and resolve from an env
-export const emptyEnv = {lets: {}, defs: {}}
+export type Env = {lets: any, defs: any}
+export const emptyEnv: Env = {lets: {}, defs: {}}
 /**
  * Given an resolve a variable in a given scope, else
  * return the object itself.
@@ -108,20 +112,26 @@ const populateTemplate = (env, o)=>{
     return out + string
 }
 
-export const compiler = (env, section)=>{
+// TODO: more shape-y things like this + look into runtime checking
+type Definition = {
+    type: 'let' | 'def',
+    value: [NodeSingle, NodeMultiple, NodeMultiple],  // ...
+}
+
+export function compiler(env: Env, section: NodeMultiple): NodeCompiled {
     asserters.assertSectionShape(section)
-    const defs = section.value.filter(is.letOrDef)
+    const defs = section.value.filter(is.letOrDef) as Array<Definition>
     const body = section.value.filter(R.complement(is.letOrDef))
     const withCompiled = []  // we will append to this
 
     for(let definition of defs){
         const [first, ...argsAndSection] = definition.value
-        const section = argsAndSection.pop()
+        const section = argsAndSection.pop() as NodeMultiple
         const args = argsAndSection
 
         let registration
         if(is.def(definition)){
-            // TODO: would be nicer if this munging didn't happen here, but on retreival
+            // TODO: would be nicer if this munging didn't happen here, but on retrieval
             const structured = R.merge(first, {section, args})
             registration = {defs: {[first.value]: structured}}
             withCompiled.push(definition)
@@ -140,7 +150,8 @@ export const compiler = (env, section)=>{
     const first = is.line(firstLine)? firstLine.value[0] : firstLine
 
     // TODO: handle aggregators consistently with everything else
-    if(is.aggregator(first)) return R.merge(firstLine, {compiledValue: body.map(o=>o.value[0])})
+    if(is.aggregator(first)) return R.merge(
+        firstLine, {compiledType: types.headers, compiledValue: body.map(o=>o.value[0])}) as NodeCompiled
     const isSet = is.var(first) || is.set(first) || is.all_headers(first)
     const compiledType = isSet? types.set : types.headers
     let compiledValue
