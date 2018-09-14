@@ -56,11 +56,10 @@ function nodeToHyperscript(o: Node): m.Vnode {
     }
     const space = m('span', ' ')
     const newline = m('span', '\n')
-    const typeStringMap: {[s: string]: (o: NodeMultiple)=>m.Vnode} = {
-        section: o=>m('span.section', intersperse(newline, o.value.map(o=>o.type === 'section'?
-            inner(o)
-            : m('span', [inner(o)])
-        ))),
+    const typeStringMap: {[s: string]: (o: NodeMultiple)=>any} = {
+        section: o=>{
+            o.value.forEach(o=>inner(o))
+        },
         let: o=>{
             const newLineI = getNewLineI()
             const let_ = m('span.let', newLineI, 'let ', many(o), newline)
@@ -94,28 +93,9 @@ function nodeToHyperscript(o: Node): m.Vnode {
         },
         set: o=>m('span', '[', o.value.map(o=>inner(o)), ']'),
         relation_literal: o=>{
-            const [headers, ...rows] = o.value as Array<NodeMultiple>
-            const toText = span=>typeof span.text == 'string'? span.text: ''
-            const headerStrings = headers.value.map(o=>inner(o)).map(toText)
-            const rowsStrings = rows.map(row=>row.value.map(o=>inner(o)).map(toText))
-            const colWidths = transpose(rowsStrings.concat([headerStrings]))
-                .map(col=>col.map(cell=>cell.length))
-                .map(colLengths=>Math.max(...colLengths))
-            function makeRow(strings: Array<string>): string{
-                return '| ' +
-                zip(strings, colWidths)
-                .map(([string, colWidth])=>string.padEnd(colWidth, ' ') + ' ')
-                .join('| ')
-                + '|'
-            }
             const newLineI = getNewLineI()
-            const headerSpan = m('span', newLineI, makeRow(headerStrings).trim())
             vnodes.push({lineI: newLineI, o})
-            const divider =  rows.length > 0?
-                m('span.divider', newline, getNewLineI(), '-'.repeat(6), newline)//toText(headerSpan).length), newline)
-                : null
-            const rowsSpans = intersperse(newline, rowsStrings.map(makeRow).map(s=>m('span', getNewLineI(), s)))
-            return m('span.relation_literal', headerSpan, divider, rowsSpans)
+            return m('')
         },
     }
     const rar = inner(o as Node)
@@ -123,9 +103,6 @@ function nodeToHyperscript(o: Node): m.Vnode {
     return m('span', intersperse(newline, nodes
         .filter(n=>n.o.compiledType === 'headers')
         .map(n=>m('span', n.lineI, n.o.compiledValue.map(v=>v.value)))))
-    // window.o = o
-    // return rar
-    // return m('span', intersperse(newline, vnodes))
 }
 
 const OriginalBlock = (block: Block)=>m(
