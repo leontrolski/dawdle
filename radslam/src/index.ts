@@ -1,4 +1,4 @@
-import { zip, merge, last, transpose, repeat, intersperse } from 'ramda'
+import { zip, merge, last, transpose, repeat, intersperse, sortBy } from 'ramda'
 import * as m from 'mithril'
 import * as ace from 'ace-builds/src-noconflict/ace'
 ace.config.set('basePath', './')
@@ -39,10 +39,11 @@ function deriveState(state: State): DerivedState{
 }
 // UI components
 function nodeToHyperscript(o: Node): m.Vnode {
-    let lineI = 0
+    let lineI = -1
+    const vnodes = []
     function getNewLineI(){
         lineI += 1
-        return lineI.toString().padEnd(3)
+        return lineI
     }
     function inner(o: Node): m.Vnode {
         if(is.multiple(o)) return typeStringMap[o.type](o)
@@ -53,27 +54,34 @@ function nodeToHyperscript(o: Node): m.Vnode {
         const section = args.pop()
         return intersperse(space, args.map(o=>inner(o))).concat([newline, inner(section)])
     }
-    const tab = m('span', '    ')
     const space = m('span', ' ')
     const newline = m('span', '\n')
-    const typeStringMap: { [s: string]: (o: NodeMultiple)=>m.Vnode } = {
+    const typeStringMap: {[s: string]: (o: NodeMultiple)=>m.Vnode} = {
         section: o=>m('span.section', intersperse(newline, o.value.map(o=>o.type === 'section'?
             inner(o)
             : m('span', [inner(o)])
         ))),
         let: o=>{
-            const let_ = m('span.let', getNewLineI(), 'let ', many(o), newline)
+            const newLineI = getNewLineI()
+            const let_ = m('span.let', newLineI, 'let ', many(o), newline)
+            vnodes.push({lineI: newLineI, o})
             getNewLineI()
             return let_
         },
         def: o=>{
-            const def = m('span.def', getNewLineI(), 'def ', many(o), newline)
+            const newLineI = getNewLineI()
+            const def = m('span.def', newLineI, 'def ', many(o), newline)
+            vnodes.push({lineI: newLineI, o})
             getNewLineI()
             return def
         },
         line: o=>{
-            if(is.section(last(o.value) || {})) return m('span.line', getNewLineI(), many(o))
-            return m('span.line', getNewLineI(), intersperse(space, o.value.map(o=>inner(o))))
+            let line
+            const newLineI = getNewLineI()
+            if(is.section(last(o.value) || {})) line = m('span.line', newLineI, many(o))
+            else line = m('span.line', newLineI, intersperse(space, o.value.map(o=>inner(o))))
+            vnodes.push({lineI: newLineI, o})
+            return line
         },
         aggregator: o=>m('span', o.value.map(o=>inner(o))),
         map_macro: o=>{
@@ -100,7 +108,9 @@ function nodeToHyperscript(o: Node): m.Vnode {
                 .join('| ')
                 + '|'
             }
-            const headerSpan = m('span', getNewLineI(), makeRow(headerStrings).trim())
+            const newLineI = getNewLineI()
+            const headerSpan = m('span', newLineI, makeRow(headerStrings).trim())
+            vnodes.push({lineI: newLineI, o})
             const divider =  rows.length > 0?
                 m('span.divider', newline, getNewLineI(), '-'.repeat(6), newline)//toText(headerSpan).length), newline)
                 : null
@@ -108,7 +118,14 @@ function nodeToHyperscript(o: Node): m.Vnode {
             return m('span.relation_literal', headerSpan, divider, rowsSpans)
         },
     }
-    return inner(o as Node)
+    const rar = inner(o as Node)
+    const nodes = sortBy(n=>n.lineI, vnodes) as Array<{lineI: number, o: NodeCompiled}>
+    return m('span', intersperse(newline, nodes
+        .filter(n=>n.o.compiledType === 'headers')
+        .map(n=>m('span', n.lineI, n.o.compiledValue.map(v=>v.value)))))
+    // window.o = o
+    // return rar
+    // return m('span', intersperse(newline, vnodes))
 }
 
 const OriginalBlock = (block: Block)=>m(
