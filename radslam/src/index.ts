@@ -102,7 +102,7 @@ const Info = (block: Block)=>
         {id: block.infoId, 'to-editor-id': block.editorId},
         nodesPerLine(block.astWithHeaders)
             .map(o=>m(
-                '.compiled-line',
+                'p.compiled-line',
                 {'to-line': o.lineI},
                 o.lineI,
                 o.compiledValue.map(v=>v.value),
@@ -116,21 +116,21 @@ const Info = (block: Block)=>
     )
 
 const Original = (block: Block)=>m(
-    '.source.width-80ch',
+    '.source.right',
     {class: block.language === languages.dawdle? 'language-dawdle' : ''},
     m('', {id: block.editorId, language: block.language}, block.source),
     m('.connecting-line'),
 )
 
-const View = ()=>m('.container',
-    m('form.options.pure-form',
-        m('label', 'some words'),
-        m('select', [m('option', 'some test case')])),
+const View = ()=>m('.root',
+    m('.options',
+        m('button.button.button-small', 'some test case'),
+        m('button.button.button-outline.button-small', 'another test case'),
+    ),
     deriveState(state).blocks.map((block, i)=>
         m('.block',
             Info(block),
-            Original(block),
-        ),
+            Original(block)),
 ))
 
 // stuff below operates outside of mithril rendering
@@ -175,7 +175,14 @@ function alignLines(){
             const toElement = toEditorElement.getElementsByClassName('ace_line')[lineI]  as HTMLElement
             lineElement.setAttribute('x2', INFO_ORIGINAL_GAP.toString())
             lineElement.setAttribute('y1', (SVG_OFFSET + (fromElement.offsetHeight / 2)).toString())
-            lineElement.setAttribute('y2', (SVG_OFFSET + 11 + toElement.offsetTop - fromElement.offsetTop).toString())
+            lineElement.setAttribute('y2', (
+                6 +
+                SVG_OFFSET +
+                toElement.offsetTop -
+                fromElement.offsetTop +
+                toEditorElement.parentElement.offsetTop -
+                infoElement.offsetTop
+            ).toString())
         }
     }
 }
