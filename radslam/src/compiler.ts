@@ -1,5 +1,5 @@
 import {
-    Node, NodeMultiple, NodeSingle, NodeCompiled,
+    Node, NodeMultiple, NodeSingle,
     fullParser, types, is, baseOperatorInverseMap
 } from './parser'
 import * as operations from './operations'
@@ -118,7 +118,7 @@ type Definition = {
     value: [NodeSingle, NodeMultiple, NodeMultiple],  // ...
 }
 
-export function compiler(env: Env, section: NodeMultiple): NodeCompiled {
+export function compiler(env: Env, section: NodeMultiple): Node {
     asserters.assertSectionShape(section)
     const defs = section.value.filter(is.letOrDef) as Array<Definition>
     const body = section.value.filter(R.complement(is.letOrDef))
@@ -151,7 +151,7 @@ export function compiler(env: Env, section: NodeMultiple): NodeCompiled {
 
     // TODO: handle aggregators consistently with everything else
     if(is.aggregator(first)) return R.merge(
-        firstLine, {compiledType: types.headers, compiledValue: body.map(o=>o.value[0])}) as NodeCompiled
+        firstLine, {compiledType: types.headers, compiledValue: body.map(o=>o.value[0])}) as Node
     const isSet = is.var(first) || is.set(first) || is.all_headers(first)
     const compiledType = isSet? types.set : types.headers
     let compiledValue

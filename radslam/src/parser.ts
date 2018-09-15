@@ -6,20 +6,14 @@ import * as R from 'ramda'
 export const inspect = o=>util.inspect(o, {depth: 16, colors: true, breakLength: 100})
 
 export type NodeMinimal = any
-export type NodeMultiple = {
+type BaseNode = {
     type: string,
-    value: Array<Node>,
+    compiledType?: string,
+    compiledValue?: any,
+    lineI?: number,
 }
-export type NodeSingle = {
-    type: string,
-    value: string,
-}
-export type NodeCompiled = {
-    type: string,
-    value: string | Array<NodeCompiled>,
-    compiledType: string,
-    compiledValue: any,
-}
+export type NodeMultiple = BaseNode & {value: Array<Node>}
+export type NodeSingle = BaseNode & {value: string}
 export type Node = NodeMultiple | NodeSingle
 
 // Capital words are kept but passed through, must resolve to one named token

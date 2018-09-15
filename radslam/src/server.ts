@@ -1,4 +1,4 @@
-import {Node, NodeMultiple, NodeCompiled, parser, deMunge} from './parser'
+import {Node, NodeMultiple, parser, deMunge} from './parser'
 import {compiler, emptyEnv} from './compiler'
 
 export const languages = {
@@ -59,7 +59,7 @@ bar`
 export type ServerBlock = {
     language: string,
     source: string,
-    astWithHeaders: NodeCompiled | null,
+    astWithHeaders: Node | null,
 }
 export const serverBlocks: Array<ServerBlock> = [
     {language: 'python', source: pythonSource1, astWithHeaders: null},

@@ -4,7 +4,11 @@ import * as ace from 'ace-builds/src-noconflict/ace'
 ace.config.set('basePath', './')
 
 import { ServerBlock, serverBlocks, languages } from './server'
-import { Node, NodeMultiple, NodeCompiled, is } from './parser'
+import { Node, NodeMultiple, is } from './parser'
+
+// constants that map to css
+const SVG_OFFSET = 1000
+const INFO_ORIGINAL_GAP = 50
 
 // server
 function readFromServer(): Promise<State>{
@@ -13,7 +17,7 @@ function readFromServer(): Promise<State>{
 }
 function writeToServer(){}// f(fileState.source)}
 
-type Block = ServerBlock & {id: string}
+type Block = ServerBlock & {editorId: string, infoId: string}
 
 type State = {
     serverBlocks: Array<ServerBlock>
@@ -29,97 +33,107 @@ let state: State = {
 function setState(s: State): void{state = s}
 
 // deriving functions
-function deriveIds(state: State): Array<string>{
+function deriveEditorIds(state: State): Array<string> {
     return state.serverBlocks.map((_, i)=>`editor-${i}`)
 }
-function deriveState(state: State): DerivedState{
-    const ids = deriveIds(state).map(id=>({id}))
-    const blocks = zip(state.serverBlocks, ids).map(([a, b])=>merge(a, b))
+function deriveInfoIds(state: State): Array<string> {
+    return state.serverBlocks
+        .map((block, i)=>({block, id: `info-${i}`}))
+        .filter(both=>both.block.astWithHeaders)
+        .map(both=>both.id)
+}
+function deriveState(state: State): DerivedState {
+    const ids = deriveEditorIds(state).map(editorId=>({editorId}))
+    const blocks = state.serverBlocks.map((block, i)=>merge(block, {
+        editorId: `editor-${i}`,
+        infoId: `info-${i}`,
+    }))
     return {blocks}
 }
 // UI components
-function nodeToHyperscript(o: Node): m.Vnode {
-    let lineI = -1
-    const vnodes = []
+function nodesPerLine(o: Node): Array<Node> {
+    let i = -1
+    const nodes: Array<Node> = []
     function getNewLineI(){
-        lineI += 1
-        return lineI
+        i += 1
+        return i
     }
-    function inner(o: Node): m.Vnode {
-        if(is.multiple(o)) return typeStringMap[o.type](o)
-        return m('span', o.value)
+    function inner(o: Node): void {
+        if(is.multiple(o)) typeStringMap[o.type](o)
     }
-    function many(o: NodeMultiple): m.Vnode[]{
-        const args = o.value
-        const section = args.pop()
-        return intersperse(space, args.map(o=>inner(o))).concat([newline, inner(section)])
-    }
-    const space = m('span', ' ')
-    const newline = m('span', '\n')
-    const typeStringMap: {[s: string]: (o: NodeMultiple)=>any} = {
-        section: o=>{
-            o.value.forEach(o=>inner(o))
-        },
+    const typeStringMap: {[s: string]: (o: NodeMultiple)=>void} = {
+        section: o=>o.value.forEach(o=>inner(o)),
         let: o=>{
-            const newLineI = getNewLineI()
-            const let_ = m('span.let', newLineI, 'let ', many(o), newline)
-            vnodes.push({lineI: newLineI, o})
+            const lineI = getNewLineI()
+            o.value.forEach(o=>inner(o))
+            nodes.push({lineI, ...o})
             getNewLineI()
-            return let_
         },
         def: o=>{
-            const newLineI = getNewLineI()
-            const def = m('span.def', newLineI, 'def ', many(o), newline)
-            vnodes.push({lineI: newLineI, o})
+            const lineI = getNewLineI()
+            o.value.forEach(o=>inner(o))
+            nodes.push({lineI, ...o})
             getNewLineI()
-            return def
         },
         line: o=>{
-            let line
-            const newLineI = getNewLineI()
-            if(is.section(last(o.value) || {})) line = m('span.line', newLineI, many(o))
-            else line = m('span.line', newLineI, intersperse(space, o.value.map(o=>inner(o))))
-            vnodes.push({lineI: newLineI, o})
-            return line
+            const lineI = getNewLineI()
+            o.value.forEach(o=>inner(o))
+            nodes.push({lineI, ...o})
         },
-        aggregator: o=>m('span', o.value.map(o=>inner(o))),
-        map_macro: o=>{
-            const [var_, template] = o.value
-            return m('span', '(map ', inner(var_), space, inner(template))
-        },
-        named_value: o=>{
-            const [var_, value] = o.value
-            return m('span', inner(var_), '=', inner(value))
-        },
-        set: o=>m('span', '[', o.value.map(o=>inner(o)), ']'),
+        aggregator: o=>o.value.forEach(o=>inner(o)),
+        map_macro: o=>o.value.forEach(o=>inner(o)),
+        named_value: o=>o.value.forEach(o=>inner(o)),
+        set: o=>o.value.forEach(o=>inner(o)),
         relation_literal: o=>{
-            const newLineI = getNewLineI()
-            vnodes.push({lineI: newLineI, o})
-            return m('')
+            const [headers, ...rows] = o.value
+            const lineI = getNewLineI()
+            nodes.push({lineI, ...o})
+            if(rows.length > 0) getNewLineI()  // for ---------
+            rows.forEach(getNewLineI)
         },
     }
-    const rar = inner(o as Node)
-    const nodes = sortBy(n=>n.lineI, vnodes) as Array<{lineI: number, o: NodeCompiled}>
-    return m('span', intersperse(newline, nodes
-        .filter(n=>n.o.compiledType === 'headers')
-        .map(n=>m('span', n.lineI, n.o.compiledValue.map(v=>v.value)))))
+    inner(o)
+    return sortBy(o=>o.lineI, nodes).filter(o=>o.compiledType === 'headers')
 }
 
-const OriginalBlock = (block: Block)=>m(
-    '.source.left',
+const Info = (block: Block)=>
+    block.astWithHeaders === null? null : m(
+        '.source',
+        {id: block.infoId, 'to-editor-id': block.editorId},
+        nodesPerLine(block.astWithHeaders)
+            .map(o=>m(
+                '.compiled-line',
+                {'to-line': o.lineI},
+                o.lineI,
+                o.compiledValue.map(v=>v.value),
+                ' ',
+                o.type,
+                ' ',
+                JSON.stringify(o.value),
+                m('svg.connecting-line', {width: INFO_ORIGINAL_GAP, height: 2 * SVG_OFFSET},
+                    m('line', {x1: 0, y1:SVG_OFFSET, x2: 0, y2: SVG_OFFSET, style: {stroke:' #000'}})),
+            )),
+    )
+
+const Original = (block: Block)=>m(
+    '.source.width-80ch',
     {class: block.language === languages.dawdle? 'language-dawdle' : ''},
-    m('', {id: block.id, language: block.language}, block.source)
+    m('', {id: block.editorId, language: block.language}, block.source),
+    m('.connecting-line'),
 )
 
-const InfoBlock = (info: NodeCompiled | null)=>info === null? null :
-    m('.source.pre.right', nodeToHyperscript(info as Node))
-
-const View = ()=>m('div',
+const View = ()=>m('.container',
+    m('form.options.pure-form',
+        m('label', 'some words'),
+        m('select', [m('option', 'some test case')])),
     deriveState(state).blocks.map((block, i)=>
         m('.block',
-            OriginalBlock(block),
-            InfoBlock(block.astWithHeaders)),
+            Info(block),
+            Original(block),
+        ),
 ))
+
+// stuff below operates outside of mithril rendering
 
 function loadEditors(ids: Array<string>): Array<AceAjax.Editor>{
     const editors = ids.map(id=>{
@@ -151,13 +165,34 @@ function loadEditors(ids: Array<string>): Array<AceAjax.Editor>{
     return editors
 }
 
+function alignLines(){
+    for(let infoId of deriveInfoIds(state)){
+        const infoElement = document.getElementById(infoId)
+        const toEditorElement = document.getElementById(infoElement.getAttribute('to-editor-id'))
+        for(let fromElement of Array.from(infoElement.getElementsByClassName('compiled-line')) as Array<HTMLElement>){
+            const lineElement = fromElement.getElementsByClassName('connecting-line')[0].children[0]
+            const lineI = parseInt(fromElement.getAttribute('to-line'))
+            const toElement = toEditorElement.getElementsByClassName('ace_line')[lineI]  as HTMLElement
+            lineElement.setAttribute('x2', INFO_ORIGINAL_GAP.toString())
+            lineElement.setAttribute('y1', (SVG_OFFSET + (fromElement.offsetHeight / 2)).toString())
+            lineElement.setAttribute('y2', (SVG_OFFSET + 11 + toElement.offsetTop - fromElement.offsetTop).toString())
+        }
+    }
+}
+
 async function init(){
     m.mount(document.body, {view: View})
     const newState = await readFromServer()
     setState(newState)
     await m.redraw()
-    const ids = deriveIds(state)
-    await requestAnimationFrame(()=>loadEditors(ids))
+    const ids = deriveEditorIds(state)
+    requestAnimationFrame(()=>loadEditors(ids))
+    let editorsLoaded = false
+    let id = setInterval(function(){
+        if(editorsLoaded) return clearInterval(id)
+        try{alignLines(); editorsLoaded = true}
+        catch{}
+    }, 100)
 }
 init()
 
