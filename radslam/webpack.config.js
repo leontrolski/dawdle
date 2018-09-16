@@ -24,12 +24,13 @@ module.exports = {
     plugins: [
         new CopyWebpackPlugin([
             {
-                from: path.resolve(__dirname, 'node_modules/ace-builds/src-noconflict/mode-python.js'),
-                to: path.resolve(__dirname, 'dist')
+                from: 'mode*.js',
+                to: path.resolve(__dirname, 'dist/modes'),
+                context: path.resolve(__dirname, 'node_modules/ace-builds/src-noconflict/'),
             },
             {
                 from: path.resolve(__dirname, 'src/mode-dawdle.js'),
-                to: path.resolve(__dirname, 'dist')
+                to: path.resolve(__dirname, 'dist/modes')
             },
         ])
     ],

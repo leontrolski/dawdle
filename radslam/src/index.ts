@@ -1,10 +1,10 @@
-import { default as axios, AxiosResponse } from 'axios'
-import { zip, merge, last, transpose, repeat, intersperse, sortBy } from 'ramda'
+import { default as axios } from 'axios'
+import { zip, merge, sortBy } from 'ramda'
 import * as m from 'mithril'
 import * as ace from 'ace-builds/src-noconflict/ace'
-ace.config.set('basePath', './')
+ace.config.set('basePath', './modes/')
 
-import { DAWDLE_URL, ServerBlock, languages } from './shared'
+import { DAWDLE_URL, ServerBlock } from './shared'
 import { Node, NodeMultiple, is } from './parser'
 
 // TODO:
@@ -102,7 +102,9 @@ function nodesPerLine(o: Node): Array<Node> {
 }
 const Header = (header: string)=>m('.button.button-outline.header.pre', header)
 const ConnectingLine = ()=>m('svg.connecting-line', {width: INFO_ORIGINAL_GAP, height: 2 * SVG_OFFSET},
-    m('line', {x1: 0, y1:SVG_OFFSET, x2: 0, y2: SVG_OFFSET, style: {stroke:' #000'}}))
+    m('marker#arrowhead', {refX: 5, refY: 5, markerUnits: "px", markerWidth: 8, markerHeight: 8},
+        m('circle[cx=5][cy=5][r=3]', {style: "stroke: none; fill:#000000;"})),
+    m('line[marker-end=url(#arrowhead)][x1=0][x2=0]', {y1:SVG_OFFSET, y2: SVG_OFFSET, style: {stroke:'#000'}}))
 
 const Info = (block: Block)=>
     block.astWithHeaders === null? null : m(
@@ -119,7 +121,7 @@ const Info = (block: Block)=>
 
 const Original = (block: Block)=>m(
     '.source.right',
-    {class: block.language === languages.dawdle? 'language-dawdle' : ''},
+    {class: `language-${block.language}`},
     m('', {id: block.editorId, language: block.language}, block.source),
     m('.connecting-line'),
 )
@@ -128,6 +130,7 @@ const View = ()=>m('.root',
     m('.options',
         m('button.button.button-small', 'some test case'),
         m('button.button.button-outline.button-small', 'another test case'),
+        m('button.button', 'view provided env'),
     ),
     deriveState(state).blocks.map((block, i)=>
         m('.block',
@@ -173,13 +176,13 @@ function alignLines(){
             const infoElement = document.getElementById(infoId)
             const toEditorElement = document.getElementById(infoElement.getAttribute('to-editor-id'))
             for(let fromElement of Array.from(infoElement.getElementsByClassName('compiled-line')) as Array<HTMLElement>){
-                const lineElement = fromElement.getElementsByClassName('connecting-line')[0].children[0]
+                const lineElement = fromElement.getElementsByClassName('connecting-line')[0].children[1]
                 const lineI = parseInt(fromElement.getAttribute('to-line'))
                 const toElement = toEditorElement.getElementsByClassName('ace_line')[lineI]  as HTMLElement
                 lineElement.setAttribute('x2', INFO_ORIGINAL_GAP.toString())
                 lineElement.setAttribute('y1', (SVG_OFFSET + (fromElement.offsetHeight / 2)).toString())
                 lineElement.setAttribute('y2', (
-                    + 6
+                    + 10
                     + SVG_OFFSET
                     - infoElement.offsetTop
                     - fromElement.offsetTop

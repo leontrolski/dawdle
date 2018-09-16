@@ -2,7 +2,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as express from 'express'
 
-import { ServerBlock, languages } from './shared'
+import { ServerBlock } from './shared'
 import { Node, NodeMultiple, parser, deMunge } from './parser'
 import { compiler, emptyEnv } from './compiler'
 import { astToString } from './astToString'
@@ -16,14 +16,14 @@ export type Header = {
 } | null
 
 
-const DAWDLE_COMMENT = '# {"dawdle":'
+const DAWDLE_COMMENT = '// {"dawdle":'
 const comment_types = {
     header: 'header',
     begin: 'begin',
     end: 'end',
 }
 function parseComment(line: string){
-    const data = JSON.parse(line.slice(2))
+    const data = JSON.parse(line.slice(3))
     return {type: data.dawdle, ...data}
 }
 
@@ -61,7 +61,7 @@ function readFile(p: string): Array<ServerBlock>{
                 const ast = deMunge(astMinimal)
                 const astWithHeaders = compiler(emptyEnv, ast as NodeMultiple)
                 serverBlocks.push({
-                    language: languages.dawdle,
+                    language: 'dawdle',
                     source: dawdleSource,
                     astWithHeaders: astWithHeaders,
                 })
@@ -82,7 +82,7 @@ function readFile(p: string): Array<ServerBlock>{
 }
 
 function getServerBlocksString(){
-    const p = path.resolve(__dirname, '../examples/example_1.py')
+    const p = path.resolve(__dirname, '../examples/example_1.ts')
     const serverBlocks: Array<ServerBlock> = readFile(p)
     return JSON.stringify(serverBlocks)
 }

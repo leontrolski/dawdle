@@ -1,17 +1,14 @@
-# {"dawdle": "header", "originalLanguage": "python", "command": "venv/python $FILE --dawdle"}
-# FILE=example_1.py eval 'venv/bin/python $FILE --dawdle'
-import foo
+// {"dawdle": "header", "originalLanguage": "typescript", "command": "venv/python $FILE --dawdle"}
+import * as foo from 'foo'
 
-d = [1, 2, 3]
+const d = [1, 2, 3]
 
-while len(d) > 100:
-    pass
+while(d.length > 100){
+    console.log('whut')
+}
 
-01234567890123456789012345678901234567890123456789012345678901234567890123456789
-1         2         3         4         5         6         7         8
-
-ast = (
-# {"dawdle": "begin", "indentLevel": 0}
+const ast = (
+// {"dawdle": "begin", "indentLevel": 0}
 {"section":[{"def":[{"operator":"JoinClone"},{"relation":"relation:"},{"relation":"right:"},
 {"section":[
     {"line":[{"relation":"relation:"}]},
@@ -23,5 +20,5 @@ ast = (
     {"line":[{"operator":"U"},{"relation":"bar:"}]},
     {"line":[{"operator":"JoinClone"},
 {"section":[{"relation_literal":[{"rl_headers":[{"header":":a"},{"header":":c"}]}]}]}]}]}
-# {"dawdle": "end"}
+// {"dawdle": "end"}
 )

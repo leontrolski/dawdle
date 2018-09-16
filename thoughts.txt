@@ -128,11 +128,9 @@ Design choices:
 
 TODO
 
-
-- generate html from ast
+- {defs and lets} should have a nicer shape in the env
 - handle named vars
 - allow `let` for types other than sets and relations
-- allow vars called > < = etc..?
 - write more comprehensive tests, esp errors and composite operators on sets
 - add // comments to parser
 - improve typing, maybe do some more stuff like:
