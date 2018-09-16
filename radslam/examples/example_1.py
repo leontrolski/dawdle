@@ -1,4 +1,4 @@
-# {"dawdle": "header", "language": "python", "command": "venv/python $FILE --dawdle"}
+# {"dawdle": "header", "originalLanguage": "python", "command": "venv/python $FILE --dawdle"}
 # FILE=example_1.py eval 'venv/bin/python $FILE --dawdle'
 import foo
 
@@ -11,22 +11,17 @@ while len(d) > 100:
 1         2         3         4         5         6         7         8
 
 ast = (
-# {"dawdle": "begin"}
-{"section":[[{"let":[{"relation":"a:"},
-{"section":[[{"let":[{"relation":"b:"},
-{"section":[[
-    {"line":[{"number":"5"}]}]}]},
-    {"line":[{"relation":"c:"}]},
-    {"line":[{"operator":"U"},{"relation":"d:"},
-{"section":[[
-    {"line":[{"relation":"e:"}]}]}]}]}]},{"def":[{"operator":"Foo"},{"relation":"relation:"},{"var":"bar"},
-{"section":[[
-    {"line":[{"relation":"i:"}]}]}]},{"let":[{"relation":"e:"},
-{"section":[[
-    {"line":[{"relation":"f:"}]}]}]},
-    {"line":[{"relation":"g:"}]},
-    {"line":[{"operator":"G"},{"header":":foo"},
-{"section":[[{"aggregator":[{"header":":bar"},{"var":"count"},{"header":":bar_id"}]}]}]}]}
+# {"dawdle": "begin", "indentLevel": 0}
+{"section":[{"def":[{"operator":"JoinClone"},{"relation":"relation:"},{"relation":"right:"},
+{"section":[
+    {"line":[{"relation":"relation:"}]},
+    {"line":[{"operator":"J"},{"relation":"right:"}]}]}]},{"let":[{"relation":"bar:"},
+{"section":[{"def":[{"operator":"Identity"},{"relation":"relation:"},
+{"section":[
+    {"line":[{"relation":"relation:"}]}]}]},{"relation_literal":[{"rl_headers":[{"header":":a"},{"header":":b"}]},{"rl_row":[{"number":"6"},{"number":"8"}]}]},
+    {"line":[{"operator":"Identity"}]}]}]},{"relation_literal":[{"rl_headers":[{"header":":a"},{"header":":b"}]},{"rl_row":[{"number":"1"},{"number":"5"}]}]},
+    {"line":[{"operator":"U"},{"relation":"bar:"}]},
+    {"line":[{"operator":"JoinClone"},
+{"section":[{"relation_literal":[{"rl_headers":[{"header":":a"},{"header":":c"}]}]}]}]}]}
 # {"dawdle": "end"}
 )
-x

@@ -66,12 +66,12 @@ const typeStringMap: { [s: string]: (o: NodeMultiple, i: number)=>string } = {
  *
  * TODO: make this match up and indent line to line with dawdle source.
  */
-function nodeToJson(o: Node, i: number): string{
-    return R.tail(  // remove first \n
-        JSON.stringify(o)
-        .replace(/{"section":/g, '\n{"section":[')
-        .replace(/{"line":/g, '\n    {"line":'))
+export function jsonifyAndIndent(o: NodeMinimal): string{
+    const s = JSON.stringify(o)
+        .replace(/{"section":/g, '\n{"section":')
+        .replace(/{"line":/g, '\n    {"line":')
+    JSON.parse(s)
+    return R.tail(s)  // remove first \n
 }
 
 export const astToString = (ast: NodeMinimal)=>nodeToString(deMunge(ast), 0)
-export const jsonifyAndIndent = (ast: NodeMinimal)=>nodeToJson(ast, 1)

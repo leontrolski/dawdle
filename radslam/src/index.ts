@@ -7,6 +7,9 @@ ace.config.set('basePath', './')
 import { DAWDLE_URL, ServerBlock, languages } from './shared'
 import { Node, NodeMultiple, is } from './parser'
 
+// TODO:
+// - sort out editor/source/original naming inconsistencies
+
 // constants that map to css
 const SVG_OFFSET = 1000
 const INFO_ORIGINAL_GAP = 50

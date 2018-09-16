@@ -155,21 +155,21 @@ describe('astToString.jsonifyAndIndent', ()=>{
             {"line": [{"relation": "g:"}]},
             {"line": [{"operator": "G"}, {"header": ":foo"}, {"section": [
                 {"aggregator": [{"header": ":bar"}, {"var": "count"}, {"header": ":bar_id"}]}]}]}]}
-        const expected = `{"section":[[{"let":[{"relation":"a:"},
-{"section":[[{"let":[{"relation":"b:"},
-{"section":[[
+        const expected = `{"section":[{"let":[{"relation":"a:"},
+{"section":[{"let":[{"relation":"b:"},
+{"section":[
     {"line":[{"number":"5"}]}]}]},
     {"line":[{"relation":"c:"}]},
     {"line":[{"operator":"U"},{"relation":"d:"},
-{"section":[[
+{"section":[
     {"line":[{"relation":"e:"}]}]}]}]}]},{"def":[{"operator":"Foo"},{"relation":"relation:"},{"var":"bar"},
-{"section":[[
+{"section":[
     {"line":[{"relation":"i:"}]}]}]},{"let":[{"relation":"e:"},
-{"section":[[
+{"section":[
     {"line":[{"relation":"f:"}]}]}]},
     {"line":[{"relation":"g:"}]},
     {"line":[{"operator":"G"},{"header":":foo"},
-{"section":[[{"aggregator":[{"header":":bar"},{"var":"count"},{"header":":bar_id"}]}]}]}]}`
+{"section":[{"aggregator":[{"header":":bar"},{"var":"count"},{"header":":bar_id"}]}]}]}]}`
         assert.deepEqual(expected, astToString.jsonifyAndIndent(in_))
     })
 })
