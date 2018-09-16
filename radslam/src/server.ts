@@ -1,74 +1,46 @@
-import {Node, NodeMultiple, parser, deMunge} from './parser'
-import {compiler, emptyEnv} from './compiler'
+import * as fs from 'fs'
+import * as path from 'path'
+import * as express from 'express'
 
-export const languages = {
-    dawdle: 'dawdle',
-    python: 'python',
-    javascript: 'javascript',
-    typescript: 'typescript',
+import {serverBlocks, ServerBlock} from './shared'
+
+const app = express()
+const port = 3000
+
+app.use(express.static(path.resolve(__dirname, '../dist')))
+app.get('/dawdle', (req, res)=>res.send(JSON.stringify(serverBlocks)))
+
+const DAWDLE_COMMENT = '# {"dawdle":'
+const comment_types = {
+    header: 'header',
+    begin: 'begin',
+    end: 'end',
+}
+function parseComment(line: string){
+    const data = JSON.parse(line.slice(2))
+    return {type: data.dawdle, ...data}
 }
 
-const pythonSource1 = `import foo
 
-d = [1, 2, 3]
-
-while len(d) > 100:
-    pass
-
-01234567890123456789012345678901234567890123456789012345678901234567890123456789
-1         2         3         4         5         6         7         8
-
-ast = (`
-
-const dawdleSource1 = `table:
-J another:`
-
-const pythonSource2 = `)
-
-and_then = (`
-
-const dawdleSource2 = `def JoinClone relation: right:
-    relation:
-    J right:
-
-let foo:
-    def Identity relation:
-        relation:
-
-    | :a | :b |
-    -----------
-    | 6  | 8  |
-    Identity
-
-| :a | :b |
------------
-| 1  | 5  |
-U foo:
-JoinClone
-    | :a | :c |
-`
-const ast = deMunge(parser(dawdleSource2)) as NodeMultiple
-
-const pythonSource3 = `)`
-
-const dawdleInfo1 = `some
--------
-foo
-bar`
-
-export type ServerBlock = {
-    language: string,
-    source: string,
-    astWithHeaders: Node | null,
+function readFile(p: string){
+    let isDawdleFile = false
+    const data = fs.readFileSync(p, 'utf8')
+    for(let line of data.split('\n')){
+        if(line.startsWith(DAWDLE_COMMENT)){
+            const data = parseComment(line)
+            console.log(data)
+        }
+    }
 }
-export const serverBlocks: Array<ServerBlock> = [
-    {language: 'python', source: pythonSource1, astWithHeaders: null},
-    {language: 'dawdle', source: dawdleSource1, astWithHeaders: null},
-    {language: 'python', source: pythonSource2, astWithHeaders: null},
-    {language: 'dawdle', source: dawdleSource2, astWithHeaders: compiler(emptyEnv, ast)},
-    {language: 'python', source: pythonSource3, astWithHeaders: null},
-]
-const fileState = {source: ''}
-const serverAst = {}
 
-export let test
+readFile(path.resolve(__dirname, '../examples/example_1.py'))
+
+// not quite...
+// async function handle(p: Promise<any>){
+//     const data = await p
+//     return function(req, res){
+//         res.send(data)
+//     }
+// }
+
+// app.listen(port, ()=>console.log(`Dawdle editor listening at http://127.0.0.1:${port}`))

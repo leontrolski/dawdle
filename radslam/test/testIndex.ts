@@ -4,8 +4,10 @@ import * as browserMock from 'mithril/test-utils/browserMock'
 const window = browserMock()
 window.document.getElementsByTagName = ()=>[]
 window.document.querySelectorAll = ()=>[]
+window.addEventListener = ()=>null
 
 declare let global
+global.underTest = true
 global.window = window
 global.document = window.document
 global.requestAnimationFrame = ()=>1

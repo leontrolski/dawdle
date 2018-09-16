@@ -22,10 +22,16 @@ module.exports = {
         path: path.resolve(__dirname, 'dist')
     },
     plugins: [
-        new CopyWebpackPlugin([{
-            from: path.resolve(__dirname, 'node_modules/ace-builds/src-noconflict/mode-python.js'),
-            to: path.resolve(__dirname, 'dist')
-        }])
+        new CopyWebpackPlugin([
+            {
+                from: path.resolve(__dirname, 'node_modules/ace-builds/src-noconflict/mode-python.js'),
+                to: path.resolve(__dirname, 'dist')
+            },
+            {
+                from: path.resolve(__dirname, 'src/mode-dawdle.js'),
+                to: path.resolve(__dirname, 'dist')
+            },
+        ])
     ],
     stats: 'verbose',
 }

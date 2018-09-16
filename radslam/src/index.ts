@@ -1,9 +1,10 @@
+import { default as axios, AxiosResponse } from 'axios'
 import { zip, merge, last, transpose, repeat, intersperse, sortBy } from 'ramda'
 import * as m from 'mithril'
 import * as ace from 'ace-builds/src-noconflict/ace'
 ace.config.set('basePath', './')
 
-import { ServerBlock, serverBlocks, languages } from './server'
+import { DAWDLE_URL, ServerBlock, languages } from './shared'
 import { Node, NodeMultiple, is } from './parser'
 
 // constants that map to css
@@ -11,9 +12,9 @@ const SVG_OFFSET = 1000
 const INFO_ORIGINAL_GAP = 50
 
 // server
-function readFromServer(): Promise<State>{
-    return new Promise((resolve, reject)=>resolve({serverBlocks}))//, serverAst})
-    // actually f(fileState.source)
+async function readFromServer(): Promise<Array<ServerBlock>>{
+    const response = await axios.get(DAWDLE_URL)
+    return response.data
 }
 function writeToServer(){}// f(fileState.source)}
 
@@ -52,6 +53,7 @@ function deriveState(state: State): DerivedState {
 }
 // UI components
 function nodesPerLine(o: Node): Array<Node> {
+    // TODO: this should maybe also have a .indentI
     let i = -1
     const nodes: Array<Node> = []
     function getNewLineI(){
@@ -95,6 +97,9 @@ function nodesPerLine(o: Node): Array<Node> {
     inner(o)
     return sortBy(o=>o.lineI, nodes).filter(o=>o.compiledType === 'headers')
 }
+const Header = (header: string)=>m('.button.button-outline.header.pre', header)
+const ConnectingLine = ()=>m('svg.connecting-line', {width: INFO_ORIGINAL_GAP, height: 2 * SVG_OFFSET},
+    m('line', {x1: 0, y1:SVG_OFFSET, x2: 0, y2: SVG_OFFSET, style: {stroke:' #000'}}))
 
 const Info = (block: Block)=>
     block.astWithHeaders === null? null : m(
@@ -102,16 +107,10 @@ const Info = (block: Block)=>
         {id: block.infoId, 'to-editor-id': block.editorId},
         nodesPerLine(block.astWithHeaders)
             .map(o=>m(
-                'p.compiled-line',
+                '.compiled-line',
                 {'to-line': o.lineI},
-                o.lineI,
-                o.compiledValue.map(v=>v.value),
-                ' ',
-                o.type,
-                ' ',
-                JSON.stringify(o.value),
-                m('svg.connecting-line', {width: INFO_ORIGINAL_GAP, height: 2 * SVG_OFFSET},
-                    m('line', {x1: 0, y1:SVG_OFFSET, x2: 0, y2: SVG_OFFSET, style: {stroke:' #000'}})),
+                o.compiledValue.map(v=>Header(v.value)),
+                ConnectingLine(),
             )),
     )
 
@@ -166,41 +165,54 @@ function loadEditors(ids: Array<string>): Array<AceAjax.Editor>{
 }
 
 function alignLines(){
-    for(let infoId of deriveInfoIds(state)){
-        const infoElement = document.getElementById(infoId)
-        const toEditorElement = document.getElementById(infoElement.getAttribute('to-editor-id'))
-        for(let fromElement of Array.from(infoElement.getElementsByClassName('compiled-line')) as Array<HTMLElement>){
-            const lineElement = fromElement.getElementsByClassName('connecting-line')[0].children[0]
-            const lineI = parseInt(fromElement.getAttribute('to-line'))
-            const toElement = toEditorElement.getElementsByClassName('ace_line')[lineI]  as HTMLElement
-            lineElement.setAttribute('x2', INFO_ORIGINAL_GAP.toString())
-            lineElement.setAttribute('y1', (SVG_OFFSET + (fromElement.offsetHeight / 2)).toString())
-            lineElement.setAttribute('y2', (
-                6 +
-                SVG_OFFSET +
-                toElement.offsetTop -
-                fromElement.offsetTop +
-                toEditorElement.parentElement.offsetTop -
-                infoElement.offsetTop
-            ).toString())
+    try{
+        for(let infoId of deriveInfoIds(state)){
+            const infoElement = document.getElementById(infoId)
+            const toEditorElement = document.getElementById(infoElement.getAttribute('to-editor-id'))
+            for(let fromElement of Array.from(infoElement.getElementsByClassName('compiled-line')) as Array<HTMLElement>){
+                const lineElement = fromElement.getElementsByClassName('connecting-line')[0].children[0]
+                const lineI = parseInt(fromElement.getAttribute('to-line'))
+                const toElement = toEditorElement.getElementsByClassName('ace_line')[lineI]  as HTMLElement
+                lineElement.setAttribute('x2', INFO_ORIGINAL_GAP.toString())
+                lineElement.setAttribute('y1', (SVG_OFFSET + (fromElement.offsetHeight / 2)).toString())
+                lineElement.setAttribute('y2', (
+                    + 6
+                    + SVG_OFFSET
+                    - infoElement.offsetTop
+                    - fromElement.offsetTop
+                    + toEditorElement.parentElement.offsetTop
+                    + toElement.offsetTop
+                ).toString())
+            }
         }
+        return true
+    }
+    catch{
+        return false
     }
 }
 
 async function init(){
-    m.mount(document.body, {view: View})
-    const newState = await readFromServer()
-    setState(newState)
-    await m.redraw()
+    await m.mount(document.body, {view: View, onupdate: alignLines})
+
+    // fetch data and redraw
+    const serverBlocks = await readFromServer()
+    setState({serverBlocks})
+    m.redraw()
+
+    // load editors and align lines for the first time
     const ids = deriveEditorIds(state)
     requestAnimationFrame(()=>loadEditors(ids))
     let editorsLoaded = false
     let id = setInterval(function(){
         if(editorsLoaded) return clearInterval(id)
-        try{alignLines(); editorsLoaded = true}
-        catch{}
+        editorsLoaded = alignLines()
     }, 100)
+    // re align lines on window resize
+    window.addEventListener('resize', alignLines)
 }
-init()
 
+declare const underTest
+try{underTest}
+catch{init()}
 export let test
