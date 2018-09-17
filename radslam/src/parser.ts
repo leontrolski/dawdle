@@ -1,20 +1,56 @@
 import * as util from 'util'
 import * as ebnf from 'ebnf'
-import * as jsYaml from 'js-yaml'
 import * as R from 'ramda'
 
-export const inspect = o=>util.inspect(o, {depth: 16, colors: true, breakLength: 100})
+export function inspect(o: any): string{
+    return util.inspect(o, {depth: 16, colors: true, breakLength: 100})
+}
 
 export type NodeMinimal = any
 type BaseNode = {
     type: string,
     compiledType?: string,
-    compiledValue?: any,
+    compiledValue?: any,  // TODO
     lineI?: number,
 }
 export type NodeMultiple = BaseNode & {value: Array<Node>}
 export type NodeSingle = BaseNode & {value: string}
 export type Node = NodeMultiple | NodeSingle
+// todo: flesh these out a bit more
+// multiple
+export type Section = NodeMultiple
+export type Let = BaseNode & {
+    type: 'let',
+    value: [NodeSingle, NodeMultiple, NodeMultiple],  // ...
+}
+export type Def = NodeMultiple & {
+    type: 'def',
+    value: [NodeSingle, NodeMultiple, NodeMultiple],  // ...
+}
+export type Line = NodeMultiple
+export type Aggregator = NodeMultiple
+export type MapMacro = NodeMultiple
+export type NamedValue = NodeMultiple
+export type RelationLiteral = NodeMultiple
+export type RlHeaders = NodeMultiple
+export type RlRow = NodeMultiple
+export type Set = NodeMultiple
+export type AllHeaders = NodeSingle
+export type Relation = NodeSingle
+export type Header = NodeSingle
+export type Var = NodeSingle
+export type Operator = NodeSingle
+export type Bool = NodeSingle
+export type Null = NodeSingle
+export type Number = NodeSingle
+export type String = NodeSingle
+export type Template = NodeSingle
+export type Decimal = NodeSingle
+export type Datetime = NodeSingle
+export type Function = NodeSingle
+
+export type Literal = Number | String | Bool | Template | Null | Decimal | Datetime
+export type Value = Literal | AllHeaders | Relation | Header | NamedValue | Var | Set
 
 // Capital words are kept but passed through, must resolve to one named token
 const grammar = `
@@ -63,15 +99,17 @@ NAME                 ::= [a-z_][a-zA-Z_0-9.]*
 CAPITALISED_NAME     ::= [A-Z][a-zA-Z_0-9]+
 `
 const generatedParser = new ebnf.Grammars.W3C.Parser(grammar, {})
-export const basicParser = s=>generatedParser.getAST(addIndents(s))
+export function basicParser(s: string): ebnf.IToken {
+    return generatedParser.getAST(addIndents(s))
+}
 
 /**
  * Strip leading newlines
  * Add <INDENT> tags to indented sections
  * @param {string}  source string
  */
-export const addIndents = s=>{
-    const getIndent = (line, lineNo)=>{
+export function addIndents(s: string){
+    function getIndent(line: string, lineNo: number){
         if(line.trim() === '') return null
         const match = line.match(/^(    )*[^ ]/g)
         if(!match) throw `line: ${lineNo + 1} incorrectly indented`
@@ -82,13 +120,14 @@ export const addIndents = s=>{
         .map(getIndent)
         .map((indent, lineNo)=>[lineNo, indent])
         .filter(([lineNo, indent])=>indent != null)
-    const diffs = R.fromPairs(lineNosIndents
-        .map(([lineNo, indent], i)=>[lineNo, (lineNosIndents[i + 1] || [0, 0])[1] - indent]))
+    const diffs= lineNosIndents.map(([lineNo, indent], i)=>
+        [lineNo, (lineNosIndents[i + 1] || [0, 0])[1] - indent] as [number, number])
+    const diffMap = R.fromPairs(diffs)
 
-    let lines = []
+    let lines: string[] = []
     split.forEach((line, lineNo)=>{
         lines.push(line)
-        const diff = diffs[lineNo] as number || 0
+        const diff = diffMap[lineNo] || 0
         for (let i = 0; i < Math.abs(diff); i++){
             lines.push(diff > 0? '<INDENT>' : '</INDENT>')
         }
@@ -96,7 +135,7 @@ export const addIndents = s=>{
     return lines.join('\n')
 }
 
-export const munge = (o, offset)=>{
+export function munge(o: ebnf.IToken, offset: number): NodeMinimal {
     if(R.isNil(o)) return {errors: [new ParserError()]}
 
     // do I even need to do this bit?
@@ -128,17 +167,19 @@ export function deMunge(o: NodeMinimal): Node {
 export function parser(s: string): NodeMinimal {
     return munge(basicParser(s), null)
 }
-export function fullParser(s: string): NodeMultiple {
-    return deMunge(munge(basicParser(s), null)) as NodeMultiple
+export function fullParser(s: string): Section {
+    return deMunge(munge(basicParser(s), null)) as Section
 }
 
-export const getType = o=>{
+export function getType(o: NodeMinimal): string {
     if(R.isNil(o)) throw new UnableToDetermineTypeError(o)
     const intersection = R.intersection(Object.keys(o), Object.keys(types))
     if(intersection.length != 1) throw new UnableToDetermineTypeError(o)
     return intersection[0]
 }
-export const getValue = o=>o[getType(o)]
+export function getValue(o: NodeMinimal){
+    return o[getType(o)]
+}
 
 // repetitive enum-like definitions
 export const baseOperators = {
@@ -211,37 +252,38 @@ export const multiple = [
     types.rl_row,
     types.set,
 ]
-export const is: { [s: string]: (o: Node)=>boolean } = {
-    section: o=>o.type === types.section,
-    let: o=>o.type === types.let,
-    def: o=>o.type === types.def,
-    line: o=>o.type === types.line,
-    aggregator: o=>o.type === types.aggregator,
-    map_macro: o=>o.type === types.map_macro,
-    all_headers: o=>o.type === types.all_headers,
-    relation: o=>o.type === types.relation,
-    header: o=>o.type === types.header,
-    named_value: o=>o.type === types.named_value,
-    var: o=>o.type === types.var,
-    operator: o=>o.type === types.operator,
-    set: o=>o.type === types.set,
-    relation_literal: o=>o.type === types.relation_literal,
-    rl_headers: o=>o.type === types.rl_headers,
-    rl_row: o=>o.type === types.rl_row,
-    bool: o=>o.type === types.bool,
-    null: o=>o.type === types.null,
-    number: o=>o.type === types.number,
-    string: o=>o.type === types.string,
-    template: o=>o.type === types.template,
-    decimal: o=>o.type === types.decimal,
-    datetime: o=>o.type === types.datetime,
-    function: o=>o.type === types.function,
+export const is = {
+    // multiple
+    section: function(o: Node): o is Section {return o.type === types.section},
+    let: function(o: Node): o is Let {return o.type === types.let},
+    def: function(o: Node): o is Def {return o.type === types.def},
+    line: function(o: Node): o is Line {return o.type === types.line},
+    aggregator: function(o: Node): o is Aggregator {return o.type === types.aggregator},
+    map_macro: function(o: Node): o is MapMacro {return o.type === types.map_macro},
+    named_value: function(o: Node): o is NamedValue {return o.type === types.named_value},
+    relation_literal: function(o: Node): o is RelationLiteral {return o.type === types.relation_literal},
+    rl_headers: function(o: Node): o is RlHeaders {return o.type === types.rl_headers},
+    rl_row: function(o: Node): o is RlRow {return o.type === types.rl_row},
+    set: function(o: Node): o is Set {return o.type === types.set},
+    // single
+    all_headers: function(o: Node): o is AllHeaders {return o.type === types.all_headers},
+    relation: function(o: Node): o is Relation {return o.type === types.relation},
+    header: function(o: Node): o is Header {return o.type === types.header},
+    var: function(o: Node): o is Var {return o.type === types.var},
+    operator: function(o: Node): o is Operator {return o.type === types.operator},
+    bool: function(o: Node): o is Bool {return o.type === types.bool},
+    null: function(o: Node): o is Null {return o.type === types.null},
+    number: function(o: Node): o is Number {return o.type === types.number},
+    string: function(o: Node): o is String {return o.type === types.string},
+    template: function(o: Node): o is Template {return o.type === types.template},
+    decimal: function(o: Node): o is Decimal {return o.type === types.decimal},
+    datetime: function(o: Node): o is Datetime {return o.type === types.datetime},
+    function: function(o: Node): o is Function {return o.type === types.function},
+
     // compound
-    multiple: function(o: Node): o is NodeMultiple {
-        return R.contains(o.type, multiple)
-    },
-    letOrDef: o=>is.let(o) || is.def(o),
-    singleRelationOrVarOrSet: o=>{
+    multiple: function(o: Node): o is NodeMultiple {return R.contains(o.type, multiple)},
+    letOrDef: (o: Node)=>is.let(o) || is.def(o),
+    singleRelationOrVarOrSet: (o: Node)=>{
         const isLine = is.line(o)
         const isLength1 = o.value.length === 1
         const first = o.value[0] as Node
@@ -253,24 +295,25 @@ export const is: { [s: string]: (o: Node)=>boolean } = {
             is.all_headers(first)
         )
     },
-    baseOperator: o=>
-        is.operator(o) &&
-        R.contains(o.value, Object.keys(baseOperatorInverseMap)),
-    groupOperator: o=>
+    baseOperator: function(o: Node): o is Operator{
+        return is.operator(o) &&
+        R.contains(o.value, Object.keys(baseOperatorInverseMap))
+    },
+    groupOperator: (o: Node)=>
         is.operator(o) &&
         o.value === baseOperatorMap.group,
 }
-export class TypeError extends Error {constructor(type, node) {
+export class TypeError extends Error {constructor(type: string, node: NodeMinimal) {
     super(`Type error, node is not type ${type}: ${inspect(node)}`)
 }}
 export class ParserError extends Error {constructor() {
     super(`Parser fully failed`)
 }}
-export class UnableToDetermineTypeError extends Error {constructor(node) {
+export class UnableToDetermineTypeError extends Error {constructor(node: NodeMinimal) {
     super(`Unable to determine type of node: ${inspect(node)}`)
 }}
-const makeAsserter = type=>o=>{
-    if(!is[type]) throw new TypeError(type, o)
+const makeAsserter = (type: string)=>(o: Node)=>{
+    if(!Object.keys(is).includes(type)) throw new TypeError(type, o)
     return o
 }
 export const assertIs = {

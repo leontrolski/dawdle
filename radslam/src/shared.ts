@@ -9,4 +9,4 @@ export type ServerBlock = {
     astWithHeaders: Node | null,
 }
 
-export let test
+export let test: any

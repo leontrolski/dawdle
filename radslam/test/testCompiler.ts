@@ -9,8 +9,13 @@ const assert = chai.assert
 chai.config.includeStack = true
 chai.config.truncateThreshold = 1000
 
-// helper
-const makeHeaders = (...headers) => headers.map(h=>({type: 'header', value: h}))
+// helpers
+function makeHeaders(...headers: string[]): Node[] {
+    return headers.map(h=>({type: 'header', value: h}))
+}
+function nullFunction(): null {
+    return null
+}
 
 describe('compiler.compileHeaders', ()=>{
     it('preddy', ()=>{
@@ -130,7 +135,7 @@ U [2 3 4]
         assert.deepEqual(expected as Node, compiler.compiler(env, ast))
     })
     it('should handle base operators at each step on a relation', ()=>{
-        const env = {lets: {fake_function: {type: 'function', value: ()=>null}}, defs: {}}
+        const env = {lets: {fake_function: {type: 'function', value: nullFunction}}, defs: {}}
         const in_ = `| :a | :b | :c |
 J
     | :d | :a |
@@ -300,7 +305,7 @@ JoinClone
         assert.deepEqual(expected as Node, compiler.compiler(env, ast))
     })
     it('should expand map macros', ()=>{
-        const env = {lets: {fake_function: {type: 'function', value: ()=>null}}, defs: {}}
+        const env = {lets: {fake_function: {type: 'function', value: nullFunction}}, defs: {}}
         const in_ = `| :a |
 (map [:foo :bar]) \`^ {{_}} fake_function\`
 `
@@ -371,9 +376,10 @@ J
     it('should do a load of nested stuff', ()=>{
         const env = {
             lets: {
-                make_null: {type: 'function', value: (row, relation, ..._)=>({type: 'null', value: 'null'})},
-                first: {type: 'function', value: (row, relation, ..._)=>relation.rows[0]},
-                value: {type: 'function', value: (row, relation, value)=>value},
+                // TODO: what is going on here..
+                make_null: {type: 'function', value: (row: Node, relation: Node, ..._: any[])=>({type: 'null', value: 'null'})},
+                first: {type: 'function', value: (row: Node, relation: any, ..._: any[])=>relation.rows[0]},
+                value: {type: 'function', value: (row: Node, relation: Node, value: Node)=>value},
             },
             defs: {},
         }

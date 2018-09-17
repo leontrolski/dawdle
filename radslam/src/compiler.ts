@@ -1,5 +1,8 @@
 import {
     Node, NodeMultiple, NodeSingle,
+    Section, Let, Def, Line, Aggregator, MapMacro, NamedValue, RelationLiteral,
+    RlHeaders, RlRow, Set, AllHeaders, Relation, Header, Var, Operator, Bool,
+    Null, Number, String, Template, Decimal, Datetime, Function, Literal, Value,
     fullParser, types, is, baseOperatorInverseMap
 } from './parser'
 import * as operations from './operations'
@@ -13,8 +16,8 @@ import * as R from 'ramda'
  *
  * eg:  a b [c d e] f -> a b c d e f
  */
-const splatSets = list=>{
-    let listOut = []
+function splatSets(list: Node[]){
+    let listOut: Node[] = []
     for(let o of list){
         if(is.set(o)) listOut = listOut.concat(o.value)
         else if(o.compiledType === types.set) listOut = listOut.concat(o.compiledValue)
@@ -30,7 +33,7 @@ export const emptyEnv: Env = {lets: {}, defs: {}}
  * Given an resolve a variable in a given scope, else
  * return the object itself.
  */
-const resolveValue = (env, o)=>{
+function resolveValue(env: Env, o: Node): any {
     if(is.var(o)) return env.lets[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
     if(is.relation(o)) return env.lets[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
     if(is.operator(o)) return env.defs[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
@@ -41,13 +44,13 @@ const resolveValue = (env, o)=>{
     if(is.template(o)) return populateTemplate(env, o)
     return o
 }
-const getSetValues = (env, o)=>{
+function getSetValues(env: Env, o: Node): Node[] {
     if(o.compiledType === types.set) return o.compiledValue
     if(is.set(o)) return o.value
     if(is.all_headers(o)) return getHeaders(env, {type: types.relation, value: R.init(o.value)})
     throw new errors.ScopeError(o, env)
 }
-const getHeaders = (env, o)=>{
+function getHeaders(env: Env, o: Node){
     if(o.compiledType === types.headers) return o.compiledValue
     if(is.relation(o)) return resolveValue(env, o).compiledValue
     if(is.relation_literal(o)) return o.value[0].value
@@ -57,7 +60,8 @@ const getValue = {
     [types.set]: getSetValues,
     [types.headers]: getHeaders,
 }
-const addRegistration = (env, registration)=>{
+type Registration = {[type_: string]: {[name: string]: Node}}  // TODO: sort out the mess of this with defs
+function addRegistration(env: Env, registration: Registration){
     const type = Object.keys(registration)[0]
     const name = Object.keys(registration[type])[0]
     return R.assocPath([type, name], registration[type][name], env)
@@ -67,7 +71,7 @@ const addRegistration = (env, registration)=>{
  * a composite operator containing the expanded macro lines.
  */
 let macroOperatorIndex = 0  // global counter
-const expandAndRegisterMacro = (env, line)=>{
+function expandAndRegisterMacro(env: Env, line: Line){
     const [headers, template] = line.value
     const setValues = getSetValues(env, resolveValue(env, headers))
     const resolved = setValues
@@ -88,9 +92,9 @@ const expandAndRegisterMacro = (env, line)=>{
         args: [{type: types.relation, value: 'relation:'}],
         section: {
             type: types.section,
-            value: [
+            value: ([
                 {type: types.line, value: [{type: types.relation, value: 'relation:'}]}
-            ].concat(lines)
+            ] as Node[]).concat(lines)
         },
     }}}
     return {line: operatorLine, registration: registration}
@@ -99,7 +103,7 @@ const expandAndRegisterMacro = (env, line)=>{
 /**
  * Populate a template with resolved vars.
  */
-const populateTemplate = (env, o)=>{
+function populateTemplate(env: Env, o: Template): string{
     let out = ''
     let string = o.value.slice(1, -1)
     for(let match of string.match(/{{[a-zA-Z0-9\.\:_]+}}/g)){
@@ -112,15 +116,10 @@ const populateTemplate = (env, o)=>{
     return out + string
 }
 
-// TODO: more shape-y things like this + look into runtime checking
-type Definition = {
-    type: 'let' | 'def',
-    value: [NodeSingle, NodeMultiple, NodeMultiple],  // ...
-}
 
 export function compiler(env: Env, section: NodeMultiple): Node {
     asserters.assertSectionShape(section)
-    const defs = section.value.filter(is.letOrDef) as Array<Definition>
+    const defs = section.value.filter(is.letOrDef) as Array<Let | Def>
     const body = section.value.filter(R.complement(is.letOrDef))
     const withCompiled = []  // we will append to this
 
@@ -171,16 +170,16 @@ export function compiler(env: Env, section: NodeMultiple): Node {
             env = addRegistration(env, expanded.registration)
         }
 
-        let [operator, ...args] = (macroLine || line).value
-        if(args.length > 0 && is.section(R.last(args))) finalSection = args.pop()
+        let [operator, ...args] = (macroLine || line).value as [Operator, Value, Value]
+        if(args.length > 0 && is.section(R.last(args) as Node)) finalSection = args.pop()
 
         // resolve args and splat sets
-        args = splatSets(args.map(o=>resolveValue(env, o))).map(o=>resolveValue(env, o))
+        args = splatSets(args.map(o=>resolveValue(env, o as Node))).map(o=>resolveValue(env, o))
         // prepend args with the previous value
-        args = [{compiledType, compiledValue}].concat(args)
+        args = [{compiledType, compiledValue} as Node].concat(args as Node[])
         // append final section to args if it exists
         if(!R.isNil(finalSection)){
-            const compiledSection = compiler(env, finalSection)
+            const compiledSection = compiler(env, finalSection as Section)
             args.push(compiledSection)
             lineWithCompiledSection = R.assocPath(
                 ['value', line.value.length - 1], compiledSection, line)
@@ -189,7 +188,7 @@ export function compiler(env: Env, section: NodeMultiple): Node {
         if(is.baseOperator(operator)){
             const operatorName = baseOperatorInverseMap[operator.value]
             asserters.assertArgs[compiledType][operatorName](...args)
-            compiledValue = operations[compiledType][operatorName](...args)
+            compiledValue = (operations as {[s: string]: any})[compiledType][operatorName](...args)
         } else {
             const operator_ = resolveValue(env, operator)
             asserters.assertOperatorArgsMatch(operator_.args, args)
@@ -207,7 +206,7 @@ export function compiler(env: Env, section: NodeMultiple): Node {
     return R.merge(sectionWith, {compiledType, compiledValue})
 }
 
-const astToValue = {
+const astToValue: {[typeName: string]: (o: NodeSingle)=>string} = {
     [types.bool]: node=>JSON.parse(node.value),
     [types.null]: node=>JSON.parse(node.value),
     [types.number]: node=>JSON.parse(node.value),
@@ -218,4 +217,6 @@ const astToValue = {
     // [types.decimal]: node=>JSON.parse(node[types.decimal]),
     // [types.datetime]: node=>JSON.parse(node[types.datetime]),
 }
-const toString = o=>astToValue[o.type](o)
+function toString(o: NodeSingle){
+    return astToValue[o.type](o)
+}

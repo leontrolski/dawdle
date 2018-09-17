@@ -187,7 +187,7 @@ G :foo
     })
     it('should parse an empty relation literal with no rows', ()=>{
         const in_ = `| |`
-        const expected = {section: [
+        const expected: parser.NodeMinimal = {section: [
             {relation_literal: [
                 {rl_headers: []}]}]}
         assert.deepEqual(expected, parser.parser(in_))
@@ -196,7 +196,7 @@ G :foo
         const in_ = `| |
 ---
 | |`
-        const expected = {section: [
+        const expected: parser.NodeMinimal = {section: [
             {relation_literal: [
                 {rl_headers: []},
                 {rl_row: []}]}]}

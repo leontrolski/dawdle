@@ -3,7 +3,7 @@
         "outDir": "./dist/",
         // comment next line to disable source maps
         "sourceMap": true,
-        "noImplicitAny": false,  // should be true
+        "noImplicitAny": true,
         "lib": ["es2018", "dom"],
         "module": "commonjs",
         "target": "es6",
