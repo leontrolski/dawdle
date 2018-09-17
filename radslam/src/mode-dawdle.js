@@ -84,11 +84,13 @@ ace.define("ace/mode/python_highlight_rules",["require","exports","module","ace/
                 token : "constant.numeric", // integer
                 regex : integer + "\\b"
             }, {
+                token : "keyword.operator",
+                // regex : ">|v|\\^|X|U|\\-|J|G"
+                regex : "[A-Z][a-zA-Z_0-9]+|>|v|\\^|X|U|\\-|J|G"
+                // regex : "\\+|\\-|\\*|\\*\\*|\\/|\\/\\/|%|<<|>>|&|\\||\\^|~|<|>|<=|=>|==|!=|<>|="
+            }, {
                 token : keywordMapper,
                 regex : "[a-zA-Z_$][a-zA-Z0-9_$]*\\b"
-            }, {
-                token : "keyword.operator",
-                regex : "\\+|\\-|\\*|\\*\\*|\\/|\\/\\/|%|<<|>>|&|\\||\\^|~|<|>|<=|=>|==|!=|<>|="
             }, {
                 token : "paren.lparen",
                 regex : "[\\[\\(\\{]"
