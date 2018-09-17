@@ -14,6 +14,10 @@ const possibleEnvs = [
     {"relation_literal":[{"rl_headers":[{"header":":this-line-shouldnt-need-to-be-here"}]}]}
 ]}
 // {"dawdle": "end"}
+,
+// {"dawdle": "begin", "indentLevel": 0}
+{"section":[{"line": [{"set": [{"string": "\"initial dawdle section\""}]}]}]}
+// {"dawdle": "end"}
 ]
 
 const ast = (
