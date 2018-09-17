@@ -1,4 +1,4 @@
-
+import { describe, it } from 'mocha'
 import * as browserMock from 'mithril/test-utils/browserMock'
 
 const window = browserMock()

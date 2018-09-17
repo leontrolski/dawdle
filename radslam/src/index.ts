@@ -64,9 +64,9 @@ function nodesPerLine(o: Node): Array<Node> {
         return i
     }
     function inner(o: Node): void {
-        if(is.multiple(o)) typeStringMap[o.type](o)
+        if(is.multiple(o)) incrementLineIMap[o.type](o as NodeMultiple)  // TODO..
     }
-    const typeStringMap: {[s: string]: (o: NodeMultiple)=>void} = {
+    const incrementLineIMap: {[s: string]: (o: NodeMultiple)=>void} = {
         section: o=>o.value.forEach(o=>inner(o)),
         let: o=>{
             const lineI = getNewLineI()
@@ -102,7 +102,7 @@ function nodesPerLine(o: Node): Array<Node> {
 }
 const Header = (header: string)=>m('.button.button-outline.header.pre', header)
 const ConnectingLine = ()=>m('svg.connecting-line', {width: INFO_ORIGINAL_GAP, height: 2 * SVG_OFFSET},
-    m('marker#arrowhead', {refX: 5, refY: 5, markerUnits: "px", markerWidth: 8, markerHeight: 8},
+    m('marker#arrowhead', {refX: 5, refY: 5, markerWidth: 8, markerHeight: 8},
         m('circle[cx=5][cy=5][r=3]', {style: "stroke: none; fill:#000000;"})),
     m('line[marker-end=url(#arrowhead)][x1=0][x2=0]', {y1:SVG_OFFSET, y2: SVG_OFFSET, style: {stroke:'#000'}}))
 
@@ -130,7 +130,7 @@ const View = ()=>m('.root',
     m('.options',
         m('button.button.button-small', 'some test case'),
         m('button.button.button-outline.button-small', 'another test case'),
-        m('button.button', 'view provided env'),
+        m('button.button', 'display provided env'),
     ),
     deriveState(state).blocks.map((block, i)=>
         m('.block',

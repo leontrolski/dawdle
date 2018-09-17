@@ -1,4 +1,5 @@
 import * as chai from 'chai'
+import { describe, it } from 'mocha'
 
 import * as parser from '../src/parser'
 import * as compiler from '../src/compiler'

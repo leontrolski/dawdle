@@ -3,14 +3,21 @@ const CopyWebpackPlugin = require('copy-webpack-plugin')
 
 module.exports = {
     entry: './src/index.ts',
-    // comment next line to disable source maps
+    // PERFORMANCE - source maps take up lots of space
     devtool: 'inline-source-map',
     module: {
         rules: [
             {
                 test: /\.tsx?$/,
-                use: 'ts-loader',
-                exclude: /node_modules/
+                use: [{
+                    loader: 'ts-loader',
+                    // PERFORMANCE - disable type checker - we will do this as part of the tests
+                    options: {
+                        transpileOnly: true,
+                        experimentalWatchApi: true,
+                    },
+                }],
+                exclude: [/node_modules/, /test/],
             }
         ]
     },
@@ -34,5 +41,20 @@ module.exports = {
             },
         ])
     ],
+    optimization: {
+        // PERFORMANCE
+        removeAvailableModules: false,
+        removeEmptyChunks: false,
+
+        splitChunks: {
+          cacheGroups: {
+            commons: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendors',
+              chunks: 'all'
+            }
+          }
+        }
+    },
     stats: 'verbose',
 }

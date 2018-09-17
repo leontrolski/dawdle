@@ -211,7 +211,7 @@ export const multiple = [
     types.rl_row,
     types.set,
 ]
-export const is = {
+export const is: { [s: string]: (o: Node)=>boolean } = {
     section: o=>o.type === types.section,
     let: o=>o.type === types.let,
     def: o=>o.type === types.def,
@@ -241,15 +241,18 @@ export const is = {
         return R.contains(o.type, multiple)
     },
     letOrDef: o=>is.let(o) || is.def(o),
-    singleRelationOrVarOrSet: o=>
-        is.line(o) &&
-        o.value.length === 1 &&
+    singleRelationOrVarOrSet: o=>{
+        const isLine = is.line(o)
+        const isLength1 = o.value.length === 1
+        const first = o.value[0] as Node
+        return isLine && isLength1 &&
         (
-            is.relation(o.value[0]) ||
-            is.var(o.value[0]) ||
-            is.set(o.value[0]) ||
-            is.all_headers(o.value[0])
-        ),
+            is.relation(first) ||
+            is.var(first) ||
+            is.set(first) ||
+            is.all_headers(first)
+        )
+    },
     baseOperator: o=>
         is.operator(o) &&
         R.contains(o.value, Object.keys(baseOperatorInverseMap)),
