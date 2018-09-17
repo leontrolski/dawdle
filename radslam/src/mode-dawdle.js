@@ -7,7 +7,7 @@ ace.define("ace/mode/python_highlight_rules",["require","exports","module","ace/
     var PythonHighlightRules = function() {
 
         var keywords = (
-            "and|as|assert|break|class|continue|def|del|elif|else|except|exec|" +
+            "and|as|assert|break|class|continue|def|let|del|elif|else|except|exec|" +
             "finally|for|from|global|if|import|in|is|lambda|not|or|pass|print|" +
             "raise|return|try|while|with|yield|async|await"
         );
