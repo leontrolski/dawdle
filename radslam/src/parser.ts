@@ -21,13 +21,16 @@ export type Node = NodeMultiple | NodeSingle
 export type Section = NodeMultiple
 export type Let = BaseNode & {
     type: 'let',
-    value: [NodeSingle, NodeMultiple, NodeMultiple],  // ...
+    value: [Relation | Var, Section],
 }
 export type Def = NodeMultiple & {
     type: 'def',
-    value: [NodeSingle, NodeMultiple, NodeMultiple],  // ...
+    value: [Operator, Relation | Var, Relation | Var, Section],
 }
-export type Line = NodeMultiple
+export type Line = {
+    type: 'line',
+    value: [Operator, Value, Value],
+}
 export type Aggregator = NodeMultiple
 export type MapMacro = NodeMultiple
 export type NamedValue = NodeMultiple

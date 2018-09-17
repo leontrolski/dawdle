@@ -210,7 +210,7 @@ async function init(){
     const ids = deriveEditorIds(state)
     requestAnimationFrame(()=>loadEditors(ids))
     let editorsLoaded = false
-    let id = setInterval(function(){
+    let id: NodeJS.Timer = setInterval(function(){
         if(editorsLoaded) return clearInterval(id)
         editorsLoaded = alignLines()
     }, 100)
@@ -218,7 +218,7 @@ async function init(){
     window.addEventListener('resize', alignLines)
 }
 
-declare const underTest
+declare const underTest: any
 try{underTest}
 catch{init()}
-export let test
+export let test: any

@@ -25,7 +25,7 @@ const typeStringMap: { [s: string]: (o: NodeMultiple, i: number)=>string } = {
     let: (o, i)=>`let ${many(o, i)}\n`,
     def: (o, i)=>`def ${many(o, i)}\n`,
     line: (o, i)=>{
-        if(is.section(R.last(o.value) || {})) return many(o, i)
+        if(is.section(R.last(o.value) || {} as Node)) return many(o, i)
         return o.value.map(o=>nodeToString(o, i)).join(' ')
     },
     aggregator: (o, i)=>o.value.map(o=>nodeToString(o, i)).join(' '),

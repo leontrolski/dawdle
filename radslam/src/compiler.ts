@@ -1,8 +1,6 @@
 import {
     Node, NodeMultiple, NodeSingle,
-    Section, Let, Def, Line, Aggregator, MapMacro, NamedValue, RelationLiteral,
-    RlHeaders, RlRow, Set, AllHeaders, Relation, Header, Var, Operator, Bool,
-    Null, Number, String, Template, Decimal, Datetime, Function, Literal, Value,
+    Section, Let, Def, Line, Operator, Template, Value,
     fullParser, types, is, baseOperatorInverseMap
 } from './parser'
 import * as operations from './operations'
@@ -32,6 +30,8 @@ export const emptyEnv: Env = {lets: {}, defs: {}}
 /**
  * Given an resolve a variable in a given scope, else
  * return the object itself.
+ *
+ * TODO: what does this really return?
  */
 function resolveValue(env: Env, o: Node): any {
     if(is.var(o)) return env.lets[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
@@ -60,14 +60,18 @@ const getValue = {
     [types.set]: getSetValues,
     [types.headers]: getHeaders,
 }
-type Registration = {[type_: string]: {[name: string]: Node}}  // TODO: sort out the mess of this with defs
+type Registration = {
+    [type_: string]: {
+        [name: string]: Node
+    }
+}  // TODO: sort out the mess of this with defs
 function addRegistration(env: Env, registration: Registration){
     const type = Object.keys(registration)[0]
     const name = Object.keys(registration[type])[0]
     return R.assocPath([type, name], registration[type][name], env)
 }
 /**
- * Create a `registration` as above for a macro that is
+ * Create a `registration`as above for a macro that is
  * a composite operator containing the expanded macro lines.
  */
 let macroOperatorIndex = 0  // global counter
@@ -93,8 +97,8 @@ function expandAndRegisterMacro(env: Env, line: Line){
         section: {
             type: types.section,
             value: ([
-                {type: types.line, value: [{type: types.relation, value: 'relation:'}]}
-            ] as Node[]).concat(lines)
+                {type: types.line, value: [{type: types.relation, value: 'relation:'}]} as Node
+            ]).concat(lines)
         },
     }}}
     return {line: operatorLine, registration: registration}
@@ -119,13 +123,13 @@ function populateTemplate(env: Env, o: Template): string{
 
 export function compiler(env: Env, section: NodeMultiple): Node {
     asserters.assertSectionShape(section)
-    const defs = section.value.filter(is.letOrDef) as Array<Let | Def>
-    const body = section.value.filter(R.complement(is.letOrDef))
+    const defs = <(Let | Def)[]>section.value.filter(is.letOrDef)
+    const body = <Line[]>section.value.filter(R.complement(is.letOrDef))
     const withCompiled = []  // we will append to this
 
     for(let definition of defs){
         const [first, ...argsAndSection] = definition.value
-        const section = argsAndSection.pop() as NodeMultiple
+        const section = <Section>argsAndSection.pop()
         const args = argsAndSection
 
         let registration
@@ -150,7 +154,7 @@ export function compiler(env: Env, section: NodeMultiple): Node {
 
     // TODO: handle aggregators consistently with everything else
     if(is.aggregator(first)) return R.merge(
-        firstLine, {compiledType: types.headers, compiledValue: body.map(o=>o.value[0])}) as Node
+        firstLine, {compiledType: types.headers, compiledValue: body.map(o=>o.value[0])})
     const isSet = is.var(first) || is.set(first) || is.all_headers(first)
     const compiledType = isSet? types.set : types.headers
     let compiledValue
@@ -170,16 +174,16 @@ export function compiler(env: Env, section: NodeMultiple): Node {
             env = addRegistration(env, expanded.registration)
         }
 
-        let [operator, ...args] = (macroLine || line).value as [Operator, Value, Value]
-        if(args.length > 0 && is.section(R.last(args) as Node)) finalSection = args.pop()
+        let [operator, ...args] = (macroLine || line).value
+        if(args.length > 0 && is.section(R.last(args))) finalSection = <Section>args.pop()
 
         // resolve args and splat sets
-        args = splatSets(args.map(o=>resolveValue(env, o as Node))).map(o=>resolveValue(env, o))
+        args = splatSets(args.map(o=>resolveValue(env, o))).map(o=>resolveValue(env, o))
         // prepend args with the previous value
-        args = [{compiledType, compiledValue} as Node].concat(args as Node[])
+        args = [{compiledType, compiledValue} as Node].concat(args)
         // append final section to args if it exists
         if(!R.isNil(finalSection)){
-            const compiledSection = compiler(env, finalSection as Section)
+            const compiledSection = compiler(env, finalSection)
             args.push(compiledSection)
             lineWithCompiledSection = R.assocPath(
                 ['value', line.value.length - 1], compiledSection, line)
@@ -195,7 +199,7 @@ export function compiler(env: Env, section: NodeMultiple): Node {
             // contruct env for operator, then compile its section with it
             let operatorEnv = env
             for(let [operatorArg, arg] of R.zip(operator_.args, args)){
-                const registration = {lets: {[(operatorArg as Node).value as any]: arg}}
+                const registration = {lets: {[(operatorArg as Node).value as string]: arg as Node}}
                 operatorEnv = addRegistration(operatorEnv, registration)
             }
             compiledValue = compiler(operatorEnv, operator_.section).compiledValue
