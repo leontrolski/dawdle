@@ -6,7 +6,7 @@ import * as R from 'ramda'
  * Convert an AST node to a source string.
  * `o` is a node, `i` is the indent level.
  */
-function nodeToString(o: Node, i: number): string {
+function nodeToString_(o: Node, i: number): string {
     if(is.multiple(o)) return typeStringMap[o.type](o, i)
     return o.value
 }
@@ -14,34 +14,34 @@ function nodeToString(o: Node, i: number): string {
 function many(o: NodeMultiple, i: number): string{
     const args = o.value
     const section = args.pop()
-    return `${args.map(o=>nodeToString(o, i)).join(' ')}\n${nodeToString(section, i + 1)}`
+    return `${args.map(o=>nodeToString_(o, i)).join(' ')}\n${nodeToString_(section, i + 1)}`
 }
 
 const typeStringMap: { [s: string]: (o: NodeMultiple, i: number)=>string } = {
     section: (o, i)=>o.value.map(o=>o.type === 'section'?
-        nodeToString(o, i + 1)
-        : '    '.repeat(i) + nodeToString(o, i)
+        nodeToString_(o, i + 1)
+        : '    '.repeat(i) + nodeToString_(o, i)
     ).join('\n'),
     let: (o, i)=>`let ${many(o, i)}\n`,
     def: (o, i)=>`def ${many(o, i)}\n`,
     line: (o, i)=>{
         if(is.section(R.last(o.value) || {} as Node)) return many(o, i)
-        return o.value.map(o=>nodeToString(o, i)).join(' ')
+        return o.value.map(o=>nodeToString_(o, i)).join(' ')
     },
-    aggregator: (o, i)=>o.value.map(o=>nodeToString(o, i)).join(' '),
+    aggregator: (o, i)=>o.value.map(o=>nodeToString_(o, i)).join(' '),
     map_macro: (o, i)=>{
         const [var_, template] = o.value
-        return `(map ${nodeToString(var_, i)}) ${nodeToString(template, i)}`
+        return `(map ${nodeToString_(var_, i)}) ${nodeToString_(template, i)}`
     },
     named_value: (o, i)=>{
         const [var_, value] = o.value
-        return `${nodeToString(var_, i)}=${nodeToString(value, i)}`
+        return `${nodeToString_(var_, i)}=${nodeToString_(value, i)}`
     },
-    set: (o, i)=>`[${o.value.map(o=>nodeToString(o, i)).join(' ')}]`,
+    set: (o, i)=>`[${o.value.map(o=>nodeToString_(o, i)).join(' ')}]`,
     relation_literal: (o, i)=>{
         const [headers, ...rows] = o.value as Array<NodeMultiple>
-        const headerStrings = headers.value.map(o=>nodeToString(o, i))
-        const rowsStrings = rows.map(row=>row.value.map(o=>nodeToString(o, i)))
+        const headerStrings = headers.value.map(o=>nodeToString_(o, i))
+        const rowsStrings = rows.map(row=>row.value.map(o=>nodeToString_(o, i)))
         const colWidths = R.transpose(rowsStrings.concat([headerStrings]))
             .map(col=>col.map(cell=>cell.length))
             .map(colLengths=>Math.max(...colLengths))
@@ -74,4 +74,5 @@ export function jsonifyAndIndent(o: NodeMinimal): string{
     return R.tail(s)  // remove first \n
 }
 
-export const astToString = (ast: NodeMinimal)=>nodeToString(deMunge(ast), 0)
+export const astToString = (ast: NodeMinimal)=>nodeToString_(deMunge(ast), 0)
+export const nodeToString = (o: Node)=>nodeToString_(o, 0)

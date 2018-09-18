@@ -121,7 +121,7 @@ function populateTemplate(env: Env, o: Template): string{
 }
 
 
-export function compiler(env: Env, section: NodeMultiple): Node {
+export function compiler(env: Env, section: Section): Section {
     asserters.assertSectionShape(section)
     const defs = <(Let | Def)[]>section.value.filter(is.letOrDef)
     const body = <Line[]>section.value.filter(R.complement(is.letOrDef))
@@ -135,6 +135,7 @@ export function compiler(env: Env, section: NodeMultiple): Node {
         let registration
         if(is.def(definition)){
             // TODO: would be nicer if this munging didn't happen here, but on retrieval
+            // also, major bug is that the env must be stored here as well...
             const structured = R.merge(first, {section, args})
             registration = {defs: {[first.value]: structured}}
             withCompiled.push(definition)
@@ -197,7 +198,7 @@ export function compiler(env: Env, section: NodeMultiple): Node {
             const operator_ = resolveValue(env, operator)
             asserters.assertOperatorArgsMatch(operator_.args, args)
             // contruct env for operator, then compile its section with it
-            let operatorEnv = env
+            let operatorEnv = env  // TODO: the operator env is not this...
             for(let [operatorArg, arg] of R.zip(operator_.args, args)){
                 const registration = {lets: {[(operatorArg as Node).value as string]: arg as Node}}
                 operatorEnv = addRegistration(operatorEnv, registration)

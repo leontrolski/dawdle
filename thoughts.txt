@@ -127,14 +127,16 @@ Design choices:
 - make error messages nice
 
 TODO
-
-- {defs and lets} should have a nicer shape in the env
+- more server errors should feed through to the UI
+- {defs and lets} should have a nicer shape in the env *and* defs need to have the env where they were defined too
 - handle named vars
 - allow `let` for types other than sets and relations
 - write more comprehensive tests, esp errors and composite operators on sets
 - add // comments to parser
-- improve typing, maybe do some more stuff like:
+- improve typing
 - remove offset malarkey in parser
+- make some of the naming more consistent
+  - ast/node
 
 - work on -[multirelation]-
 - what about update/insert etc
