@@ -122,12 +122,16 @@ Design choices:
 - Each line of dawdle should map deterministically both ways to the JSON AST
 - Given an environment, it should always be possible to determine the schema at any line
 - Given test values, it should always be possible to determine the value at any line of a top level let or section
-- Composite operators can only be composed of the base operators and other functions
-- Sets are always splatted in place
-- make error messages nice
+- Composite operators can only be composed of the base operators and other composite operators
+- Sets are splatted in place when called with relation operators
+- make error messages nicer
 
 TODO
-- more server errors should feed through to the UI
+- are text from AST similar error
+- write to file, reload file
+- more general server errors
+
+- maybe just raise errors from parser rather than insert them in the AST?
 - {defs and lets} should have a nicer shape in the env *and* defs need to have the env where they were defined too
 - handle named vars
 - allow `let` for types other than sets and relations
@@ -138,7 +142,7 @@ TODO
 - make some of the naming more consistent
   - ast/node
 
-- work on -[multirelation]-
+- work on -[multirelation]- (and give it a better token)
 - what about update/insert etc
 
 

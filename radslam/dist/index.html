@@ -10,12 +10,18 @@ body{margin:0px;background-color:#799eb1;font-size: 1.4em;}
 .source{position:relative;background-color:white;margin-top:8px;}
 .language-dawdle{border-top:solid 5px grey;border-bottom:solid 5px grey;}
 /* font copied from ace editor */
-.pre{white-space:pre;font:12px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;}
+.pre{white-space:pre-wrap;font:12px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;}
+
 .right{width:80ch;flex-shrink:0;margin-left:50px;}
 .compiled-line{position:relative;border-top:solid grey 1px;}
 .connecting-line{position:absolute;top:-1000px;right:-50px;width:50px;}
+.error{border-top:solid grey 1px;}
+.editor-buttons{position:fixed;bottom:1em;right:1em;}
 /* extensions to milligram */
 .button-small{font-size:1rem;height:2rem;line-height:2rem;padding:0 1.5rem;text-transform:none;margin:2px;}
+.button-editor{font-size:1rem;height:2rem;line-height:2rem;padding:0 1.5rem;margin:4px;box-shadow:black 1px 1px 6px 0px;display: block;}
+.button-save{background-color:green;border-color:green;}
+.button-reload{background-color:palevioletred;border-color:palevioletred;}
 .header{font-size:1.0rem;height:2rem;line-height:2rem;padding:0 0.5rem;text-transform:none;margin-right:0.4ch;margin:0.3em;}
 </style>
 </head>

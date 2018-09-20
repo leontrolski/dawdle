@@ -10,6 +10,13 @@ export type ServerError = {
 
 export type TestCaseMap = {[name: string]: Env}
 
+export type CommentData = {
+    dawdle?: any,
+    type: 'header',
+    originalLanguage: string,
+    command: string,
+} | null
+
 export type ServerBlock = {
     id: string,
     language: string,
@@ -17,6 +24,7 @@ export type ServerBlock = {
     astWithHeaders: Section | null,
     testCases: TestCaseMap,
     errors: ServerError[],
+    commentData?: CommentData,
 }
 
 export type State = {

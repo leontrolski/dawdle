@@ -1,38 +1,35 @@
 import * as fs from 'fs'
 import * as path from 'path'
-import { zip } from 'ramda'
+import { zip, dissoc, pipe } from 'ramda'
 import * as express from 'express'
 import * as bodyParser from 'body-parser'
 
-import { ServerBlock, State, TestCaseMap, ServerError } from './shared'
+import { CommentData, ServerBlock, State, TestCaseMap, ServerError } from './shared'
 import { Section, deMunge, parser } from './parser'
 import { compiler, emptyEnv } from './compiler'
-import { astToString, nodeToString } from './astToString'
+import { astToString, nodeToString, jsonifyAndIndent } from './astToString'
 import { log } from './errorsAndAsserters';
 
 const PATH = path.resolve(__dirname, '../examples/example_1.ts')
 
-type Header = {
-    dawdle?: any,
-    type: 'header',
-    originalLanguage: string,
-    command: string,
-} | null
-
 type PreBlock = {
     language: string,
     source: string,
+    commentData?: CommentData,
 }
 
 const DAWDLE_COMMENT = '// {"dawdle":'
+const DAWDLE_COMMENT_OPENER = '// {"dawdle": "header", "originalLanguage": "typescript", "command": "venv/python $FILE --dawdle"}'
+const DAWDLE_COMMENT_BEGIN = '// {"dawdle": "begin", '
+const DAWDLE_COMMENT_END = '// {"dawdle": "end", '
 const comment_types = {
     header: 'header',
     begin: 'begin',
     end: 'end',
 }
-function parseComment(line: string){
+function parseComment(line: string): CommentData {
     const data = JSON.parse(line.slice(3))
-    return {type: data.dawdle, ...data}
+    return {type: data.dawdle, ...data} as CommentData
 }
 
 const fakeTestCases: TestCaseMap = {
@@ -41,18 +38,18 @@ const fakeTestCases: TestCaseMap = {
 }
 
 function readFile(p: string): Array<PreBlock>{
-    let header: Header = null
+    let header: CommentData = null
     let isInDawdleBlock = false
     let thisOriginalBlock: Array<string> = []
     let thisDawdleBlock: Array<string> = []
     const serverBlocks: Array<PreBlock> = []
 
-    const data = fs.readFileSync(p, 'utf8')
-    for(let line of data.split('\n')){
+    const fileString = fs.readFileSync(p, 'utf8')
+    for(let line of fileString.split('\n')){
         if(line.startsWith(DAWDLE_COMMENT)){
             const data = parseComment(line)
             if(data.type === comment_types.header){
-                header = data as Header
+                header = data as CommentData
             }
             if(!header) throw new Error('dawdle comment found in file without header comment')
             if(data.type === comment_types.begin){
@@ -69,6 +66,7 @@ function readFile(p: string): Array<PreBlock>{
                 serverBlocks.push({
                     language: 'dawdle',
                     source: thisDawdleBlock.join('\n'),
+                    commentData: data,
                 })
                 thisDawdleBlock = []
             }
@@ -111,19 +109,18 @@ function astToSourceAndCompiled(blocks: PreBlock[]): ServerBlock[] {
             // testCases: {},
             testCases: dawdleSource.includes('JoinClone')? fakeTestCases : {},
             errors: [],
+            commentData: block.commentData,
         }
     })
 }
-function editedSourceToAstAndBack(
-    originalBlocks: ServerBlock[],
-    editedBlocks: ServerBlock[],
-): ServerBlock[] {
-    return zip(originalBlocks, editedBlocks).map(([original, edited])=>{
-        if(edited.language !== 'dawdle') return edited
+function editedSourceToAstAndBack(editedBlocks: ServerBlock[]): ServerBlock[] {
+    return editedBlocks.map(block=>{
+        if(block.language !== 'dawdle') return block
         // else is a dawdle block
-        let dawdleSource, astWithHeaders
+        let dawdleSource = null
+        let astWithHeaders = null
         let errors: ServerError[] = []
-        const editedDawdleSource = edited.source.trim() + '\n'  // TODO: sort out this ambiguity?
+        const editedDawdleSource = block.source.trim() + '\n'  // TODO: sort out this ambiguity?
         try{
             const astMinimal = parser(editedDawdleSource)
             dawdleSource = astToString(astMinimal)
@@ -132,34 +129,57 @@ function editedSourceToAstAndBack(
         }
         catch(error){
             errors = [{message: error.message, lineNumber: null}]
-            dawdleSource = original.source
-            astWithHeaders = original.astWithHeaders
         }
         return {
-            id: edited.id,
-            language: edited.language,
-            source: dawdleSource,  // this should not be used
+            id: block.id,
+            language: block.language,
+            source: dawdleSource,
             astWithHeaders: astWithHeaders,
             // testCases: {},
-            testCases: dawdleSource.includes('JoinClone')? fakeTestCases : {},
+            testCases: (dawdleSource || editedDawdleSource).includes('JoinClone')? fakeTestCases : {},
             errors: errors,
+            commentData: block.commentData,
         }
     })
 }
-
+function editedSourceToFileString(editedBlocks: ServerBlock[]): string {
+    let fileString = DAWDLE_COMMENT_OPENER + '\n'
+    editedBlocks.forEach(block=>{
+        if(block.language !== 'dawdle'){
+            fileString += block.source
+        }
+        else { // is a dawdle block
+            const dropPointlessKeys = pipe(dissoc('dawdle'), dissoc('type'))
+            fileString += '\n' + DAWDLE_COMMENT_BEGIN + JSON.stringify(dropPointlessKeys(block.commentData)).slice(1) + '\n'
+            const editedDawdleSource = block.source.trim() + '\n'  // TODO: sort out this ambiguity?
+            const astMinimal = parser(editedDawdleSource)
+            fileString += jsonifyAndIndent(astMinimal)
+            fileString += '\n' + DAWDLE_COMMENT_END + JSON.stringify(dropPointlessKeys(block.commentData)).slice(1) + '\n'
+        }
+    })
+    return fileString
+}
+// read from the file
 function get(req: express.Request): State {
+    const fileBlocks = readFile(PATH)
     return {
         defaultEnv: emptyEnv,
-        blocks: astToSourceAndCompiled(readFile(PATH))
+        blocks: astToSourceAndCompiled(fileBlocks)
     }
 }
-function post(req: express.Request): State {
+// validate and parse edited state
+function put(req: express.Request): State {
     const editedState = req.body as State
-    const originals = astToSourceAndCompiled(readFile(PATH))
     return {
         defaultEnv: emptyEnv,
-        blocks: editedSourceToAstAndBack(originals, editedState.blocks),
+        blocks: editedSourceToAstAndBack(editedState.blocks),
     }
+}
+// write edited state to file
+function post(req: express.Request): boolean {
+    const editedState = req.body as State
+    console.log(editedSourceToFileString(editedState.blocks))
+    return true
 }
 
 // express specific stuff
@@ -169,6 +189,7 @@ const port = 3000
 
 app.use(express.static(path.resolve(__dirname, '../dist')))
 app.get('/dawdle', (req, res)=>res.json(get(req)))
+app.put('/dawdle', (req, res)=>res.json(put(req)))
 app.post('/dawdle', (req, res)=>res.json(post(req)))
 
 // run app when not under test

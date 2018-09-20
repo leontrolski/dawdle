@@ -1,12 +1,13 @@
 import { default as axios } from 'axios'
-import { zip, merge, sortBy } from 'ramda'
+import { zip, merge, sortBy, isEmpty, intersperse } from 'ramda'
 import * as m from 'mithril'
 import * as ace from 'ace-builds/src-noconflict/ace'
 ace.config.set('basePath', './modes/')
 
 import { DAWDLE_URL, ServerBlock, State } from './shared'
-import { Node, NodeMultiple, Header, is, Set } from './parser'
+import { Node, NodeMultiple, Header, is, Set, Value } from './parser'
 import { Env, emptyEnv } from './compiler';
+import { SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS } from 'constants';
 
 // TODO:
 // - sort out editor/source/original naming inconsistencies
@@ -23,20 +24,24 @@ type Block = ServerBlock & {
 }
 type DerivedState = {
     blocks: Block[],
+    areAnyErrors: boolean,
 }
 
-// empty state to start with
+// empty to start with
 let state: State = {
     defaultEnv: emptyEnv,
     blocks: [],
 }
-// functions that mutate state
-function setState(s: State): void {
-    state = s
+// functions that mutate
+function setDefaultEnv(s: State, env: Env){
+    s.defaultEnv = env
 }
-async function setEditedSource(i: number, editedSource: string): Promise<void> {
-    state.blocks[i].source = editedSource
-    await setFromWriteServerStateDebounced()
+function setBlocks(s:State, blocks: ServerBlock[]){
+    s.blocks = blocks
+}
+async function setEditedSource(s: State, i: number, editedSource: string): Promise<void> {
+    s.blocks[i].source = editedSource
+    await setFromWriteServerStateDebounced(s)
 }
 
 // server
@@ -44,43 +49,54 @@ async function readServerState(): Promise<State> {
     const response = await axios.get(DAWDLE_URL)
     return response.data
 }
-async function writeServerState(): Promise<State> {
-    const response = await axios.post(DAWDLE_URL, state)
+async function writeServerState(s: State): Promise<State> {
+    const response = await axios.put(DAWDLE_URL, s)
     return response.data
 }
-async function setFromServerState(): Promise<void> {
-    const serverState = await readServerState()
-    setState({
-        defaultEnv: serverState.defaultEnv,
-        blocks: serverState.blocks,
-    })
+async function saveStateToFile(s: State): Promise<State> {
+    const response = await axios.post(DAWDLE_URL, s)
+    return response.data
 }
-async function setFromWriteServerState(){
-    const serverState = await writeServerState()
-    setState({
-        defaultEnv: serverState.defaultEnv,
-        blocks: serverState.blocks,
-    })
+async function setFromServerState(s: State): Promise<void> {
+    const serverState = await readServerState()
+    setDefaultEnv(s, serverState.defaultEnv)
+    setBlocks(s, serverState.blocks)
+    m.redraw()
+}
+async function setFromWriteServerState(s: State){
+    const serverState = await writeServerState(s)
+    // merge blocks only on new valid information
+    const mergedBlocks = zip(s.blocks, serverState.blocks)
+        .map(([original, server])=>merge(
+            server,
+            {
+                source: original.source,
+                astWithHeaders: server.astWithHeaders || original.astWithHeaders,
+            }))
+    setDefaultEnv(s, serverState.defaultEnv)
+    setBlocks(s, mergedBlocks)
+    m.redraw()
 }
 const setFromWriteServerStateDebounced = debounce(setFromWriteServerState, 500)
 
 // deriving functions
-function deriveEditorIds(state: State): Array<string> {
-    return state.blocks.map((_, i)=>`editor-${i}`)
+function deriveEditorIds(s: State): Array<string> {
+    return s.blocks.map((_, i)=>`editor-${i}`)
 }
-function deriveInfoIds(state: State): Array<string> {
-    return state.blocks
+function deriveInfoIds(s: State): Array<string> {
+    return s.blocks
         .map((block, i)=>({block, id: `info-${i}`}))
         .filter(both=>both.block.astWithHeaders)
         .map(both=>both.id)
 }
-function deriveState(state: State): DerivedState {
-    const blocks = state.blocks.map((block, i)=>merge(block, {
+function deriveState(s: State): DerivedState {
+    const blocks = s.blocks.map((block, i)=>merge(block, {
         editorId: `editor-${i}`,
         infoId: `info-${i}`,
         selectedTestCaseName: Object.keys(block.testCases)[0],
     }))
-    return {blocks}
+    const areAnyErrors = s.blocks.map(block=>!isEmpty(block.errors)).some(x=>x)
+    return {blocks, areAnyErrors}
 }
 // UI components
 function nodesPerLine(o: Node): Array<Node> {
@@ -132,13 +148,25 @@ function nodesPerLine(o: Node): Array<Node> {
 const ConnectingLine = ()=>m('svg.connecting-line', {width: INFO_ORIGINAL_GAP, height: 2 * SVG_OFFSET},
     m('marker#arrowhead', {refX: 5, refY: 5, markerWidth: 8, markerHeight: 8},
         m('circle[cx=5][cy=5][r=3]', {style: "stroke: none; fill:#000000;"})),
-    m('line[marker-end=url(#arrowhead)][x1=0][x2=0]', {y1:SVG_OFFSET, y2: SVG_OFFSET, style: {stroke:'#000'}}))
+    m('line[marker-end=url(#arrowhead)][x1=0][x2=0]', {y1: SVG_OFFSET, y2: SVG_OFFSET, style: {stroke:'#000'}}))
+
+
+const HeaderEl = (o: Header)=>m('.button.button-outline.header.pre', o.value)
 
 const CompiledValue = (o: Node)=>{
-    if(o.compiledType === 'headers') return o.compiledValue.map((v: Header)=>m('.button.button-outline.header.pre', v.value))
-    if(o.compiledType === 'set') return ['[', o.compiledValue.map((v: Set)=>v.value).join(', '), ']']
+    if(o.compiledType === 'headers') return o.compiledValue.map(HeaderEl)
+    if(o.compiledType === 'set') return [
+        '[',
+        intersperse(',', o.compiledValue.map((v: Value)=>is.header(v)? HeaderEl(v) : v.value)),
+        ']'
+    ]
     return null
 }
+
+const Errors = (block: Block)=>m(
+        '.source',
+        block.errors.map(error=>m('.pre.error', error.message))
+    )
 
 const Info = (block: Block)=>
     block.astWithHeaders === null? null : m(
@@ -167,18 +195,39 @@ const Original = (block: Block)=>m(
     m('.connecting-line'),
 )
 
-const View = ()=>m('.root',
-    m('.options',
-        m('button.button', 'Default env'),
-    ),
-    deriveState(state).blocks.map((block, i)=>
+const View = (s: State)=>m('.root',
+    m('.options', ''),
+    deriveState(s).blocks.map((block, i)=>
         m('.block',
-            Info(block),
-            Original(block)),
-))
+            isEmpty(block.errors)? Info(block) : Errors(block),
+            Original(block))),
+    m('.editor-buttons',
+        m('.button.button-editor.button-save', {
+            onclick: ()=>saveStateToFile(s),
+        }, 'save'),
+        m('.button.button-editor.button-reload', 'reload from file'),
+        m('.button.button-editor', 'show default env')),
+)
+
+async function init(){
+    await m.mount(document.body, {view: ()=>View(state), onupdate: alignLines})
+
+    // fetch data and redraw
+    await setFromServerState(state)
+
+    // load editors and align lines for the first time
+    const ids = deriveEditorIds(state)
+    requestAnimationFrame(()=>loadEditors(ids))
+    let editorsLoaded = false
+    let id: NodeJS.Timer = setInterval(function(){
+        if(editorsLoaded) return clearInterval(id)
+        editorsLoaded = alignLines()
+    }, 100)
+    // re align lines on window resize
+    window.addEventListener('resize', alignLines)
+}
 
 // stuff below operates outside of mithril rendering
-
 function loadEditors(ids: Array<string>): Array<AceAjax.Editor>{
     const editors = ids.map(id=>{
         const editorElement = document.getElementById(id)
@@ -193,7 +242,7 @@ function loadEditors(ids: Array<string>): Array<AceAjax.Editor>{
         })
     })
     zip(editors, ids).forEach(([editor, id], i)=>{
-        editor.on('change', ()=>setEditedSource(i, editor.getValue()))
+        editor.on('change', ()=>setEditedSource(state, i, editor.getValue()))
         // only highlight lines of the focused editor
         editor.renderer.$cursorLayer.element.style.display = 'none'
         const otherEditors = editors.filter(e=>e !== editor)
@@ -237,41 +286,23 @@ function alignLines(){
         return false
     }
 }
+
+// helpers
 function debounce(func: Function, wait: number){
 	let timeout: NodeJS.Timer
 	return function(...args: any[]){
 		var later = function() {
 			timeout = null
-			func(args)
+			func(...args)
 		}
 		clearTimeout(timeout)
 		timeout = setTimeout(later, wait)
 	}
 }
 
-async function init(){
-    await m.mount(document.body, {view: View, onupdate: alignLines})
-
-    // fetch data and redraw
-    await setFromServerState()
-    m.redraw()
-
-    // load editors and align lines for the first time
-    const ids = deriveEditorIds(state)
-    requestAnimationFrame(()=>loadEditors(ids))
-    let editorsLoaded = false
-    let id: NodeJS.Timer = setInterval(function(){
-        if(editorsLoaded) return clearInterval(id)
-        editorsLoaded = alignLines()
-    }, 100)
-    // re align lines on window resize
-    window.addEventListener('resize', alignLines)
-}
-
-
 // inspecting tools
 const _window = window as any
-_window._state = ()=>state  // allow easy inspecting
+_window._state = state
 // run when not under test
 declare const underTest: any
 try{underTest}
