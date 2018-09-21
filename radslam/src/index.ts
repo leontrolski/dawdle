@@ -4,7 +4,7 @@ import * as m from 'mithril'
 import * as ace from 'ace-builds/src-noconflict/ace'
 ace.config.set('basePath', './modes/')
 
-import { DAWDLE_URL, ServerBlock, State } from './shared'
+import { DAWDLE_URL, ServerBlock, ServerState } from './shared'
 import { Node, NodeMultiple, Header, is, Set, Value } from './parser'
 import { Env, emptyEnv } from './compiler';
 import { SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS } from 'constants';
@@ -24,13 +24,19 @@ type Block = ServerBlock & {
 }
 type DerivedState = {
     blocks: Block[],
-    areAnyErrors: boolean,
 }
 
+type UIState = {
+    HTTPError: string | null,
+}
+type State = ServerState & {
+    ui: UIState,
+}
 // empty to start with
 let state: State = {
     defaultEnv: emptyEnv,
     blocks: [],
+    ui: {HTTPError: null},
 }
 // functions that mutate
 function setDefaultEnv(s: State, env: Env){
@@ -43,22 +49,25 @@ async function setEditedSource(s: State, i: number, editedSource: string): Promi
     s.blocks[i].source = editedSource
     await setFromWriteServerStateDebounced(s)
 }
+function setHttpError(s:State, errorMessage: string | null){
+    s.ui.HTTPError = errorMessage
+}
 
 // server
-async function readServerState(): Promise<State> {
-    const response = await axios.get(DAWDLE_URL)
+async function readServerState(s: State): Promise<State> {
+    const response = await catchHTTPErrors(s, ()=>axios.get(DAWDLE_URL))
     return response.data
 }
 async function writeServerState(s: State): Promise<State> {
-    const response = await axios.put(DAWDLE_URL, s)
+    const response = await catchHTTPErrors(s, ()=>axios.put(DAWDLE_URL, s))
     return response.data
 }
-async function saveStateToFile(s: State): Promise<State> {
-    const response = await axios.post(DAWDLE_URL, s)
-    return response.data
+async function saveStateToFile(s: State): Promise<void> {
+    const response = await catchHTTPErrors(s, ()=>axios.post(DAWDLE_URL, s))
+    m.redraw()
 }
 async function setFromServerState(s: State): Promise<void> {
-    const serverState = await readServerState()
+    const serverState = await readServerState(s)
     setDefaultEnv(s, serverState.defaultEnv)
     setBlocks(s, serverState.blocks)
     m.redraw()
@@ -95,8 +104,10 @@ function deriveState(s: State): DerivedState {
         infoId: `info-${i}`,
         selectedTestCaseName: Object.keys(block.testCases)[0],
     }))
-    const areAnyErrors = s.blocks.map(block=>!isEmpty(block.errors)).some(x=>x)
-    return {blocks, areAnyErrors}
+    return {blocks}
+}
+function deriveAreAnyErrors(s: State): boolean {
+    return s.blocks.map(block=>!isEmpty(block.errors)).some(x=>x)
 }
 // UI components
 function nodesPerLine(o: Node): Array<Node> {
@@ -165,8 +176,7 @@ const CompiledValue = (o: Node)=>{
 
 const Errors = (block: Block)=>m(
         '.source',
-        block.errors.map(error=>m('.pre.error', error.message))
-    )
+        block.errors.map(error=>m('.pre.error', error.message)))
 
 const Info = (block: Block)=>
     block.astWithHeaders === null? null : m(
@@ -203,10 +213,18 @@ const View = (s: State)=>m('.root',
             Original(block))),
     m('.editor-buttons',
         m('.button.button-editor.button-save', {
-            onclick: ()=>saveStateToFile(s),
+            onclick: deriveAreAnyErrors(s)? (): null=>null : ()=>saveStateToFile(s),
+            class: deriveAreAnyErrors(s)? 'button-cant-save' : '',
+            title: deriveAreAnyErrors(s)? "Can't save as there are errors" : '',
         }, 'save'),
         m('.button.button-editor.button-reload', 'reload from file'),
         m('.button.button-editor', 'show default env')),
+    s.ui.HTTPError?
+        m('.http-error.pre', s.ui.HTTPError,
+            m('.editor-buttons', m('.button', {
+                onclick: ()=>setHttpError(s, null),
+            }, 'dismiss'))):
+        null,
 )
 
 async function init(){
@@ -298,6 +316,23 @@ function debounce(func: Function, wait: number){
 		clearTimeout(timeout)
 		timeout = setTimeout(later, wait)
 	}
+}
+async function catchHTTPErrors(s: State, f: Function){
+    try {
+        return await f()
+    }
+    catch(error){
+        if(error.response){
+            const el = document.createElement('html')
+            el.innerHTML = error.response.data
+            const HTTPError = `Server responded with status: ${error.response.status}: ${el.innerText}`
+            setHttpError(s, HTTPError)
+            return
+        }
+        else{
+            throw error
+        }
+    }
 }
 
 // inspecting tools

@@ -27,7 +27,7 @@ export type ServerBlock = {
     commentData?: CommentData,
 }
 
-export type State = {
+export type ServerState = {
     defaultEnv: Env,
     blocks: ServerBlock[],
 }

@@ -1,10 +1,10 @@
 import * as fs from 'fs'
 import * as path from 'path'
-import { zip, dissoc, pipe } from 'ramda'
+import { zip, dissoc, pipe, isEmpty } from 'ramda'
 import * as express from 'express'
 import * as bodyParser from 'body-parser'
 
-import { CommentData, ServerBlock, State, TestCaseMap, ServerError } from './shared'
+import { CommentData, ServerBlock, ServerState, TestCaseMap, ServerError } from './shared'
 import { Section, deMunge, parser } from './parser'
 import { compiler, emptyEnv } from './compiler'
 import { astToString, nodeToString, jsonifyAndIndent } from './astToString'
@@ -20,8 +20,8 @@ type PreBlock = {
 
 const DAWDLE_COMMENT = '// {"dawdle":'
 const DAWDLE_COMMENT_OPENER = '// {"dawdle": "header", "originalLanguage": "typescript", "command": "venv/python $FILE --dawdle"}'
-const DAWDLE_COMMENT_BEGIN = '// {"dawdle": "begin", '
-const DAWDLE_COMMENT_END = '// {"dawdle": "end", '
+const DAWDLE_COMMENT_BEGIN = '// {"dawdle": "begin"'  // note missing closing bracket
+const DAWDLE_COMMENT_END = '// {"dawdle": "end"}'
 const comment_types = {
     header: 'header',
     begin: 'begin',
@@ -42,6 +42,7 @@ function readFile(p: string): Array<PreBlock>{
     let isInDawdleBlock = false
     let thisOriginalBlock: Array<string> = []
     let thisDawdleBlock: Array<string> = []
+    let thisDawleBeginCommentData: CommentData = null
     const serverBlocks: Array<PreBlock> = []
 
     const fileString = fs.readFileSync(p, 'utf8')
@@ -55,6 +56,7 @@ function readFile(p: string): Array<PreBlock>{
             if(data.type === comment_types.begin){
                 if(isInDawdleBlock) throw new Error('nested dawdle blocks are not supported')
                 isInDawdleBlock = true
+                thisDawleBeginCommentData = data
                 serverBlocks.push({
                     language: header.originalLanguage,
                     source: thisOriginalBlock.join('\n'),
@@ -66,7 +68,7 @@ function readFile(p: string): Array<PreBlock>{
                 serverBlocks.push({
                     language: 'dawdle',
                     source: thisDawdleBlock.join('\n'),
-                    commentData: data,
+                    commentData: thisDawleBeginCommentData,
                 })
                 thisDawdleBlock = []
             }
@@ -149,18 +151,19 @@ function editedSourceToFileString(editedBlocks: ServerBlock[]): string {
             fileString += block.source
         }
         else { // is a dawdle block
-            const dropPointlessKeys = pipe(dissoc('dawdle'), dissoc('type'))
-            fileString += '\n' + DAWDLE_COMMENT_BEGIN + JSON.stringify(dropPointlessKeys(block.commentData)).slice(1) + '\n'
+            const relevant = pipe(dissoc('dawdle'), dissoc('type'))(block.commentData)
+            const comma = isEmpty(relevant)? '' : ', '
+            fileString += '\n' + DAWDLE_COMMENT_BEGIN + comma + JSON.stringify(relevant).slice(1) + '\n'
             const editedDawdleSource = block.source.trim() + '\n'  // TODO: sort out this ambiguity?
             const astMinimal = parser(editedDawdleSource)
             fileString += jsonifyAndIndent(astMinimal)
-            fileString += '\n' + DAWDLE_COMMENT_END + JSON.stringify(dropPointlessKeys(block.commentData)).slice(1) + '\n'
+            fileString += '\n' + DAWDLE_COMMENT_END + '\n'
         }
     })
     return fileString
 }
 // read from the file
-function get(req: express.Request): State {
+function get(req: express.Request): ServerState {
     const fileBlocks = readFile(PATH)
     return {
         defaultEnv: emptyEnv,
@@ -168,8 +171,8 @@ function get(req: express.Request): State {
     }
 }
 // validate and parse edited state
-function put(req: express.Request): State {
-    const editedState = req.body as State
+function put(req: express.Request): ServerState {
+    const editedState = req.body as ServerState
     return {
         defaultEnv: emptyEnv,
         blocks: editedSourceToAstAndBack(editedState.blocks),
@@ -177,8 +180,9 @@ function put(req: express.Request): State {
 }
 // write edited state to file
 function post(req: express.Request): boolean {
-    const editedState = req.body as State
-    console.log(editedSourceToFileString(editedState.blocks))
+    const editedState = req.body as ServerState
+    const editedSource = editedSourceToFileString(editedState.blocks)
+    fs.writeFileSync(PATH, editedSource)
     return true
 }
 

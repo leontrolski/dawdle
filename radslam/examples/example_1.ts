@@ -8,20 +8,20 @@ while(d.length > 100){
 }
 
 const possibleEnvs = [
-// {"dawdle": "begin", "indentLevel": 0}
+// {"dawdle": "begin", "indentLevel":0}
+{"section":[{"let":[{"var":"foo"},
 {"section":[
-    {"let":[{"var":"foo"},{"section":[{"line":[{"set": [{"string":"\"it should be possible for this to be a number\""}]}]}]}]},
-    {"relation_literal":[{"rl_headers":[{"header":":this-line-shouldnt-need-to-be-here"}]}]}
-]}
+    {"line":[{"set":[{"string":"\"it should be possible for this to be a number\""}]}]}]}]},{"relation_literal":[{"rl_headers":[{"header":":this-line-shouldnt-need-to-be-herrrrre"}]}]}]}
 // {"dawdle": "end"}
 ,
-// {"dawdle": "begin", "indentLevel": 0}
-{"section":[{"line": [{"set": [{"string": "\"initial dawdle section\""}]}]}]}
+// {"dawdle": "begin", "indentLevel":0}
+{"section":[
+    {"line":[{"set":[{"string":"\"initial dawdle section\""}]}]}]}
 // {"dawdle": "end"}
 ]
 
 const ast = (
-// {"dawdle": "begin", "indentLevel": 0}
+// {"dawdle": "begin", "indentLevel":0}
 {"section":[{"def":[{"operator":"JoinClone"},{"relation":"relation:"},{"relation":"right:"},
 {"section":[
     {"line":[{"relation":"relation:"}]},
