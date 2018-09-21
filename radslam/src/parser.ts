@@ -129,7 +129,7 @@ export function addIndents(s: string){
 
     let lines: string[] = []
     split.forEach((line, lineNo)=>{
-        lines.push(line)
+        lines.push(line.replace(/ +$/, ''))  // trim right
         const diff = diffMap[lineNo] || 0
         for (let i = 0; i < Math.abs(diff); i++){
             lines.push(diff > 0? '<INDENT>' : '</INDENT>')

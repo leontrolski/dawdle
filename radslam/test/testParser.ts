@@ -83,7 +83,7 @@ Custom other_other_rel:*
         assert.deepEqual(expected, parser.parser(in_))
     })
     it('should parse JSON literals U [templates set]', ()=>{
-        const in_ = 'U 1 -2 3.0 true null $4.63 $-5 ~2018-08-02T09:16:12+00:00 ["string" `template` ["sub_set"]] []'
+        const in_ = 'U 1 -2 3.0 true null $4.63 $-5 ~2018-08-02T09:16:12+00:00 ~2018-08-02 ["string" `template` ["sub_set"]] []'
         const expected = {section: [{line: [
             {operator: 'U'},
             {number: '1'},
@@ -94,6 +94,7 @@ Custom other_other_rel:*
             {decimal: '$4.63'},
             {decimal: '$-5'},
             {datetime: '~2018-08-02T09:16:12+00:00'},
+            {datetime: '~2018-08-02'},
             {set: [
                 {string: '"string"'},
                 {template: '`template`'},

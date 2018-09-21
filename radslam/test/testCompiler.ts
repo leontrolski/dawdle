@@ -18,28 +18,6 @@ function nullFunction(): null {
 }
 
 describe('compiler.compileHeaders', ()=>{
-    it('preddy', ()=>{
-        // Discriminated Unions
-        type Square = {kind: "square", size: number}
-        type Circle = {kind: "circle", size: number}
-        type Rectangle = {kind: "rectangle", height: number}
-        type Shape =
-            Square |
-            Circle |
-            Rectangle
-        type SizeKinds =
-            Square |
-            Circle
-        const sizeKinds = [
-            'square',
-            'circle']
-        function isSizeKind(shape: Shape): shape is SizeKinds {
-          return sizeKinds.includes(shape.kind)
-        }
-        function area(s: Shape){
-          return isSizeKind(s)? s.size : s.height
-        }
-    })
     it('should get the headers of a table literal', ()=>{
         const env = compiler.emptyEnv
         const in_ = `| :a | :b |`
@@ -133,6 +111,18 @@ U [2 3 4]
             compiledValue: [ { type: 'number', value: '1' }, { type: 'number', value: '3' } ] }
 
         assert.deepEqual(expected as Node, compiler.compiler(env, ast))
+    })
+    xit('should handle the let keyword with a set', ()=>{
+      const env = compiler.emptyEnv
+      const in_ = `let set
+    [1 2]
+
+set
+- [1]`
+      const ast = parser.fullParser(in_)
+      const expected = {}
+      console.log(parser.inspect(compiler.compiler(env, ast)))
+      assert.deepEqual(expected as Node, compiler.compiler(env, ast))
     })
     it('should handle base operators at each step on a relation', ()=>{
         const env = {lets: {fake_function: {type: 'function', value: nullFunction}}, defs: {}}

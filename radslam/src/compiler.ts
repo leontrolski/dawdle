@@ -48,6 +48,7 @@ function getSetValues(env: Env, o: Node): Node[] {
     if(o.compiledType === types.set) return o.compiledValue
     if(is.set(o)) return o.value
     if(is.all_headers(o)) return getHeaders(env, {type: types.relation, value: R.init(o.value)})
+    // if(is.var(o)) return resolveValue(env, o)  // TODO: is this cool?
     throw new errors.ScopeError(o, env)
 }
 function getHeaders(env: Env, o: Node){

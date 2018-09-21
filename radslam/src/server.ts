@@ -3,6 +3,7 @@ import * as path from 'path'
 import { zip, dissoc, pipe, isEmpty } from 'ramda'
 import * as express from 'express'
 import * as bodyParser from 'body-parser'
+import * as stripAnsi from 'strip-ansi'
 
 import { CommentData, ServerBlock, ServerState, TestCaseMap, ServerError } from './shared'
 import { Section, deMunge, parser } from './parser'
@@ -10,7 +11,7 @@ import { compiler, emptyEnv } from './compiler'
 import { astToString, nodeToString, jsonifyAndIndent } from './astToString'
 import { log } from './errorsAndAsserters';
 
-const PATH = path.resolve(__dirname, '../examples/example_1.ts')
+const PATH = path.resolve(__dirname, '../examples/example_2.dawdle.ts')
 
 type PreBlock = {
     language: string,
@@ -22,6 +23,9 @@ const DAWDLE_COMMENT = '// {"dawdle":'
 const DAWDLE_COMMENT_OPENER = '// {"dawdle": "header", "originalLanguage": "typescript", "command": "venv/python $FILE --dawdle"}'
 const DAWDLE_COMMENT_BEGIN = '// {"dawdle": "begin"'  // note missing closing bracket
 const DAWDLE_COMMENT_END = '// {"dawdle": "end"}'
+const DAWDLE_PARSABLE_BLOCK = `// {"dawdle": "begin", "indentLevel":0}
+{"section":[{"relation_literal":[{"rl_headers":[]}]}]}
+// {"dawdle": "end"}`
 const comment_types = {
     header: 'header',
     begin: 'begin',
@@ -85,7 +89,6 @@ function readFile(p: string): Array<PreBlock>{
     })
     return serverBlocks
 }
-
 function astToSourceAndCompiled(blocks: PreBlock[]): ServerBlock[] {
     return blocks.map((block, i)=>{
         if(block.language !== 'dawdle'){
@@ -130,7 +133,8 @@ function editedSourceToAstAndBack(editedBlocks: ServerBlock[]): ServerBlock[] {
             astWithHeaders = compiler(emptyEnv, ast as Section)
         }
         catch(error){
-            errors = [{message: error.message, lineNumber: null}]
+            console.log('Compilation error: ', error.message)
+            errors = [{message: stripAnsi(error.message), lineNumber: null}]
         }
         return {
             id: block.id,
@@ -162,6 +166,7 @@ function editedSourceToFileString(editedBlocks: ServerBlock[]): string {
     })
     return fileString
 }
+
 // read from the file
 function get(req: express.Request): ServerState {
     const fileBlocks = readFile(PATH)

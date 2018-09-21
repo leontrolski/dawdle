@@ -127,12 +127,15 @@ Design choices:
 - make error messages nicer
 
 TODO
-- are text from AST similar error
-- write to file, reload file
-- more general server errors
-
-- maybe just raise errors from parser rather than insert them in the AST?
+- make table literal rows and unparsable trailing lines raise errors when they shouldn't parse
+- add spaces between compiled values on left
 - {defs and lets} should have a nicer shape in the env *and* defs need to have the env where they were defined too
+- are text from AST and file itself similar error
+- add button on each line to add a new dawdle section, check empty sections work as expected..
+
+- add more tests for ISO-6081 datetimes/intervals etc.
+- reload all editors on a file reload
+- maybe just raise errors from parser rather than insert them in the AST?
 - handle named vars
 - allow `let` for types other than sets and relations
 - write more comprehensive tests, esp errors and composite operators on sets
@@ -187,4 +190,3 @@ S
     ]
     c_s: [{c: 3, d: 4}, {c: 6, d: 7}, {c: 0, d: 7}]
 }
-

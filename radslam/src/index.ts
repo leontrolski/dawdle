@@ -55,14 +55,17 @@ function setHttpError(s:State, errorMessage: string | null){
 
 // server
 async function readServerState(s: State): Promise<State> {
+    console.log('Getting state from file')
     const response = await catchHTTPErrors(s, ()=>axios.get(DAWDLE_URL))
     return response.data
 }
 async function writeServerState(s: State): Promise<State> {
+    console.log('Getting server to compile')
     const response = await catchHTTPErrors(s, ()=>axios.put(DAWDLE_URL, s))
     return response.data
 }
 async function saveStateToFile(s: State): Promise<void> {
+    console.log('Saving state to file')
     const response = await catchHTTPErrors(s, ()=>axios.post(DAWDLE_URL, s))
     m.redraw()
 }
@@ -70,6 +73,7 @@ async function setFromServerState(s: State): Promise<void> {
     const serverState = await readServerState(s)
     setDefaultEnv(s, serverState.defaultEnv)
     setBlocks(s, serverState.blocks)
+    if(!isEmpty(editors)) setEditorsContent(s)  // yughh
     m.redraw()
 }
 async function setFromWriteServerState(s: State){
@@ -122,7 +126,9 @@ function nodesPerLine(o: Node): Array<Node> {
         if(is.multiple(o)) incrementLineIMap[o.type](o as NodeMultiple)  // TODO..
     }
     const incrementLineIMap: {[s: string]: (o: NodeMultiple)=>void} = {
-        section: o=>o.value.forEach(o=>inner(o)),
+        section: o=>{
+            o.value.forEach(o=>inner(o))
+        },
         let: o=>{
             const lineI = getNewLineI()
             o.value.forEach(o=>inner(o))
@@ -168,7 +174,7 @@ const CompiledValue = (o: Node)=>{
     if(o.compiledType === 'headers') return o.compiledValue.map(HeaderEl)
     if(o.compiledType === 'set') return [
         '[',
-        intersperse(',', o.compiledValue.map((v: Value)=>is.header(v)? HeaderEl(v) : v.value)),
+        intersperse(', ', o.compiledValue.map((v: Value)=>is.header(v)? HeaderEl(v) : v.value)),
         ']'
     ]
     return null
@@ -202,7 +208,6 @@ const Original = (block: Block)=>m(
     '.source.right',
     {class: `language-${block.language}`},
     m('', {id: block.editorId, language: block.language}, block.source),
-    m('.connecting-line'),
 )
 
 const View = (s: State)=>m('.root',
@@ -217,7 +222,9 @@ const View = (s: State)=>m('.root',
             class: deriveAreAnyErrors(s)? 'button-cant-save' : '',
             title: deriveAreAnyErrors(s)? "Can't save as there are errors" : '',
         }, 'save'),
-        m('.button.button-editor.button-reload', 'reload from file'),
+        m('.button.button-editor.button-reload', {
+            onclick: ()=>setFromServerState(s),
+        }, 'reload from file'),
         m('.button.button-editor', 'show default env')),
     s.ui.HTTPError?
         m('.http-error.pre', s.ui.HTTPError,
@@ -246,8 +253,9 @@ async function init(){
 }
 
 // stuff below operates outside of mithril rendering
+let editors: any[] = [] //  should be AceAjax.Editor[] = []
 function loadEditors(ids: Array<string>): Array<AceAjax.Editor>{
-    const editors = ids.map(id=>{
+    editors = ids.map(id=>{
         const editorElement = document.getElementById(id)
         const language = editorElement.getAttribute('language')
         return ace.edit(editorElement, {
@@ -273,9 +281,13 @@ function loadEditors(ids: Array<string>): Array<AceAjax.Editor>{
             otherEditors.forEach(editor=>editor.selection.clearSelection())
             otherEditors.forEach(editor=>editor.renderer.$cursorLayer.element.style.display = 'none')
         }
-        editor.container.children[0].onfocus = setHighlight
+        (editor.container.children[0] as HTMLElement).onfocus = setHighlight
     })
     return editors
+}
+function setEditorsContent(s: State){
+    console.log('Setting editor content')
+    zip(s.blocks, editors).forEach(([block, editor])=>editor.setValue(block.source))
 }
 function alignLines(){
     try{

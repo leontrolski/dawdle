@@ -11,7 +11,7 @@ const possibleEnvs = [
 // {"dawdle": "begin", "indentLevel":0}
 {"section":[{"let":[{"var":"foo"},
 {"section":[
-    {"line":[{"set":[{"string":"\"it should be possible for this to be a number\""}]}]}]}]},{"relation_literal":[{"rl_headers":[{"header":":this-line-shouldnt-need-to-be-herrrrre"}]}]}]}
+    {"line":[{"set":[{"string":"\"it should be possible for this to be a number\""}]}]}]}]},{"relation_literal":[{"rl_headers":[{"header":":this-line-shouldnt-need-to-be-here"}]}]}]}
 // {"dawdle": "end"}
 ,
 // {"dawdle": "begin", "indentLevel":0}
