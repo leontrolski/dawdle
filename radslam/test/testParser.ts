@@ -152,6 +152,7 @@ let e:
 g:
 G :foo
     :bar count :bar_id
+    :qux count :bar_id
 `
         const expected = {"section": [
             {"let": [{"relation": "a:"}, {"section": [
@@ -170,7 +171,8 @@ G :foo
             },
             {"line": [{"relation": "g:"}]},
             {"line": [{"operator": "G"}, {"header": ":foo"}, {"section": [
-                {"aggregator": [{"header": ":bar"}, {"var": "count"}, {"header": ":bar_id"}]}]}]}]}
+                {"aggregator": [{"header": ":bar"}, {"var": "count"}, {"header": ":bar_id"}]},
+                {"aggregator": [{"header": ":qux"}, {"var": "count"}, {"header": ":bar_id"}]}]}]}]}
         assert.deepEqual(expected, parser.parser(in_))
     })
     it('should parse a relation literal', ()=>{

@@ -1,10 +1,10 @@
 import { default as axios } from 'axios'
-import { zip, merge, sortBy, isEmpty, intersperse } from 'ramda'
+import { zip, merge, isEmpty, intersperse } from 'ramda'
 import * as m from 'mithril'
 import * as ace from 'ace-builds/src-noconflict/ace'
 ace.config.set('basePath', './modes/')
 
-import { DAWDLE_URL, ServerBlock, ServerState } from './shared'
+import { DAWDLE_URL, ServerBlock, ServerState, nodesPerLine, isSpacer } from './shared'
 import { Node, NodeMultiple, Header, is, Set, Value } from './parser'
 import { Env, emptyEnv } from './compiler';
 import { SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS } from 'constants';
@@ -113,60 +113,13 @@ function deriveState(s: State): DerivedState {
 function deriveAreAnyErrors(s: State): boolean {
     return s.blocks.map(block=>!isEmpty(block.errors)).some(x=>x)
 }
+
 // UI components
-function nodesPerLine(o: Node): Array<Node> {
-    // TODO: this should maybe also have a .indentI
-    let i = -1
-    const nodes: Array<Node> = []
-    function getNewLineI(){
-        i += 1
-        return i
-    }
-    function inner(o: Node): void {
-        if(is.multiple(o)) incrementLineIMap[o.type](o as NodeMultiple)  // TODO..
-    }
-    const incrementLineIMap: {[s: string]: (o: NodeMultiple)=>void} = {
-        section: o=>{
-            o.value.forEach(o=>inner(o))
-        },
-        let: o=>{
-            const lineI = getNewLineI()
-            o.value.forEach(o=>inner(o))
-            nodes.push({lineI, ...o})
-            getNewLineI()
-        },
-        def: o=>{
-            const lineI = getNewLineI()
-            o.value.forEach(o=>inner(o))
-            nodes.push({lineI, ...o})
-            getNewLineI()
-        },
-        line: o=>{
-            const lineI = getNewLineI()
-            o.value.forEach(o=>inner(o))
-            nodes.push({lineI, ...o})
-        },
-        aggregator: o=>o.value.forEach(o=>inner(o)),
-        map_macro: o=>o.value.forEach(o=>inner(o)),
-        named_value: o=>o.value.forEach(o=>inner(o)),
-        set: o=>o.value.forEach(o=>inner(o)),
-        relation_literal: o=>{
-            const [headers, ...rows] = o.value
-            const lineI = getNewLineI()
-            nodes.push({lineI, ...o})
-            if(rows.length > 0) getNewLineI()  // for ---------
-            rows.forEach(getNewLineI)
-        },
-    }
-    inner(o)
-    return sortBy(o=>o.lineI, nodes)
-}
 
 const ConnectingLine = ()=>m('svg.connecting-line', {width: INFO_ORIGINAL_GAP, height: 2 * SVG_OFFSET},
     m('marker#arrowhead', {refX: 5, refY: 5, markerWidth: 8, markerHeight: 8},
-        m('circle[cx=5][cy=5][r=3]', {style: "stroke: none; fill:#000000;"})),
-    m('line[marker-end=url(#arrowhead)][x1=0][x2=0]', {y1: SVG_OFFSET, y2: SVG_OFFSET, style: {stroke:'#000'}}))
-
+        m('circle[cx=5][cy=5][r=3]', {style: {stroke: 'none', fill: 'black'}})),
+    m('line[marker-end=url(#arrowhead)][x1=0][x2=0]', {y1: SVG_OFFSET, y2: SVG_OFFSET, style: {stroke: 'black'}}))
 
 const HeaderEl = (o: Header)=>m('.button.button-outline.header.pre', o.value)
 
@@ -196,12 +149,14 @@ const Info = (block: Block)=>
             ))),
         nodesPerLine(block.astWithHeaders)
             .filter(o=>o.compiledType)
-            .map(o=>m(
-                '.compiled-line',
-                {'to-line': o.lineI},
-                CompiledValue(o),
-                ConnectingLine(),
-            )),
+            .map(o=>
+                isSpacer(o)? m('.spacer')
+                : m(
+                    '.compiled-line',
+                    {'to-line': o.lineI},
+                    CompiledValue(o),
+                    ConnectingLine())
+            ),
     )
 
 const Original = (block: Block)=>m(
@@ -254,7 +209,7 @@ async function init(){
 
 // stuff below operates outside of mithril rendering
 let editors: any[] = [] //  should be AceAjax.Editor[] = []
-function loadEditors(ids: Array<string>): Array<AceAjax.Editor>{
+function loadEditors(ids: Array<string>){
     editors = ids.map(id=>{
         const editorElement = document.getElementById(id)
         const language = editorElement.getAttribute('language')
@@ -283,7 +238,6 @@ function loadEditors(ids: Array<string>): Array<AceAjax.Editor>{
         }
         (editor.container.children[0] as HTMLElement).onfocus = setHighlight
     })
-    return editors
 }
 function setEditorsContent(s: State){
     console.log('Setting editor content')

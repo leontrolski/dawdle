@@ -6,7 +6,7 @@
 body{margin:0px;background-color:#799eb1;font-size: 1.4em;}
 .root{margin:0.5em}
 .options{background-color:white;padding:0.5em;}
-.block{display:flex;align-items:center;justify-content:flex-end;position:relative;}
+.block{display:flex;align-items:flex-end;justify-content:flex-end;position:relative;}
 .source{position:relative;background-color:white;margin-top:8px;}
 .language-dawdle{border-top:solid 5px grey;border-bottom:solid 5px grey;}
 /* font copied from ace editor */
@@ -14,8 +14,9 @@ body{margin:0px;background-color:#799eb1;font-size: 1.4em;}
 
 .right{width:80ch;flex-shrink:0;margin-left:50px;}
 .compiled-line{position:relative;border-top:solid grey 1px;}
+.spacer{height:0.5em;background-color:gray;}
 .connecting-line{position:absolute;top:-1000px;right:-50px;width:50px;}
-.error{border-top:solid grey 1px;}
+.error{border-top:solid grey 1px;max-height: 20em;overflow-y: scroll;}
 .editor-buttons{position:fixed;bottom:1em;right:1em;}
 .http-error{position:fixed;bottom:0;right:0;width:100%;background-color:tomato;color:white;}
 /* extensions to milligram */

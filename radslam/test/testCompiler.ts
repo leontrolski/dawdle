@@ -209,8 +209,12 @@ U
              value:
               [ { type: 'operator', value: 'G' },
                 { type: 'header', value: ':a' },
-                { type: 'aggregator',
-                  value: [ { type: 'header', value: ':g' }, { type: 'var', value: 'some_function' } ],
+                { type: 'section',
+                  value: [
+                    { type: 'aggregator',
+                      value: [ { type: 'header', value: ':g' }, { type: 'var', value: 'some_function' } ]},
+                    { type: 'aggregator',
+                      value: [ { type: 'header', value: ':h' }, { type: 'var', value: 'some_function' } ]}],
                   compiledType: 'headers',
                   compiledValue: [ { type: 'header', value: ':g' }, { type: 'header', value: ':h' } ] } ],
              compiledType: 'headers',

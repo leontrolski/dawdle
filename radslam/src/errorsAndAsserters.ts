@@ -10,7 +10,7 @@ import * as R from 'ramda'
 export const log = (o: any)=>console.log(inspect(o))
 
 class ScopeError extends Error {constructor(node: Node, env: Env) {
-    super(`Scope doesn't contain var, relation or def: ${inspect(node)} \n in env: ${inspect(env)}`)
+    super(`Scope doesn't contain var, relation or def: ${inspect(node)} \nin lets: ${inspect(Object.keys(env.lets))} \nor defs: ${inspect(Object.keys(env.defs))}`)
 }}
 class SectionOrderIncorrect extends Error {constructor(node: Node) {
     super(`The order of defs and lines in the section is incorrect: ${inspect(node)}`)

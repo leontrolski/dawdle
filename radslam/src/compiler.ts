@@ -155,8 +155,13 @@ export function compiler(env: Env, section: Section): Section {
     const first = is.line(firstLine)? firstLine.value[0] : firstLine
 
     // TODO: handle aggregators consistently with everything else
-    if(is.aggregator(first)) return R.merge(
-        firstLine, {compiledType: types.headers, compiledValue: body.map(o=>o.value[0])})
+    if(is.aggregator(first))return {
+            type: types.section,
+            value: body,
+            compiledType: types.headers,
+            compiledValue: body.map(o=>o.value[0]),
+        }
+
     const isSet = is.var(first) || is.set(first) || is.all_headers(first)
     const compiledType = isSet? types.set : types.headers
     let compiledValue

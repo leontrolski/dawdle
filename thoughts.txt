@@ -121,10 +121,11 @@ def Namespace relation: namespace ignore
 Design choices:
 - Each line of dawdle should map deterministically both ways to the JSON AST
 - Given an environment, it should always be possible to determine the schema at any line
+- Operation lines are ordered, but don't *have* to be executed in a ordered way, up to you
 - Given test values, it should always be possible to determine the value at any line of a top level let or section
 - Composite operators can only be composed of the base operators and other composite operators
 - Sets are splatted in place when called with relation operators
-- make error messages nicer
+- make error messages nice
 
 TODO
 - make table literal rows and unparsable trailing lines raise errors when they shouldn't parse

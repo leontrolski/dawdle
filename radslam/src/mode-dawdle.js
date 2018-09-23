@@ -85,7 +85,6 @@ ace.define("ace/mode/python_highlight_rules",["require","exports","module","ace/
                 regex : integer + "\\b"
             }, {
                 token : "keyword.operator",
-                // regex : ">|v|\\^|X|U|\\-|J|G"
                 regex : "[A-Z][a-zA-Z_0-9]+|>|v|\\^|X|U|\\-|J|G"
                 // regex : "\\+|\\-|\\*|\\*\\*|\\/|\\/\\/|%|<<|>>|&|\\||\\^|~|<|>|<=|=>|==|!=|<>|="
             }, {
