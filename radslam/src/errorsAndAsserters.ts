@@ -126,6 +126,17 @@ const assertSetArgs = {
     union: (rel: Relation, value: Value)=>{},
     difference: (rel: Relation, value: Value)=>{},
 }
+// TODO: fill these in
+const assertRelationArgs = {
+    filter: (rel: Relation, func: Function, ...values: Value[])=>{},
+    select: (rel: Relation, ...headers: Header[])=>{},
+    extend: (rel: Relation, header: Header, func: Function, ...values: Value[])=>{},
+    cross: (rel: Relation, value: Value)=>{},
+    union: (rel: Relation, value: Value)=>{},
+    difference: (rel: Relation, value: Value)=>{},
+    join: (rel: Relation, value: Value)=>{},
+    group: (rel: Relation, ...headers_allAggregator: (Header | Section)[])=>{},
+}
 const assertOperatorArgsMatch = (operatorArgs: any, args: any)=>{
     if(operatorArgs.length !== args.length) throw new OperatorArgsError(operatorArgs, args)
     // TODO: do some type checking stuff as well
@@ -149,6 +160,7 @@ export const errors = {
 const assertArgs: {[t: string]: {[_: string]: (...__: any[])=>void}} = {
     [types.set]: assertSetArgs,
     [types.headers]: assertHeadersArgs,
+    [types.relation]: assertRelationArgs,
 }
 export const asserters = {
     assertSectionShape,

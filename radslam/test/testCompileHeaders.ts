@@ -17,7 +17,7 @@ function nullFunction(): null {
     return null
 }
 
-describe('compiler.compileHeaders', ()=>{
+describe('compiler.compiler headers', ()=>{
     it('should get the headers of a table literal', ()=>{
         const env = compiler.emptyEnv
         const in_ = `| :a | :b |`

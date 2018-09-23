@@ -263,4 +263,9 @@ AllUserJoins`
               {line: [{operator: 'AllUserJoins'}]}]}
         assert.deepEqual(expected, parser.parser(in_))
     })
+    xit('should raise an error on see errors part way through a file', ()=>{
+        const in_ = `some_var`
+        const expected = {section: [{line: [{var: 'some_var'}]}]}
+        assert.deepEqual(expected, parser.parser(in_))
+    })
 })

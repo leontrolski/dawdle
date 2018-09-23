@@ -1,12 +1,27 @@
 import {
     Node, NodeMultiple, NodeSingle,
     Section, Let, Def, Line, Operator, Template, Value,
-    fullParser, types, is, baseOperatorInverseMap
+    fullParser, types, is, baseOperatorInverseMap, Datetime, Decimal
 } from './parser'
 import * as operations from './operations'
 import {errors, asserters, log} from './errorsAndAsserters'
 
 import * as R from 'ramda'
+
+export type RelationAPI = {
+    headers: string[],
+    rows: Array<(number | string | boolean | null | Decimal | Datetime)[]>,  // TODO: make this Iterable
+    // TODO: implement these extra bits
+    types?: string[],
+    indexes?: any[],
+    ranks?: any[],
+}
+export type FunctionAPI = {
+    name: string,
+    type: 'extend' | 'filter' | 'aggregate',
+    function: (rel: RelationAPI, ...args: any[])=>RelationAPI,
+    args: any,
+}
 
 /**
  * Given a list of values, return the list, but with the
@@ -57,9 +72,24 @@ function getHeaders(env: Env, o: Node){
     if(is.relation_literal(o)) return o.value[0].value
     throw new errors.ScopeError(o, env)
 }
+function getRelation(env: Env, o: Node): RelationAPI{
+    if(o.compiledType === types.relation) return o.compiledValue
+    if(is.relation(o)) return resolveValue(env, o).compiledValue
+    if(is.relation_literal(o)){
+        const [headers, ...rows] = o.value as Array<NodeMultiple>
+        const headerStrings = headers.value.map(o=>(o.value as string).slice(1))
+        const rowValues = rows.map(row=>row.value.map(o=>JSON.parse(o.value as string))) // TODO: handle JSON+ types here
+        return {
+            headers: headerStrings,
+            rows: rowValues,
+        }
+    }
+    throw new errors.ScopeError(o, env)
+}
 const getValue = {
     [types.set]: getSetValues,
     [types.headers]: getHeaders,
+    [types.relation]: getRelation,
 }
 type Registration = {
     [type_: string]: {
@@ -122,7 +152,7 @@ function populateTemplate(env: Env, o: Template): string{
 }
 
 
-export function compiler(env: Env, section: Section): Section {
+export function compiler(env: Env, section: Section, justHeaders=true): Section {
     asserters.assertSectionShape(section)
     const defs = <(Let | Def)[]>section.value.filter(is.letOrDef)
     const body = <Line[]>section.value.filter(R.complement(is.letOrDef))
@@ -142,7 +172,7 @@ export function compiler(env: Env, section: Section): Section {
             withCompiled.push(definition)
         }
         else{  // is.let(definition)
-            const compiledSection = compiler(env, section)
+            const compiledSection = compiler(env, section, justHeaders)
             registration = {lets: {[first.value]: compiledSection}}
             const letWithCompiledSection = R.assocPath(
                 ['value', definition.value.length - 1], compiledSection, definition)
@@ -155,15 +185,15 @@ export function compiler(env: Env, section: Section): Section {
     const first = is.line(firstLine)? firstLine.value[0] : firstLine
 
     // TODO: handle aggregators consistently with everything else
-    if(is.aggregator(first))return {
-            type: types.section,
-            value: body,
-            compiledType: types.headers,
-            compiledValue: body.map(o=>o.value[0]),
-        }
+    if(is.aggregator(first)) return {
+        type: types.section,
+        value: body,
+        compiledType: types.headers,
+        compiledValue: body.map(o=>o.value[0]),
+    }
 
     const isSet = is.var(first) || is.set(first) || is.all_headers(first)
-    const compiledType = isSet? types.set : types.headers
+    const compiledType = isSet? types.set : justHeaders? types.headers : types.relation
     let compiledValue
 
     compiledValue = getValue[compiledType](env, first)
@@ -190,7 +220,7 @@ export function compiler(env: Env, section: Section): Section {
         args = [{compiledType, compiledValue} as Node].concat(args)
         // append final section to args if it exists
         if(!R.isNil(finalSection)){
-            const compiledSection = compiler(env, finalSection)
+            const compiledSection = compiler(env, finalSection, justHeaders)
             args.push(compiledSection)
             lineWithCompiledSection = R.assocPath(
                 ['value', line.value.length - 1], compiledSection, line)
@@ -209,7 +239,7 @@ export function compiler(env: Env, section: Section): Section {
                 const registration = {lets: {[(operatorArg as Node).value as string]: arg as Node}}
                 operatorEnv = addRegistration(operatorEnv, registration)
             }
-            compiledValue = compiler(operatorEnv, operator_.section).compiledValue
+            compiledValue = compiler(operatorEnv, operator_.section, justHeaders).compiledValue
         }
         withCompiled.push(R.merge(lineWithCompiledSection || line, {compiledType, compiledValue}))
     }

@@ -1,5 +1,5 @@
 import {Node, NodeMultiple, Section, is} from './parser'
-import {Env, compiler, emptyEnv} from './compiler'
+import {Env, compiler, emptyEnv, RelationAPI} from './compiler'
 import { sortBy } from 'ramda';
 
 export const DAWDLE_URL = 'http://localhost:3000/dawdle'
