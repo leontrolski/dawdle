@@ -36,4 +36,4 @@ const myFirstOperations =
     {"rl_row":[{"number":"0"},{"number":"4"}]}]}]}]},
     {"line":[{"operator":"v"},{"header":":d"},{"header":":c"}]}]}
 // {"dawdle": "end"}
-const foo = 'bar'
+const foo = 'bear'

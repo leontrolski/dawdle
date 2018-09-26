@@ -1,5 +1,5 @@
 import { default as axios } from 'axios'
-import { zip, merge, isEmpty, intersperse, isNil } from 'ramda'
+import { zip, merge, isEmpty, intersperse, isNil, equals } from 'ramda'
 import * as m from 'mithril'
 import * as ace from 'ace-builds/src-noconflict/ace'
 ace.config.set('basePath', './modes/')
@@ -17,6 +17,7 @@ const INFO_ORIGINAL_GAP = 50
 
 // derived
 type Block = ServerBlock & {
+    blockI: number,
     editorId: string,
     infoId: string,
     selectedTestCaseName: string,
@@ -27,6 +28,7 @@ type DerivedState = {
 
 type UIState = {
     HTTPError: string | null,
+    mouseovered: {blockI: number | null, lineI: number | null},
 }
 type State = ServerState & {
     ui: UIState,
@@ -35,7 +37,10 @@ type State = ServerState & {
 let state: State = {
     defaultEnv: emptyEnv,
     blocks: [],
-    ui: {HTTPError: null},
+    ui: {
+        HTTPError: null,
+        mouseovered: {blockI: null, lineI: null}
+    },
 }
 // functions that mutate
 function setDefaultEnv(s: State, env: Env){
@@ -51,6 +56,10 @@ async function setEditedSource(s: State, i: number, editedSource: string): Promi
 function setHttpError(s:State, errorMessage: string | null){
     s.ui.HTTPError = errorMessage
 }
+function setMouseovered(s: State, blockI: number, lineI: number){
+    s.ui.mouseovered = {blockI, lineI}
+}
+const setMouseoveredDebounced = debounce(setMouseovered, 100)
 
 // server
 async function readServerState(s: State): Promise<State> {
@@ -103,6 +112,7 @@ function deriveInfoIds(s: State): Array<string> {
 }
 function deriveState(s: State): DerivedState {
     const blocks = s.blocks.map((block, i)=>merge(block, {
+        blockI: i,
         editorId: `editor-${i}`,
         infoId: `info-${i}`,
         selectedTestCaseName: Object.keys(block.testCases)[0],
@@ -115,10 +125,13 @@ function deriveAreAnyErrors(s: State): boolean {
 
 // UI components
 
-const ConnectingLine = ()=>m('svg.connecting-line', {width: INFO_ORIGINAL_GAP, height: 2 * SVG_OFFSET},
-    m('marker#arrowhead', {refX: 5, refY: 5, markerWidth: 8, markerHeight: 8},
-        m('circle[cx=5][cy=5][r=3]', {style: {stroke: 'none', fill: 'black'}})),
-    m('line[marker-end=url(#arrowhead)][x1=0][x2=0]', {y1: SVG_OFFSET, y2: SVG_OFFSET, style: {stroke: 'black'}}))
+const ConnectingLine = (isFocused: boolean)=>{
+    const markerId = `marker-${(Math.random() * 10E18).toString()}`  // hack to namespace markers so they change colour correctly
+    return m('svg.connecting-line', {width: INFO_ORIGINAL_GAP, height: 2 * SVG_OFFSET},
+        isFocused? m('marker', {id: markerId, refX: 5, refY: 5, markerWidth: 8, markerHeight: 8},
+            m('circle[cx=5][cy=5][r=3]', {style: {stroke: 'none', fill: 'black'}})) : null,
+        m('line[x1=0][x2=0]', {'marker-end': isFocused? `url(#${markerId})` : '', y1: SVG_OFFSET, y2: SVG_OFFSET, style: {stroke: isFocused? 'black' : 'gray'}}))
+}
 
 const HeaderEl = (headerValue: string)=>m('.button.button-outline.header.pre', headerValue)
 
@@ -126,20 +139,21 @@ const HeaderEl = (headerValue: string)=>m('.button.button-outline.header.pre', h
 const Null = m('em.null', 'null')
 const Cell = (cellValue)=>m('td.cell', isNil(cellValue)? Null : cellValue.type? cellValue.value : cellValue)
 
-const Table = (o: RelationAPI)=>m('table.table',
+const Table = (o: RelationAPI, isFocused: boolean)=>m('table.table',
+    {class: isFocused? 'table-focused' : ''},
     isEmpty(o.headers)?
         m('thead', m('th.cell', m('em', 'no headers')))
         : m('thead', m('tr', o.headers.map(header=>m('th.cell', HeaderEl(header))))),
     m('tbody', o.rows.map(row=>m('tr', row.map(Cell)))))
 
-const CompiledValue = (o: Node)=>{
+const CompiledValue = (o: Node, isFocused: boolean)=>{
     if(o.compiledType === 'headers') return o.compiledValue.map(header=>HeaderEl(header.value))
     if(o.compiledType === 'set') return [
         '[',
         intersperse(', ', o.compiledValue.map((v: Value)=>is.header(v)? HeaderEl(v.value) : v.value)),
         ']'
     ]
-    if(o.compiledType === 'relation') return Table(o.compiledValue as RelationAPI)
+    if(o.compiledType === 'relation') return Table(o.compiledValue as RelationAPI, isFocused)
     return null
 }
 
@@ -147,7 +161,7 @@ const Errors = (block: Block)=>m(
         '.source',
         block.errors.map(error=>m('.pre.error', error.message)))
 
-const Info = (block: Block)=>
+const Info = (s, block: Block)=>
     block.astWithHeaders === null? null : m(
         '.source',
         {id: block.infoId, 'to-editor-id': block.editorId},
@@ -159,14 +173,16 @@ const Info = (block: Block)=>
             ))),
         nodesPerLine(block.astWithHeaders)
             .filter(o=>o.compiledType)
-            .map(o=>
-                isSpacer(o)? m('.spacer')
-                : m(
+            .map((o, i)=>{
+                if(isSpacer(o)) return m('.spacer')
+                const isFocused =  s.ui.mouseovered.blockI === block.blockI && s.ui.mouseovered.lineI === i
+                return m(
                     '.compiled-line',
-                    {'to-line': o.lineI},
-                    CompiledValue(o),
-                    ConnectingLine())
-            ),
+                    {'to-line': o.lineI, onmouseover: ()=>setMouseovered(s, block.blockI, i)},
+                    CompiledValue(o, isFocused),
+                    ConnectingLine(isFocused)
+                )
+            }),
     )
 
 const Original = (block: Block)=>m(
@@ -177,9 +193,9 @@ const Original = (block: Block)=>m(
 
 const View = (s: State)=>m('.root',
     m('.options', ''),
-    deriveState(s).blocks.map((block, i)=>
+    deriveState(s).blocks.map((block)=>
         m('.block',
-            isEmpty(block.errors)? Info(block) : Errors(block),
+            isEmpty(block.errors)? Info(s, block) : Errors(block),
             Original(block))),
     m('.editor-buttons',
         m('.button.button-editor.button-save', {
@@ -259,7 +275,7 @@ function alignLines(){
             const infoElement = document.getElementById(infoId)
             const toEditorElement = document.getElementById(infoElement.getAttribute('to-editor-id'))
             for(let fromElement of Array.from(infoElement.getElementsByClassName('compiled-line')) as Array<HTMLElement>){
-                const lineElement = fromElement.getElementsByClassName('connecting-line')[0].children[1]
+                const lineElement = fromElement.getElementsByClassName('connecting-line')[0].children[0] // TODO: make this second 0 a proper reference
                 const lineI = parseInt(fromElement.getAttribute('to-line'))
                 const toElement = toEditorElement.getElementsByClassName('ace_line')[lineI]  as HTMLElement
                 lineElement.setAttribute('x2', INFO_ORIGINAL_GAP.toString())
@@ -285,7 +301,7 @@ function alignLines(){
 function debounce(func: Function, wait: number){
 	let timeout: NodeJS.Timer
 	return function(...args: any[]){
-		var later = function() {
+		var later = function(){
 			timeout = null
 			func(...args)
 		}
