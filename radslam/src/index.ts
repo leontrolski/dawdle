@@ -1,13 +1,12 @@
 import { default as axios } from 'axios'
-import { zip, merge, isEmpty, intersperse } from 'ramda'
+import { zip, merge, isEmpty, intersperse, isNil } from 'ramda'
 import * as m from 'mithril'
 import * as ace from 'ace-builds/src-noconflict/ace'
 ace.config.set('basePath', './modes/')
 
-import { DAWDLE_URL, ServerBlock, ServerState, nodesPerLine, isSpacer } from './shared'
-import { Node, NodeMultiple, Header, is, Set, Value } from './parser'
+import { Node, Header, is, Set, Value } from './parser'
 import { Env, emptyEnv } from './compiler';
-import { SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS } from 'constants';
+import { DAWDLE_URL, ServerBlock, ServerState, nodesPerLine, isSpacer, RelationAPI } from './shared'
 
 // TODO:
 // - sort out editor/source/original naming inconsistencies
@@ -121,15 +120,26 @@ const ConnectingLine = ()=>m('svg.connecting-line', {width: INFO_ORIGINAL_GAP, h
         m('circle[cx=5][cy=5][r=3]', {style: {stroke: 'none', fill: 'black'}})),
     m('line[marker-end=url(#arrowhead)][x1=0][x2=0]', {y1: SVG_OFFSET, y2: SVG_OFFSET, style: {stroke: 'black'}}))
 
-const HeaderEl = (o: Header)=>m('.button.button-outline.header.pre', o.value)
+const HeaderEl = (headerValue: string)=>m('.button.button-outline.header.pre', headerValue)
+
+// TODO: convert these to {type: value:} and make a component for each type
+const Null = m('em.null', 'null')
+const Cell = (cellValue)=>m('td.cell', isNil(cellValue)? Null : cellValue.type? cellValue.value : cellValue)
+
+const Table = (o: RelationAPI)=>m('table.table',
+    isEmpty(o.headers)?
+        m('thead', m('th.cell', m('em', 'no headers')))
+        : m('thead', m('tr', o.headers.map(header=>m('th.cell', HeaderEl(header))))),
+    m('tbody', o.rows.map(row=>m('tr', row.map(Cell)))))
 
 const CompiledValue = (o: Node)=>{
-    if(o.compiledType === 'headers') return o.compiledValue.map(HeaderEl)
+    if(o.compiledType === 'headers') return o.compiledValue.map(header=>HeaderEl(header.value))
     if(o.compiledType === 'set') return [
         '[',
-        intersperse(', ', o.compiledValue.map((v: Value)=>is.header(v)? HeaderEl(v) : v.value)),
+        intersperse(', ', o.compiledValue.map((v: Value)=>is.header(v)? HeaderEl(v.value) : v.value)),
         ']'
     ]
+    if(o.compiledType === 'relation') return Table(o.compiledValue as RelationAPI)
     return null
 }
 
@@ -255,7 +265,7 @@ function alignLines(){
                 lineElement.setAttribute('x2', INFO_ORIGINAL_GAP.toString())
                 lineElement.setAttribute('y1', (SVG_OFFSET + (fromElement.offsetHeight / 2)).toString())
                 lineElement.setAttribute('y2', (
-                    + 10
+                    + 13
                     + SVG_OFFSET
                     - infoElement.offsetTop
                     - fromElement.offsetTop

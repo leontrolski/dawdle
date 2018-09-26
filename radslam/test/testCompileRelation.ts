@@ -19,11 +19,11 @@ describe('compiler.compiler relation', ()=>{
     | 2 | 4   |
 
 let c:
-    | :c | :a |
-    -----------
-    | 5  | 1  |
-    | 6  | 1  |
-    | 7  | 2  |
+    | :c | :a          |
+    --------------------
+    | 5  | 1           |
+    | 6  | 1           |
+    | 7  | ~2016-12-02 |
 
 a:
 J c:
@@ -56,11 +56,11 @@ v :b :c
                         [ { type: 'rl_headers', value: [ { type: 'header', value: ':c' }, { type: 'header', value: ':a' } ] },
                           { type: 'rl_row', value: [ { type: 'number', value: '5' }, { type: 'number', value: '1' } ] },
                           { type: 'rl_row', value: [ { type: 'number', value: '6' }, { type: 'number', value: '1' } ] },
-                          { type: 'rl_row', value: [ { type: 'number', value: '7' }, { type: 'number', value: '2' } ] } ],
+                          { type: 'rl_row', value: [ { type: 'number', value: '7' }, { type: "datetime", value: "~2016-12-02" } ] } ],
                        compiledType: 'relation',
-                       compiledValue: { headers: [ 'c', 'a' ], rows: [ [ 5, 1 ], [ 6, 1 ], [ 7, 2 ] ] } } ],
+                       compiledValue: { headers: [ 'c', 'a' ], rows: [ [ 5, 1 ], [ 6, 1 ], [ 7, { type: "datetime", value: "~2016-12-02" } ] ] } } ],
                   compiledType: 'relation',
-                  compiledValue: { headers: [ 'c', 'a' ], rows: [ [ 5, 1 ], [ 6, 1 ], [ 7, 2 ] ] } } ] },
+                  compiledValue: { headers: [ 'c', 'a' ], rows: [ [ 5, 1 ], [ 6, 1 ], [ 7, { type: "datetime", value: "~2016-12-02" } ] ] } } ] },
            { type: 'line',
              value: [ { type: 'relation', value: 'a:' } ],
              compiledType: 'relation',
@@ -68,13 +68,13 @@ v :b :c
            { type: 'line',
              value: [ { type: 'operator', value: 'J' }, { type: 'relation', value: 'c:' } ],
              compiledType: 'relation',
-             compiledValue: { headers: [ 'a', 'b', 'c' ], rows: [ [ 1, 2, 5 ], [ 1, 2, 6 ], [ 2, 4, 7 ] ] } },
+             compiledValue: { headers: [ 'a', 'b', 'c' ], rows: [ [ 1, 2, 5 ], [ 1, 2, 6 ] ] } },
            { type: 'line',
              value: [ { type: 'operator', value: 'v' }, { type: 'header', value: ':b' }, { type: 'header', value: ':c' } ],
              compiledType: 'relation',
-             compiledValue: { headers: [ 'b', 'c' ], rows: [ [ 2, 5 ], [ 2, 6 ], [ 4, 7 ] ] } } ],
+             compiledValue: { headers: [ 'b', 'c' ], rows: [ [ 2, 5 ], [ 2, 6 ] ] } } ],
         compiledType: 'relation',
-        compiledValue: { headers: [ 'b', 'c' ], rows: [ [ 2, 5 ], [ 2, 6 ], [ 4, 7 ] ] } }
+        compiledValue: { headers: [ 'b', 'c' ], rows: [ [ 2, 5 ], [ 2, 6 ] ] } }
 
         assert.deepEqual(expected as Node, compiler.compiler(env, ast, false))
         // console.log(parser.inspect(compiler.compiler(env, ast, false)))

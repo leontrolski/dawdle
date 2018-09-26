@@ -3,7 +3,7 @@
 <link rel="stylesheet" href="http://cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
 <link rel="stylesheet" href="http://cdn.rawgit.com/milligram/milligram/master/dist/milligram.min.css">
 <style>
-body{margin:0px;background-color:#799eb1;font-size: 1.4em;}
+body{margin:0px;background-color:#799eb1;font-size:1.4em;}
 .root{margin:0.5em}
 .options{background-color:white;padding:0.5em;}
 .block{display:flex;align-items:flex-end;justify-content:flex-end;position:relative;}
@@ -13,7 +13,7 @@ body{margin:0px;background-color:#799eb1;font-size: 1.4em;}
 .pre{white-space:pre-wrap;font:12px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;}
 
 .right{width:80ch;flex-shrink:0;margin-left:50px;}
-.compiled-line{position:relative;border-top:solid grey 1px;}
+.compiled-line{position:relative;padding-bottom:0.6em;padding-left:0.6em;display:flex;flex-direction:column;align-items:flex-end;}
 .spacer{height:0.5em;background-color:gray;}
 .connecting-line{position:absolute;top:-1000px;right:-50px;width:50px;}
 .error{border-top:solid grey 1px;max-height: 20em;overflow-y: scroll;}
@@ -26,6 +26,9 @@ body{margin:0px;background-color:#799eb1;font-size: 1.4em;}
 .button-cant-save{background-color:grey;border-color:grey;cursor:not-allowed;}
 .button-reload{background-color:palevioletred;border-color:palevioletred;}
 .header{font-size:1.0rem;height:2rem;line-height:2rem;padding:0 0.5rem;text-transform:none;margin-right:0.4ch;margin:0.3em;}
+.table{margin-bottom:0;width:unset;border-right:solid 1px black;}
+.table:after{position:absolute;top:0;right:0;width:1em;background-color:red;height:100%;}
+.cell{padding:0.1em;font-size:0.8em;padding-left:1ch !important;}
 </style>
 </head>
 <body>

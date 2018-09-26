@@ -1,8 +1,23 @@
-import {Node, NodeMultiple, Section, is} from './parser'
-import {Env, compiler, emptyEnv, RelationAPI} from './compiler'
+import { Node, NodeMultiple, Section, Decimal, Datetime, is } from './parser'
+import { Env, compiler, emptyEnv } from './compiler'
 import { sortBy } from 'ramda';
 
 export const DAWDLE_URL = 'http://localhost:3000/dawdle'
+
+export type RelationAPI = {
+    headers: string[],
+    rows: Array<(number | string | boolean | null | Decimal | Datetime)[]>,  // TODO: make this Iterable
+    // TODO: implement these extra bits
+    types?: string[],
+    indexes?: any[],
+    ranks?: any[],
+}
+export type FunctionAPI = {
+    name: string,
+    type: 'extend' | 'filter' | 'aggregate',
+    function: (rel: RelationAPI, ...args: any[])=>RelationAPI,
+    args: any,
+}
 
 export type ServerError = {
     lineNumber: number | null,

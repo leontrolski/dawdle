@@ -11,7 +11,7 @@ import { compiler, emptyEnv } from './compiler'
 import { astToString, nodeToString, jsonifyAndIndent } from './astToString'
 import { log } from './errorsAndAsserters';
 
-const PATH = path.resolve(__dirname, '../examples/example_2.dawdle.ts')
+const PATH = path.resolve(__dirname, '../examples/example_3.dawdle.ts')
 
 type PreBlock = {
     language: string,
@@ -89,7 +89,7 @@ function readFile(p: string): Array<PreBlock>{
     })
     return serverBlocks
 }
-function astToSourceAndCompiled(blocks: PreBlock[]): ServerBlock[] {
+function firstTimeCompileBlocks(blocks: PreBlock[]): ServerBlock[] {
     return blocks.map((block, i)=>{
         if(block.language !== 'dawdle'){
             return {
@@ -105,7 +105,7 @@ function astToSourceAndCompiled(blocks: PreBlock[]): ServerBlock[] {
         const astMinimal = JSON.parse(block.source)
         const dawdleSource = astToString(astMinimal)
         const ast = deMunge(astMinimal)
-        const astWithHeaders = compiler(emptyEnv, ast as Section)
+        const astWithHeaders = compiler(emptyEnv, ast as Section, false)
         return {
             id: `block-${i}`,
             language: block.language,
@@ -118,7 +118,7 @@ function astToSourceAndCompiled(blocks: PreBlock[]): ServerBlock[] {
         }
     })
 }
-function editedSourceToAstAndBack(editedBlocks: ServerBlock[]): ServerBlock[] {
+function compileBlocks(editedBlocks: ServerBlock[]): ServerBlock[] {
     return editedBlocks.map(block=>{
         if(block.language !== 'dawdle') return block
         // else is a dawdle block
@@ -130,7 +130,7 @@ function editedSourceToAstAndBack(editedBlocks: ServerBlock[]): ServerBlock[] {
             const astMinimal = parser(editedDawdleSource)
             dawdleSource = astToString(astMinimal)
             const ast = deMunge(astMinimal)
-            astWithHeaders = compiler(emptyEnv, ast as Section)
+            astWithHeaders = compiler(emptyEnv, ast as Section, false)
         }
         catch(error){
             console.log('Compilation error: ', error.message)
@@ -148,7 +148,7 @@ function editedSourceToAstAndBack(editedBlocks: ServerBlock[]): ServerBlock[] {
         }
     })
 }
-function editedSourceToFileString(editedBlocks: ServerBlock[]): string {
+function writeBlocksToFile(editedBlocks: ServerBlock[]): string {
     let fileString = DAWDLE_COMMENT_OPENER + '\n'
     editedBlocks.forEach(block=>{
         if(block.language !== 'dawdle'){
@@ -172,7 +172,7 @@ function get(req: express.Request): ServerState {
     const fileBlocks = readFile(PATH)
     return {
         defaultEnv: emptyEnv,
-        blocks: astToSourceAndCompiled(fileBlocks)
+        blocks: firstTimeCompileBlocks(fileBlocks)
     }
 }
 // validate and parse edited state
@@ -180,13 +180,13 @@ function put(req: express.Request): ServerState {
     const editedState = req.body as ServerState
     return {
         defaultEnv: emptyEnv,
-        blocks: editedSourceToAstAndBack(editedState.blocks),
+        blocks: compileBlocks(editedState.blocks),
     }
 }
 // write edited state to file
 function post(req: express.Request): boolean {
     const editedState = req.body as ServerState
-    const editedSource = editedSourceToFileString(editedState.blocks)
+    const editedSource = writeBlocksToFile(editedState.blocks)
     fs.writeFileSync(PATH, editedSource)
     return true
 }

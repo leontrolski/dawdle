@@ -8,21 +8,6 @@ import {errors, asserters, log} from './errorsAndAsserters'
 
 import * as R from 'ramda'
 
-export type RelationAPI = {
-    headers: string[],
-    rows: Array<(number | string | boolean | null | Decimal | Datetime)[]>,  // TODO: make this Iterable
-    // TODO: implement these extra bits
-    types?: string[],
-    indexes?: any[],
-    ranks?: any[],
-}
-export type FunctionAPI = {
-    name: string,
-    type: 'extend' | 'filter' | 'aggregate',
-    function: (rel: RelationAPI, ...args: any[])=>RelationAPI,
-    args: any,
-}
-
 /**
  * Given a list of values, return the list, but with the
  * sets splatted in place.
@@ -72,13 +57,13 @@ function getHeaders(env: Env, o: Node){
     if(is.relation_literal(o)) return o.value[0].value
     throw new errors.ScopeError(o, env)
 }
-function getRelation(env: Env, o: Node): RelationAPI{
+function getRelation(env: Env, o: Node){ // TODO: :RelationAPI {
     if(o.compiledType === types.relation) return o.compiledValue
     if(is.relation(o)) return resolveValue(env, o).compiledValue
     if(is.relation_literal(o)){
         const [headers, ...rows] = o.value as Array<NodeMultiple>
         const headerStrings = headers.value.map(o=>(o.value as string).slice(1))
-        const rowValues = rows.map(row=>row.value.map(o=>JSON.parse(o.value as string))) // TODO: handle JSON+ types here
+        const rowValues = rows.map(row=>row.value.map(toString)) // TODO: handle JSON+ types here
         return {
             headers: headerStrings,
             rows: rowValues,
@@ -252,12 +237,14 @@ const astToValue: {[typeName: string]: (o: NodeSingle)=>string} = {
     [types.null]: node=>JSON.parse(node.value),
     [types.number]: node=>JSON.parse(node.value),
     [types.string]: node=>JSON.parse(node.value),
+    [types.decimal]: node=>node,
+    [types.datetime]: node=>node,
+    // TODO: what is the actual expected usage here? above assumes it is mapping to RelationAPI and back
     [types.header]: node=>node.value,
     [types.relation]: node=>node.value,
-    // TODO: implement these
-    // [types.decimal]: node=>JSON.parse(node[types.decimal]),
-    // [types.datetime]: node=>JSON.parse(node[types.datetime]),
+
 }
+// TODO: see above comment
 function toString(o: NodeSingle){
     return astToValue[o.type](o)
 }

@@ -1,5 +1,5 @@
 import { Node, Header, Relation, Function, Value, Section, Set } from './parser'
-import { RelationAPI, FunctionAPI } from './compiler'
+import { RelationAPI, FunctionAPI } from './shared'
 
 import * as R from 'ramda'
 
@@ -28,20 +28,18 @@ export const headers: {[s: string]: any} = {
 export const relation: {[s: string]: (rel: Relation, ...args: any[])=>RelationAPI} = {
     filter: (rel: Relation, func: FunctionAPI, ...values: Value[])=>{
         // assert function.type === 'filter'
-        return func.function(rel.compiledValue, ...values)
+        return rel.compiledValue// TODO: func.function(rel.compiledValue, ...values)
     },
     select: (rel: Relation, ...headers: Header[])=>{
         const left = rel.compiledValue as RelationAPI
         const selectHeaders = headers.map(header=>header.value.slice(1))
-        const rows = left.rows.map(row=>
-            R.zip(left.headers, row)
-                .filter(([header, _])=>selectHeaders.includes(header))
-                .map(([_, value])=>value))
+        const leftKVs = left.rows.map(row=>R.fromPairs(R.zip(left.headers, row)))
+        const rows = leftKVs.map(kv=>selectHeaders.map(header=>kv[header]))
         return {headers: selectHeaders, rows: rows}
     },
     extend: (rel: Relation, header: Header, func: FunctionAPI, ...values: Value[])=>{
         // assert function.type === 'extend'
-        return func.function(rel.compiledValue, header, ...values)
+        return rel.compiledValue// TODO: func.function(rel.compiledValue, header, ...values)
     },
     cross: (rel: Relation, value: Value)=>{
         const left = rel.compiledValue as RelationAPI

@@ -70,6 +70,8 @@ export function jsonifyAndIndent(o: NodeMinimal): string{
     const s = JSON.stringify(o)
         .replace(/{"section":/g, '\n{"section":')
         .replace(/{"line":/g, '\n    {"line":')
+        .replace(/{"rl_headers":/g, '\n    {"rl_headers":')
+        .replace(/{"rl_row":/g, '\n    {"rl_row":')
     JSON.parse(s)
     return R.tail(s)  // remove first \n
 }
