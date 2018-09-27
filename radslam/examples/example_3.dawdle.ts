@@ -16,7 +16,7 @@ const myFirstTable =
     {"rl_row":[{"number":"2"},{"string":"\"Tom\""},{"datetime":"~1950-02-20"}]},
     {"rl_row":[{"number":"3"},{"string":"\"Jackie\""},{"null":"null"}]}]}]}]},{"let":[{"relation":"example-line-break:"},
 {"section":[{"relation_literal":[
-    {"rl_headers":[{"header":":user_id"},{"header":":town_maybe_city_maybe_some_other_long_thingg"}]},
+    {"rl_headers":[{"header":":user_id"},{"header":":town_maybe_city_maybe_some_other_long_thing"}]},
     {"rl_row":[{"number":"1"},{"string":"\"Slough\""}]},
     {"rl_row":[{"number":"2"},{"string":"\"Chicago\""}]},
     {"rl_row":[{"number":"3"},{"string":"\"The North\""}]}]}]}]},

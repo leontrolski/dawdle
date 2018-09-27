@@ -1,6 +1,7 @@
 import * as util from 'util'
 import * as ebnf from 'ebnf'
 import * as R from 'ramda'
+import { errors } from './errorsAndAsserters';
 
 export function inspect(o: any): string{
     return util.inspect(o, {depth: 16, colors: true, breakLength: 100})
@@ -139,7 +140,8 @@ export function addIndents(s: string){
 }
 
 export function munge(o: ebnf.IToken, offset: number): NodeMinimal {
-    if(R.isNil(o)) return {errors: [new ParserError()]}
+    if(R.isNil(o)) throw new ParserError('*no text*', ['parser fully failed'])
+    if(!R.isEmpty(o.errors)) throw new ParserError(o.text, o.errors)
 
     // do I even need to do this bit?
     // <INDENT>\n </INDENT>\n
@@ -309,8 +311,8 @@ export const is = {
 export class TypeError extends Error {constructor(type: string, node: NodeMinimal) {
     super(`Type error, node is not type ${type}: ${inspect(node)}`)
 }}
-export class ParserError extends Error {constructor() {
-    super(`Parser fully failed`)
+export class ParserError extends Error {constructor(text: string, errors: any[]) {
+    super(`Parser failed at point:\n${text}\nwith errors:\n${inspect(errors)}`)
 }}
 export class UnableToDetermineTypeError extends Error {constructor(node: NodeMinimal) {
     super(`Unable to determine type of node: ${inspect(node)}`)

@@ -204,4 +204,4 @@ app.post('/dawdle', (req, res)=>res.json(post(req)))
 declare const underTest: any
 try{underTest}
 catch{app.listen(port, ()=>console.log(`Dawdle editor listening at http://127.0.0.1:${port}`))}
-export let test: any
+export let test: any = null

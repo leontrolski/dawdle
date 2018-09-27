@@ -1,4 +1,5 @@
 import { describe, it } from 'mocha'
+import { assert } from 'chai'
 import * as browserMock from 'mithril/test-utils/browserMock'
 
 const window = (<any>browserMock)() as any
@@ -12,8 +13,27 @@ global.window = window
 global.document = window.document
 global.requestAnimationFrame = ()=>1
 
-import {test} from "../src/index";
+import * as index from "../src/index";
+import { range } from 'ramda';
 
 describe('index', ()=>{
-    it('should compile', ()=>{test})
+    it('should compile', ()=>{index.test})
+    it('should raise an error when it fails to parse a complete relation literal', ()=>{
+        const old = `foo-0
+    foo-1
+    bar-2
+qux-3`
+        const new_ = `foo-0
+    foo-1
+    n-bar-2
+another-3
+
+qux-3`
+        const lineDiff = index.mapOldLineToNew(old, new_)
+        assert.deepEqual(lineDiff, {
+            0: 0,
+            1: 1,
+            3: 5,
+        })
+    })
 })

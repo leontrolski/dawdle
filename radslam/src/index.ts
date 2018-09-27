@@ -1,21 +1,51 @@
 import { default as axios } from 'axios'
-import { zip, merge, isEmpty } from 'ramda'
+import { zip, merge, isEmpty, range, uniq, difference } from 'ramda'
 import * as m from 'mithril'
 import * as ace from 'ace-builds/src-noconflict/ace'
+import * as diff from 'diff'
 ace.config.set('basePath', './modes/')
 
 import { emptyEnv } from './compiler';
-import { DAWDLE_URL, Setters, ServerState, State, DerivedState } from './shared'
+import { DAWDLE_URL, Setters, ServerState, State, DerivedState, UIState } from './shared'
 import { View, SVG_OFFSET } from './components'
 
-// functions that mutate state
+
+export function mapOldLineToNew(old: string, new_: string): {[n: number]: number} {
+    const lineDiff = diff.diffLines(old, new_, {ignoreCase: false, ignoreWhitespace: true})
+    let i = 0
+    let offset = 0
+    const oldNewLineMap: {[n: number]: number} = {}
+    for (let d of lineDiff){
+        if(d.added){
+            offset += d.count
+        }
+        else if(d.removed){
+            offset -= d.count
+            i += d.count
+        }
+        else{
+            range(i, i + d.count).forEach(n=>oldNewLineMap[n] = n + offset)
+            i += d.count
+        }
+    }
+    return oldNewLineMap
+}
+
+// big closure to make functions that mutate state
 function makeSetters(s: State): Setters {
     const setters: Setters = {
         defaultEnv: function(env){s.defaultEnv = env},
         blocks: function(blocks){s.blocks = blocks},
-        editedSource: async function(i, editedSource){s.blocks[i].source = editedSource},
+        editedSource: async function(i, editedSource){
+            const oldNewLineMap = mapOldLineToNew(s.blocks[i].source, editedSource)
+            s.ui.folded[i] = (s.ui.folded[i] || []).map(lineI=>oldNewLineMap[lineI]).filter(x=>x)
+            s.blocks[i].source = editedSource
+        },
         httpError: function (errorMessage){s.ui.HTTPError = errorMessage},
         mouseovered: function(blockI, lineI){s.ui.mouseovered = {blockI, lineI}},
+        fold: function(blockI, lineI){s.ui.folded[blockI] = uniq((s.ui.folded[blockI] || []).concat([lineI]))},
+        unfold: function(blockI, lineI){s.ui.folded[blockI] = difference(s.ui.folded[blockI] || [], [lineI])},
+        emptyUI: function(){s.ui = makeEmptyUi()},
         // functions that interact with server
         fromServerState: async function(){
             const serverState = await setters.readServerState() as ServerState
@@ -36,7 +66,7 @@ function makeSetters(s: State): Setters {
             setters.defaultEnv(serverState.defaultEnv)
             setters.blocks(mergedBlocks)
         },
-        // these don't actually mutate state yet
+        // these don't actually mutate state as of yet
         readServerState: async function(){
             console.log('Reading file from server')
             const response = await catchHTTPErrors(setters, ()=>axios.get(DAWDLE_URL))
@@ -79,23 +109,30 @@ function deriveState(s: State): DerivedState {
         areAnyErrors: s.blocks.map(block=>!isEmpty(block.errors)).some(x=>x)
     }
 }
+function makeEmptyUi(): UIState {
+    return {
+        HTTPError: null,
+        mouseovered: {blockI: null, lineI: null},
+        folded: {},
+    }
+}
 
 async function init(){
     // empty to start with
     let state: State = {
         defaultEnv: emptyEnv,
         blocks: [],
-        ui: {
-            HTTPError: null,
-            mouseovered: {blockI: null, lineI: null}
-        },
+        ui: JSON.parse(localStorage.getItem('state.ui')) || makeEmptyUi()
     }
     const setters = makeSetters(state)
     // mount the root component
     await m.mount(document.body, {
         view: ()=>View(setters, deriveState(state)),
-        onupdate: ()=>alignLines(state)}
-    )
+        onupdate: ()=>{
+            alignLines(state)
+            localStorage.setItem('state.ui', JSON.stringify(state.ui))
+        },
+    })
     // fetch data and redraw
     await setters.fromServerState()
     m.redraw()
@@ -132,13 +169,11 @@ function loadEditors(setters: Setters, ids: Array<string>){
     })
     editors.forEach((editor, i)=>{
         const debouncedWrite = debounce(async function(){
+            setters.editedSource(i, editor.getValue())
             await setters.fromWriteServerState()
             m.redraw()
         }, 500)
-        editor.on('change', ()=>{
-            setters.editedSource(i, editor.getValue())
-            debouncedWrite()
-        })
+        editor.on('change', ()=>debouncedWrite())
         // only highlight lines of the focused editor
         editor.renderer.$cursorLayer.element.style.display = 'none'
         const otherEditors = editors.filter(e=>e !== editor)
@@ -221,4 +256,4 @@ async function catchHTTPErrors(setters: Setters, f: Function){
 declare const underTest: any
 try{underTest}
 catch{init()}
-export let test: any
+export let test: any = null
