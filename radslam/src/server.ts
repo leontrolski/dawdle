@@ -8,8 +8,7 @@ import * as stripAnsi from 'strip-ansi'
 import { CommentData, ServerBlock, ServerState, TestCaseMap, ServerError } from './shared'
 import { Section, deMunge, parser } from './parser'
 import { compiler, emptyEnv } from './compiler'
-import { astToString, nodeToString, jsonifyAndIndent } from './astToString'
-import { log } from './errorsAndAsserters';
+import { astToString, jsonifyAndIndent } from './astToString'
 
 const PATH = path.resolve(__dirname, '../examples/example_3.dawdle.ts')
 

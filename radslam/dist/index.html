@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="http://cdn.rawgit.com/milligram/milligram/master/dist/milligram.min.css">
 <style>
 body{margin:0px;background-color:#799eb1;font-size:1.4em;}
-.root{margin:0.5em}
+.root{margin:0.5em;display:inline-flex;flex-direction:column;min-width:calc(100% - 1em);}
 .options{background-color:white;padding:0.5em;}
 .block{display:flex;align-items:flex-end;justify-content:flex-end;position:relative;}
 .source{position:relative;background-color:white;margin-top:8px;}
@@ -30,6 +30,7 @@ body{margin:0px;background-color:#799eb1;font-size:1.4em;}
 .table{margin-bottom:0;width:unset;}
 .table-focused{box-shadow:2px 0px 0 0px black;}
 .cell{padding:0.1em;font-size:0.8em;padding-left:1ch !important;}
+.cell-header{padding-left:0 !important;}
 </style>
 </head>
 <body>

@@ -1,106 +1,61 @@
 import { default as axios } from 'axios'
-import { zip, merge, isEmpty, intersperse, isNil, equals } from 'ramda'
+import { zip, merge, isEmpty } from 'ramda'
 import * as m from 'mithril'
 import * as ace from 'ace-builds/src-noconflict/ace'
 ace.config.set('basePath', './modes/')
 
-import { Node, Header, is, Set, Value } from './parser'
-import { Env, emptyEnv } from './compiler';
-import { DAWDLE_URL, ServerBlock, ServerState, nodesPerLine, isSpacer, RelationAPI } from './shared'
+import { emptyEnv } from './compiler';
+import { DAWDLE_URL, Setters, ServerState, State, DerivedState } from './shared'
+import { View, SVG_OFFSET } from './components'
 
-// TODO:
-// - sort out editor/source/original naming inconsistencies
-
-// constants that map to css
-const SVG_OFFSET = 1000
-const INFO_ORIGINAL_GAP = 50
-
-// derived
-type Block = ServerBlock & {
-    blockI: number,
-    editorId: string,
-    infoId: string,
-    selectedTestCaseName: string,
+// functions that mutate state
+function makeSetters(s: State): Setters {
+    const setters: Setters = {
+        defaultEnv: function(env){s.defaultEnv = env},
+        blocks: function(blocks){s.blocks = blocks},
+        editedSource: async function(i, editedSource){s.blocks[i].source = editedSource},
+        httpError: function (errorMessage){s.ui.HTTPError = errorMessage},
+        mouseovered: function(blockI, lineI){s.ui.mouseovered = {blockI, lineI}},
+        // functions that interact with server
+        fromServerState: async function(){
+            const serverState = await setters.readServerState() as ServerState
+            setters.defaultEnv(serverState.defaultEnv)
+            setters.blocks(serverState.blocks)
+            if(!isEmpty(editors)) setEditorsContent(s)  // yughh
+        },
+        fromWriteServerState: async function(){
+            const serverState = await setters.writeServerState() as ServerState
+            // merge blocks only on new valid information
+            const mergedBlocks = zip(s.blocks, serverState.blocks)
+                .map(([original, server])=>merge(
+                    server,
+                    {
+                        source: original.source,
+                        astWithHeaders: server.astWithHeaders || original.astWithHeaders,
+                    }))
+            setters.defaultEnv(serverState.defaultEnv)
+            setters.blocks(mergedBlocks)
+        },
+        // these don't actually mutate state yet
+        readServerState: async function(){
+            console.log('Reading file from server')
+            const response = await catchHTTPErrors(setters, ()=>axios.get(DAWDLE_URL))
+            return response.data
+        },
+        writeServerState: async function(){
+            console.log('Getting server to compile')
+            const response = await catchHTTPErrors(setters, ()=>axios.put(DAWDLE_URL, s))
+            return response.data
+        },
+        saveStateToFile: async function(){
+            console.log('Writing file to server')
+            const response = await catchHTTPErrors(setters, ()=>axios.post(DAWDLE_URL, s))
+            m.redraw()
+        },
+    }
+    return setters
 }
-type DerivedState = {
-    blocks: Block[],
-}
-
-type UIState = {
-    HTTPError: string | null,
-    mouseovered: {blockI: number | null, lineI: number | null},
-}
-type State = ServerState & {
-    ui: UIState,
-}
-// empty to start with
-let state: State = {
-    defaultEnv: emptyEnv,
-    blocks: [],
-    ui: {
-        HTTPError: null,
-        mouseovered: {blockI: null, lineI: null}
-    },
-}
-// functions that mutate
-function setDefaultEnv(s: State, env: Env){
-    s.defaultEnv = env
-}
-function setBlocks(s:State, blocks: ServerBlock[]){
-    s.blocks = blocks
-}
-async function setEditedSource(s: State, i: number, editedSource: string): Promise<void> {
-    s.blocks[i].source = editedSource
-    await setFromWriteServerStateDebounced(s)
-}
-function setHttpError(s:State, errorMessage: string | null){
-    s.ui.HTTPError = errorMessage
-}
-function setMouseovered(s: State, blockI: number, lineI: number){
-    s.ui.mouseovered = {blockI, lineI}
-}
-const setMouseoveredDebounced = debounce(setMouseovered, 100)
-
-// server
-async function readServerState(s: State): Promise<State> {
-    console.log('Getting state from file')
-    const response = await catchHTTPErrors(s, ()=>axios.get(DAWDLE_URL))
-    return response.data
-}
-async function writeServerState(s: State): Promise<State> {
-    console.log('Getting server to compile')
-    const response = await catchHTTPErrors(s, ()=>axios.put(DAWDLE_URL, s))
-    return response.data
-}
-async function saveStateToFile(s: State): Promise<void> {
-    console.log('Saving state to file')
-    const response = await catchHTTPErrors(s, ()=>axios.post(DAWDLE_URL, s))
-    m.redraw()
-}
-async function setFromServerState(s: State): Promise<void> {
-    const serverState = await readServerState(s)
-    setDefaultEnv(s, serverState.defaultEnv)
-    setBlocks(s, serverState.blocks)
-    if(!isEmpty(editors)) setEditorsContent(s)  // yughh
-    m.redraw()
-}
-async function setFromWriteServerState(s: State){
-    const serverState = await writeServerState(s)
-    // merge blocks only on new valid information
-    const mergedBlocks = zip(s.blocks, serverState.blocks)
-        .map(([original, server])=>merge(
-            server,
-            {
-                source: original.source,
-                astWithHeaders: server.astWithHeaders || original.astWithHeaders,
-            }))
-    setDefaultEnv(s, serverState.defaultEnv)
-    setBlocks(s, mergedBlocks)
-    m.redraw()
-}
-const setFromWriteServerStateDebounced = debounce(setFromWriteServerState, 500)
-
-// deriving functions
+// munging functions
 function deriveEditorIds(s: State): Array<string> {
     return s.blocks.map((_, i)=>`editor-${i}`)
 }
@@ -117,125 +72,52 @@ function deriveState(s: State): DerivedState {
         infoId: `info-${i}`,
         selectedTestCaseName: Object.keys(block.testCases)[0],
     }))
-    return {blocks}
+    return {
+        defaultEnv: s.defaultEnv,
+        ui: s.ui,
+        blocks,
+        areAnyErrors: s.blocks.map(block=>!isEmpty(block.errors)).some(x=>x)
+    }
 }
-function deriveAreAnyErrors(s: State): boolean {
-    return s.blocks.map(block=>!isEmpty(block.errors)).some(x=>x)
-}
-
-// UI components
-
-const ConnectingLine = (isFocused: boolean)=>{
-    const markerId = `marker-${(Math.random() * 10E18).toString()}`  // hack to namespace markers so they change colour correctly
-    return m('svg.connecting-line', {width: INFO_ORIGINAL_GAP, height: 2 * SVG_OFFSET},
-        isFocused? m('marker', {id: markerId, refX: 5, refY: 5, markerWidth: 8, markerHeight: 8},
-            m('circle[cx=5][cy=5][r=3]', {style: {stroke: 'none', fill: 'black'}})) : null,
-        m('line[x1=0][x2=0]', {'marker-end': isFocused? `url(#${markerId})` : '', y1: SVG_OFFSET, y2: SVG_OFFSET, style: {stroke: isFocused? 'black' : 'gray'}}))
-}
-
-const HeaderEl = (headerValue: string)=>m('.button.button-outline.header.pre', headerValue)
-
-// TODO: convert these to {type: value:} and make a component for each type
-const Null = m('em.null', 'null')
-const Cell = (cellValue)=>m('td.cell', isNil(cellValue)? Null : cellValue.type? cellValue.value : cellValue)
-
-const Table = (o: RelationAPI, isFocused: boolean)=>m('table.table',
-    {class: isFocused? 'table-focused' : ''},
-    isEmpty(o.headers)?
-        m('thead', m('th.cell', m('em', 'no headers')))
-        : m('thead', m('tr', o.headers.map(header=>m('th.cell', HeaderEl(header))))),
-    m('tbody', o.rows.map(row=>m('tr', row.map(Cell)))))
-
-const CompiledValue = (o: Node, isFocused: boolean)=>{
-    if(o.compiledType === 'headers') return o.compiledValue.map(header=>HeaderEl(header.value))
-    if(o.compiledType === 'set') return [
-        '[',
-        intersperse(', ', o.compiledValue.map((v: Value)=>is.header(v)? HeaderEl(v.value) : v.value)),
-        ']'
-    ]
-    if(o.compiledType === 'relation') return Table(o.compiledValue as RelationAPI, isFocused)
-    return null
-}
-
-const Errors = (block: Block)=>m(
-        '.source',
-        block.errors.map(error=>m('.pre.error', error.message)))
-
-const Info = (s, block: Block)=>
-    block.astWithHeaders === null? null : m(
-        '.source',
-        {id: block.infoId, 'to-editor-id': block.editorId},
-        m('.test-case-options', Object.keys(block.testCases).map(testCaseName=>
-            m(
-                'button.button.button-small',
-                {class: testCaseName === block.selectedTestCaseName? '' : 'button-outline'},
-                testCaseName
-            ))),
-        nodesPerLine(block.astWithHeaders)
-            .filter(o=>o.compiledType)
-            .map((o, i)=>{
-                if(isSpacer(o)) return m('.spacer')
-                const isFocused =  s.ui.mouseovered.blockI === block.blockI && s.ui.mouseovered.lineI === i
-                return m(
-                    '.compiled-line',
-                    {'to-line': o.lineI, onmouseover: ()=>setMouseovered(s, block.blockI, i)},
-                    CompiledValue(o, isFocused),
-                    ConnectingLine(isFocused)
-                )
-            }),
-    )
-
-const Original = (block: Block)=>m(
-    '.source.right',
-    {class: `language-${block.language}`},
-    m('', {id: block.editorId, language: block.language}, block.source),
-)
-
-const View = (s: State)=>m('.root',
-    m('.options', ''),
-    deriveState(s).blocks.map((block)=>
-        m('.block',
-            isEmpty(block.errors)? Info(s, block) : Errors(block),
-            Original(block))),
-    m('.editor-buttons',
-        m('.button.button-editor.button-save', {
-            onclick: deriveAreAnyErrors(s)? (): null=>null : ()=>saveStateToFile(s),
-            class: deriveAreAnyErrors(s)? 'button-cant-save' : '',
-            title: deriveAreAnyErrors(s)? "Can't save as there are errors" : '',
-        }, 'save'),
-        m('.button.button-editor.button-reload', {
-            onclick: ()=>setFromServerState(s),
-        }, 'reload from file'),
-        m('.button.button-editor', 'show default env')),
-    s.ui.HTTPError?
-        m('.http-error.pre', s.ui.HTTPError,
-            m('.editor-buttons', m('.button', {
-                onclick: ()=>setHttpError(s, null),
-            }, 'dismiss'))):
-        null,
-)
 
 async function init(){
-    await m.mount(document.body, {view: ()=>View(state), onupdate: alignLines})
-
+    // empty to start with
+    let state: State = {
+        defaultEnv: emptyEnv,
+        blocks: [],
+        ui: {
+            HTTPError: null,
+            mouseovered: {blockI: null, lineI: null}
+        },
+    }
+    const setters = makeSetters(state)
+    // mount the root component
+    await m.mount(document.body, {
+        view: ()=>View(setters, deriveState(state)),
+        onupdate: ()=>alignLines(state)}
+    )
     // fetch data and redraw
-    await setFromServerState(state)
-
+    await setters.fromServerState()
+    m.redraw()
     // load editors and align lines for the first time
     const ids = deriveEditorIds(state)
-    requestAnimationFrame(()=>loadEditors(ids))
+    requestAnimationFrame(()=>loadEditors(setters, ids))
     let editorsLoaded = false
     let id: NodeJS.Timer = setInterval(function(){
         if(editorsLoaded) return clearInterval(id)
-        editorsLoaded = alignLines()
+        editorsLoaded = alignLines(state)
     }, 100)
-    // re align lines on window resize
-    window.addEventListener('resize', alignLines)
+    // inspecting tool and realign lines on resize
+    const _window = window as any
+    _window._state = state
+    _window._deriveState = deriveState
+    _window.addEventListener('resize', ()=>requestAnimationFrame(()=>alignLines(_window._state)))
 }
 
-// stuff below operates outside of mithril rendering
-let editors: any[] = [] //  should be AceAjax.Editor[] = []
-function loadEditors(ids: Array<string>){
+// stuff below operates outside of mithril rendering, scary stuff
+type Ace = AceAjax.Editor & {renderer: {$cursorLayer: any}}
+let editors: Ace[] = []
+function loadEditors(setters: Setters, ids: Array<string>){
     editors = ids.map(id=>{
         const editorElement = document.getElementById(id)
         const language = editorElement.getAttribute('language')
@@ -248,8 +130,15 @@ function loadEditors(ids: Array<string>){
             highlightActiveLine: false,
         })
     })
-    zip(editors, ids).forEach(([editor, id], i)=>{
-        editor.on('change', ()=>setEditedSource(state, i, editor.getValue()))
+    editors.forEach((editor, i)=>{
+        const debouncedWrite = debounce(async function(){
+            await setters.fromWriteServerState()
+            m.redraw()
+        }, 500)
+        editor.on('change', ()=>{
+            setters.editedSource(i, editor.getValue())
+            debouncedWrite()
+        })
         // only highlight lines of the focused editor
         editor.renderer.$cursorLayer.element.style.display = 'none'
         const otherEditors = editors.filter(e=>e !== editor)
@@ -269,16 +158,16 @@ function setEditorsContent(s: State){
     console.log('Setting editor content')
     zip(s.blocks, editors).forEach(([block, editor])=>editor.setValue(block.source))
 }
-function alignLines(){
+function alignLines(s: State){
     try{
-        for(let infoId of deriveInfoIds(state)){
+        for(let infoId of deriveInfoIds(s)){
             const infoElement = document.getElementById(infoId)
             const toEditorElement = document.getElementById(infoElement.getAttribute('to-editor-id'))
             for(let fromElement of Array.from(infoElement.getElementsByClassName('compiled-line')) as Array<HTMLElement>){
-                const lineElement = fromElement.getElementsByClassName('connecting-line')[0].children[0] // TODO: make this second 0 a proper reference
+                const lineElement = fromElement.getElementsByClassName('connecting-line')[0].children[0] // TODO: make this second 0 a proper non-positional reference
                 const lineI = parseInt(fromElement.getAttribute('to-line'))
                 const toElement = toEditorElement.getElementsByClassName('ace_line')[lineI]  as HTMLElement
-                lineElement.setAttribute('x2', INFO_ORIGINAL_GAP.toString())
+                // lineElement.setAttribute('x2', '50')// INFO_ORIGINAL_GAP.toString())
                 lineElement.setAttribute('y1', (SVG_OFFSET + (fromElement.offsetHeight / 2)).toString())
                 lineElement.setAttribute('y2', (
                     + 13
@@ -309,7 +198,7 @@ function debounce(func: Function, wait: number){
 		timeout = setTimeout(later, wait)
 	}
 }
-async function catchHTTPErrors(s: State, f: Function){
+async function catchHTTPErrors(setters: Setters, f: Function){
     try {
         return await f()
     }
@@ -318,7 +207,8 @@ async function catchHTTPErrors(s: State, f: Function){
             const el = document.createElement('html')
             el.innerHTML = error.response.data
             const HTTPError = `Server responded with status: ${error.response.status}: ${el.innerText}`
-            setHttpError(s, HTTPError)
+            setters.httpError(HTTPError)
+            m.redraw()
             return
         }
         else{
@@ -327,9 +217,6 @@ async function catchHTTPErrors(s: State, f: Function){
     }
 }
 
-// inspecting tools
-const _window = window as any
-_window._state = state
 // run when not under test
 declare const underTest: any
 try{underTest}

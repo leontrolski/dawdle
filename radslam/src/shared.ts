@@ -4,6 +4,13 @@ import { sortBy } from 'ramda';
 
 export const DAWDLE_URL = 'http://localhost:3000/dawdle'
 
+// API types
+export type CommentData = {
+    dawdle?: any,
+    type: 'header',
+    originalLanguage: string,
+    command: string,
+} | null
 export type RelationAPI = {
     headers: string[],
     rows: Array<(number | string | boolean | null | Decimal | Datetime)[]>,  // TODO: make this Iterable
@@ -18,21 +25,11 @@ export type FunctionAPI = {
     function: (rel: RelationAPI, ...args: any[])=>RelationAPI,
     args: any,
 }
-
 export type ServerError = {
     lineNumber: number | null,
     message: string,
 }
-
 export type TestCaseMap = {[name: string]: Env}
-
-export type CommentData = {
-    dawdle?: any,
-    type: 'header',
-    originalLanguage: string,
-    command: string,
-} | null
-
 export type ServerBlock = {
     id: string,
     language: string,
@@ -42,14 +39,45 @@ export type ServerBlock = {
     errors: ServerError[],
     commentData?: CommentData,
 }
-
 export type ServerState = {
     defaultEnv: Env,
     blocks: ServerBlock[],
 }
+// UI types
+export type UIState = {
+    HTTPError: string | null,
+    mouseovered: {blockI: number | null, lineI: number | null},
+}
+export type State = ServerState & {
+    ui: UIState,
+}
+export type Block = ServerBlock & {
+    blockI: number,
+    editorId: string,
+    infoId: string,
+    selectedTestCaseName: string,
+}
+export type DerivedState = {
+    defaultEnv: Env,
+    blocks: Block[],
+    ui: UIState,
+    areAnyErrors: boolean,
+}
+export type Setters = {
+    defaultEnv: (env: Env)=>void,
+    blocks: (blocks: ServerBlock[])=>void,
+    editedSource: (i: number, editedSource: string)=>Promise<void>,
+    httpError: (errorMessage: string | null)=>void,
+    mouseovered: (blockI: number, lineI: number)=>void,
+    fromServerState: ()=>Promise<void>,
+    fromWriteServerState: ()=>Promise<void>,
+    readServerState: ()=>Promise<State>,
+    writeServerState: ()=>Promise<State>,
+    saveStateToFile: ()=>Promise<void>,
+}
+
 
 // stuff below shouldn't necessarily be here..
-
 export type Spacer = {
     compiledType: 'spacer',
     lineI: number,
