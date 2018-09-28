@@ -25,8 +25,8 @@ function splatSets(list: Node[]){
 }
 
 // functions to register and resolve from an env
-export type Env = {lets: any, defs: any}
-export const emptyEnv: Env = {lets: {}, defs: {}}
+export type Env = {[key: string]: any} // TODO, change this to Let | Def}
+export const emptyEnv: Env = {}
 /**
  * Given an resolve a variable in a given scope, else
  * return the object itself.
@@ -34,12 +34,13 @@ export const emptyEnv: Env = {lets: {}, defs: {}}
  * TODO: what does this really return?
  */
 function resolveValue(env: Env, o: Node): any {
-    if(is.var(o) || is.relation(o)){
-        const let_ = env.lets[o.value]
-        if(R.isNil(let_)) throw new errors.ScopeError(o, env)
-        return env.lets[o.value].value[1]  // just gets the section value (see the shape of the Let type)
+    if(is.var(o) || is.relation(o) || is.operator(o)){
+        const resolved = env[o.value]
+        if(R.isNil(resolved)) throw new errors.ScopeError(o, env)
+        if(is.operator(o)) return resolved
+        const [_, section] = resolved.value
+        return section
     }
-    if(is.operator(o)) return env.defs[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
     if(is.all_headers(o)) return {
         compiledType: types.set,
         compiledValue: getHeaders(env, {type: types.relation, value: R.init(o.value)})
@@ -82,8 +83,8 @@ const getValue = {
 type Registration = Let | Def
 function addRegistration(env: Env, registration: Registration){
     const [first, ..._] = registration.value
-    if(is.let(registration))return R.assocPath(['lets', first.value], registration, env)
-    if(is.def(registration))return R.assocPath(['defs', first.value], registration, env)
+    if(is.let(registration))return R.assocPath([first.value], registration, env)
+    if(is.def(registration))return R.assocPath([first.value], registration, env)
 }
 /**
  * Create a `registration`as above for a macro that is
@@ -94,7 +95,7 @@ function expandAndRegisterMacro(env: Env, line: Line){
     const [headers, template] = line.value
     const setValues = getSetValues(env, resolveValue(env, headers))
     const resolved = setValues
-        .map(value=>R.merge(env, {lets: {_: {value: [null, value]}}}))
+        .map(value=>R.merge(env, {_: {value: [null, value]}}))
         .map(envWithValue=>resolveValue(envWithValue, template))
     const lines = resolved
         .map(fullParser)

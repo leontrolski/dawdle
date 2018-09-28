@@ -10,7 +10,7 @@ import * as R from 'ramda'
 export const log = (o: any)=>console.log(inspect(o))
 
 class ScopeError extends Error {constructor(node: Node, env: Env) {
-    super(`Scope doesn't contain var, relation or def: ${inspect(node)} \nin lets: ${inspect(Object.keys(env.lets))} \nor defs: ${inspect(Object.keys(env.defs))}`)
+    super(`Scope doesn't contain var, relation or def: ${inspect(node)} \nin: ${inspect(Object.keys(env))}`)
 }}
 class SectionOrderIncorrect extends Error {constructor(node: Node) {
     super(`The order of defs and lines in the section is incorrect: ${inspect(node)}`)
@@ -47,7 +47,7 @@ class NotImplemented extends Error {constructor(message: string) {
 }}
 
 function assertSectionShape(section: Section){
-    if(R.isNil(section.value)) throw new ParserError()
+    if(R.isNil(section.value)) throw new ParserError('section has no value', [])
     if(is.aggregator(section.value[0])){
         // if the first node is an aggregator, assert that the rest are
         section.value.forEach(assertIs.aggregator)

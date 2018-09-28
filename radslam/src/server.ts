@@ -6,7 +6,7 @@ import * as bodyParser from 'body-parser'
 import * as stripAnsi from 'strip-ansi'
 
 import {
-    DawdleModule, FileBlock, FileState, CommentData,
+    DawdleModuleAPI, FileBlock, FileState, CommentData,
     ServerBlock, ServerState, TestCaseMap, ServerError } from './shared'
 import { Section, deMunge, parser } from './parser'
 import { compiler, emptyEnv } from './compiler'
@@ -29,6 +29,9 @@ const comment_types = {
 function parseComment(line: string): CommentData {
     const data = JSON.parse(line.slice(3))
     return {type: data.dawdle, ...data} as CommentData
+}
+function getDawdleModule(): DawdleModuleAPI {
+    return require(PATH) as DawdleModuleAPI
 }
 
 const fakeTestCases: TestCaseMap = {
@@ -82,10 +85,8 @@ function readFile(p: string): FileState {
         language: header.originalLanguage,
         source: thisOriginalBlock.join('\n'),
     })
-    const module_ = require(PATH) as DawdleModule
-    return {header: header, blocks: serverBlocks, defaultEnv: module_.defaultEnv}
+    return {header: header, blocks: serverBlocks, defaultEnv: getDawdleModule().defaultEnv}
 }
-
 
 function firstTimeCompileBlocks(fileState: FileState): ServerState {
     const compiledBlocks = fileState.blocks.map((block, i)=>{
@@ -118,6 +119,7 @@ function firstTimeCompileBlocks(fileState: FileState): ServerState {
     return {defaultEnv: fileState.defaultEnv, blocks: compiledBlocks}
 }
 function compileBlocks(state: ServerState): ServerState {
+    const defaultEnv = getDawdleModule().defaultEnv
     const compiledBlocks = state.blocks.map(block=>{
         if(block.language !== 'dawdle') return block
         // else is a dawdle block
@@ -129,7 +131,7 @@ function compileBlocks(state: ServerState): ServerState {
             const astMinimal = parser(editedDawdleSource)
             dawdleSource = astToString(astMinimal)
             const ast = deMunge(astMinimal)
-            astWithHeaders = compiler(state.defaultEnv, ast as Section, false)
+            astWithHeaders = compiler(defaultEnv, ast as Section, false)
         }
         catch(error){
             console.log('Compilation error: ', error.message)
@@ -146,7 +148,7 @@ function compileBlocks(state: ServerState): ServerState {
             commentData: block.commentData,
         }
     })
-    return {defaultEnv: state.defaultEnv, blocks: compiledBlocks}
+    return {defaultEnv: defaultEnv, blocks: compiledBlocks}
 }
 function writeBlocksToFile(editedBlocks: ServerBlock[]): string {
     let fileString = DAWDLE_COMMENT_OPENER + '\n'

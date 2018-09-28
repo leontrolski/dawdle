@@ -126,10 +126,7 @@ set
     })
     it('should handle base operators at each step on a relation', ()=>{
         const env = {
-            lets: {
-              fake_function: {value: [null, {type: 'function', value: nullFunction}]}
-            },
-            defs: {}
+            fake_function: {value: [null, {type: 'function', value: nullFunction}]}
         }
         const in_ = `| :a | :b | :c |
 J
@@ -305,10 +302,7 @@ JoinClone
     })
     it('should expand map macros', ()=>{
         const env = {
-            lets: {
-                fake_function: {value: [null, {type: 'function', value: nullFunction}]}
-            },
-            defs: {}
+            fake_function: {value: [null, {type: 'function', value: nullFunction}]}
         }
         const in_ = `| :a |
 (map [:foo :bar]) \`^ {{_}} fake_function\`
@@ -379,13 +373,10 @@ J
     })
     it('should do a load of nested stuff', ()=>{
         const env = {
-            lets: {
-                // TODO: what is going on here..
-                make_null: {value: [null, {type: 'function', value: (row: Node, relation: Node, ..._: any[])=>({type: 'null', value: 'null'})}]},
-                first: {value: [null, {type: 'function', value: (row: Node, relation: any, ..._: any[])=>relation.rows[0]}]},
-                value: {value: [null, {type: 'function', value: (row: Node, relation: Node, value: Node)=>value}]},
-            },
-            defs: {},
+            // TODO: what is going on here..
+            make_null: {value: [null, {type: 'function', value: (row: Node, relation: Node, ..._: any[])=>({type: 'null', value: 'null'})}]},
+            first: {value: [null, {type: 'function', value: (row: Node, relation: any, ..._: any[])=>relation.rows[0]}]},
+            value: {value: [null, {type: 'function', value: (row: Node, relation: Node, value: Node)=>value}]},
         }
         const in_ = `def Outer relation: right:
     let joined:

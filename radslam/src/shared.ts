@@ -15,7 +15,7 @@ export type FileState = {
     blocks: FileBlock[]
     defaultEnv: Env
 }
-export type DawdleModule = {
+export type DawdleModuleAPI = {
     defaultEnv: Env
 }
 export type CommentData = {
@@ -32,11 +32,15 @@ export type RelationAPI = {
     indexes?: any[]
     ranks?: any[]
 }
+export type ActualFunction = (rel: RelationAPI, ...args: any[])=>RelationAPI  // TODO: give this a beter name
 export type FunctionAPI = {
     name: string
     type: 'extend' | 'filter' | 'aggregate'
-    function: (rel: RelationAPI, ...args: any[])=>RelationAPI
-    args: any
+    func: ActualFunction
+    args: {  // TODO: make these actually do something...
+        name: string
+        types: string[]
+    }[]
 }
 export type ServerError = {
     lineNumber: number | null

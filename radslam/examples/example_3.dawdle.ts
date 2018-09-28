@@ -1,4 +1,7 @@
 // {"dawdle": "header", "originalLanguage": "typescript", "command": "venv/python $FILE --dawdle"}
+import { FunctionAPI, DawdleModuleAPI } from '../src/shared'
+import { types, Header, Value } from '../src/parser';
+
 // here we go!
 const setExample =
 // {"dawdle": "begin", "indentLevel":0}
@@ -23,20 +26,31 @@ const myFirstTable =
     {"line":[{"relation":"user:"}]},
     {"line":[{"operator":"J"},{"relation":"example-line-break:"}]}]}
 // {"dawdle": "end"}
-export const defaultEnv = { lets:
-   { lt:
-      { type: 'let',
-        value:
-         [ { type: 'var', value: 'lt' },
-           { type: 'section',
-             value:
-              [ { type: 'relation_literal',
-                  value: [ { type: 'rl_headers', value: [] } ],
-                  compiledType: 'relation',
-                  compiledValue: { headers: [], rows: [] } } ],
-             compiledType: 'relation',
-             compiledValue: { headers: [], rows: [] } } ] } },
-  defs: {} }
+const lt: FunctionAPI = {
+    type: 'filter',
+    name: 'lt',
+    args: [
+        {name: 'a', types: [types.header]},
+        {name: 'b', types: [types.number]},
+    ],
+    func: (rel, a: Header, b: Value)=>{
+        const i = rel.headers.indexOf(a.value.slice(1))
+        return {headers: rel.headers, rows: rel.rows.filter(row=>row[i] < b.value)}
+    }
+}
+const moduleAPI: DawdleModuleAPI = {
+    defaultEnv: {
+        lt: {
+            type: 'let',
+            value: [
+                {type: 'var', value: 'lt'},
+                lt
+            ]
+        },
+    }
+}
+
+export const defaultEnv = moduleAPI.defaultEnv
 
 const myFirstOperations =
 // {"dawdle": "begin", "indentLevel":0}

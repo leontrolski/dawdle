@@ -27,8 +27,9 @@ export const headers: {[s: string]: any} = {
  */
 export const relation: {[s: string]: (rel: Relation, ...args: any[])=>RelationAPI} = {
     filter: (rel: Relation, func: FunctionAPI, ...values: Value[])=>{
-        // assert function.type === 'filter'
-        return rel.compiledValue// TODO: func.function(rel.compiledValue, ...values)
+        // TODO: assert function.type === 'filter'
+        // TODO: assert func.args match
+        return func.func(rel.compiledValue, ...values)
     },
     select: (rel: Relation, ...headers: Header[])=>{
         const left = rel.compiledValue as RelationAPI
