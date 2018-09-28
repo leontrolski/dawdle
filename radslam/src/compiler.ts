@@ -77,14 +77,12 @@ const getValue = {
     [types.relation]: getRelation,
 }
 type Registration = {
-    [type_: string]: {
-        [name: string]: Node
-    }
+    type: string,
+    key: string,
+    value: any,
 }  // TODO: sort out the mess of this with defs
 function addRegistration(env: Env, registration: Registration){
-    const type = Object.keys(registration)[0]
-    const name = Object.keys(registration[type])[0]
-    return R.assocPath([type, name], registration[type][name], env)
+    return R.assocPath([registration.type, registration.key], registration.value, env)
 }
 /**
  * Create a `registration`as above for a macro that is
@@ -106,19 +104,25 @@ function expandAndRegisterMacro(env: Env, line: Line){
     macroOperatorIndex += 1
 
     const operatorLine = {type: types.line, value: [{type: types.operator, value: operatorName}]}
-    const registration = {defs: {[operatorName]: {
-        type: types.operator,
-        value: operatorName,
-        args: [{type: types.relation, value: 'relation:'}],
-        section: {
-            type: types.section,
-            value: ([
-                {type: types.line, value: [{type: types.relation, value: 'relation:'}]} as Node
-            ]).concat(lines)
-        },
-    }}}
+    const section = ([{type: types.line, value: [{type: types.relation, value: 'relation:'}]} as Node]).concat(lines)
+    const registration = {
+        type: 'defs',
+        key: operatorName,
+        value: {
+            type: types.def,
+            value:[
+                {type: types.operator, value: operatorName},
+                {type: types.relation, value: 'relation:'},
+                {type: types.section, value: section},
+            ]
+        }
+    }
     return {line: operatorLine, registration: registration}
 }
+// const [first, ...argsAndSection] = definition.value
+// const section = argsAndSection.pop()
+// const args = argsAndSection
+// const structured = R.merge(first, {section, args})
 
 /**
  * Populate a template with resolved vars.
@@ -136,7 +140,6 @@ function populateTemplate(env: Env, o: Template): string{
     return out + string
 }
 
-
 export function compiler(env: Env, section: Section, justHeaders=true): Section {
     asserters.assertSectionShape(section)
     const defs = <(Let | Def)[]>section.value.filter(is.letOrDef)
@@ -144,21 +147,16 @@ export function compiler(env: Env, section: Section, justHeaders=true): Section 
     const withCompiled = []  // we will append to this
 
     for(let definition of defs){
-        const [first, ...argsAndSection] = definition.value
-        const section = <Section>argsAndSection.pop()
-        const args = argsAndSection
-
         let registration
         if(is.def(definition)){
-            // TODO: would be nicer if this munging didn't happen here, but on retrieval
-            // also, major bug is that the env must be stored here as well...
-            const structured = R.merge(first, {section, args})
-            registration = {defs: {[first.value]: structured}}
+            const [first, ..._] = definition.value
+            registration = {type: 'defs', key: first.value, value: definition}
             withCompiled.push(definition)
         }
         else{  // is.let(definition)
+            const [first, section] = definition.value
             const compiledSection = compiler(env, section, justHeaders)
-            registration = {lets: {[first.value]: compiledSection}}
+            registration = {type: 'lets', key: first.value, value: compiledSection}
             const letWithCompiledSection = R.assocPath(
                 ['value', definition.value.length - 1], compiledSection, definition)
             withCompiled.push(letWithCompiledSection)
@@ -217,14 +215,21 @@ export function compiler(env: Env, section: Section, justHeaders=true): Section 
             compiledValue = (operations as {[s: string]: any})[compiledType][operatorName](...args)
         } else {
             const operator_ = resolveValue(env, operator)
-            asserters.assertOperatorArgsMatch(operator_.args, args)
+            const [op_first, ...op_argsAndSection] = operator_.value
+            const op_section = <Section>op_argsAndSection.pop()
+            const op_args = op_argsAndSection
+            asserters.assertOperatorArgsMatch(op_args, args)
             // contruct env for operator, then compile its section with it
             let operatorEnv = env  // TODO: the operator env is not this...
-            for(let [operatorArg, arg] of R.zip(operator_.args, args)){
-                const registration = {lets: {[(operatorArg as Node).value as string]: arg as Node}}
+            for(let [operatorArg, arg] of R.zip(op_args, args)){
+                const registration = {
+                    type: 'lets',
+                    key: (operatorArg as Node).value as string,
+                    value: arg as Node
+                }
                 operatorEnv = addRegistration(operatorEnv, registration)
             }
-            compiledValue = compiler(operatorEnv, operator_.section, justHeaders).compiledValue
+            compiledValue = compiler(operatorEnv, op_section, justHeaders).compiledValue
         }
         withCompiled.push(R.merge(lineWithCompiledSection || line, {compiledType, compiledValue}))
     }

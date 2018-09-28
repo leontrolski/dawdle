@@ -8,20 +8,20 @@ import { DerivedState, UIState, Block, RelationAPI, Setters, nodesPerLine, isSpa
 export const SVG_OFFSET = 1000
 export const INFO_ORIGINAL_GAP = 50
 
-const ConnectingLine = (isFocused: boolean)=>{
-    const markerId = `marker-${(Math.random() * 10E18).toString()}`  // hack to name markers so they change colour correctly
+const ConnectingLine = (isFocused: boolean, isFolded: boolean)=>{
+    const markerId = `marker-${(Math.random() * 10E18).toString()}`  // hacky way to name markers so they change colour correctly
     return m('svg.connecting-line', {width: INFO_ORIGINAL_GAP, height: 2 * SVG_OFFSET},
         isFocused?
             m('marker', {id: markerId, refX: 5, refY: 5, markerWidth: 8, markerHeight: 8},
                 m('circle[cx=5][cy=5][r=3]', {style: {stroke: 'none', fill: 'black'}}))
             : null,
-        m('line', {
+        m('line.actual-line', {
             x1: 0,
             y1: SVG_OFFSET,
             x2: INFO_ORIGINAL_GAP,
             y2: SVG_OFFSET,
             'marker-end': isFocused? `url(#${markerId})` : '',
-            style: {stroke: isFocused? 'black' : 'gray'}
+            style: {stroke: isFocused? 'black' : isFolded? '#7193a5' : 'gray'}
         }))
 }
 
@@ -59,7 +59,7 @@ const Line = (setters: Setters, ui: UIState, o: CompiledLineNode, blockI: number
         isFolded?
             m('.button.button-fold', {onclick: ()=>setters.unfold(blockI, toLineI)}, '+')
             : m('.button.button-fold', {onclick: ()=>setters.fold(blockI, toLineI)}, '-'),
-        ConnectingLine(isFocused),
+        ConnectingLine(isFocused, isFolded),
     )
 }
 const Info = (setters: Setters, ui: UIState, block: Block)=>

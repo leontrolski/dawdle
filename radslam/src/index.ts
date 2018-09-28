@@ -130,6 +130,7 @@ async function init(){
         view: ()=>View(setters, deriveState(state)),
         onupdate: ()=>{
             alignLines(state)
+            // TODO: make this file specific, maybe it should even live in the file itself
             localStorage.setItem('state.ui', JSON.stringify(state.ui))
         },
     })
@@ -199,10 +200,9 @@ function alignLines(s: State){
             const infoElement = document.getElementById(infoId)
             const toEditorElement = document.getElementById(infoElement.getAttribute('to-editor-id'))
             for(let fromElement of Array.from(infoElement.getElementsByClassName('compiled-line')) as Array<HTMLElement>){
-                const lineElement = fromElement.getElementsByClassName('connecting-line')[0].children[0] // TODO: make this second 0 a proper non-positional reference
+                const lineElement = fromElement.getElementsByClassName('actual-line')[0]
                 const lineI = parseInt(fromElement.getAttribute('to-line'))
                 const toElement = toEditorElement.getElementsByClassName('ace_line')[lineI]  as HTMLElement
-                // lineElement.setAttribute('x2', '50')// INFO_ORIGINAL_GAP.toString())
                 lineElement.setAttribute('y1', (SVG_OFFSET + (fromElement.offsetHeight / 2)).toString())
                 lineElement.setAttribute('y2', (
                     + 13
