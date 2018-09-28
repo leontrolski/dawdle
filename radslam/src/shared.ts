@@ -5,6 +5,19 @@ import { sortBy } from 'ramda'
 export const DAWDLE_URL = 'http://localhost:3000/dawdle'
 
 // API types
+export type FileBlock = {
+    language: string
+    source: string
+    commentData?: CommentData
+}
+export type FileState = {
+    header: any
+    blocks: FileBlock[]
+    defaultEnv: Env
+}
+export type DawdleModule = {
+    defaultEnv: Env
+}
 export type CommentData = {
     dawdle?: any
     type: 'header'

@@ -134,6 +134,7 @@ TODO
 - are text from AST and file itself similar error
 - add button on each line to add a new dawdle section, check empty sections work as expected..
 
+- add error message in UI for connection error
 - add more tests for ISO-6081 datetimes/intervals etc.
 - reload all editors on a file reload
 - maybe just raise errors from parser rather than insert them in the AST?

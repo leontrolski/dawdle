@@ -1,7 +1,6 @@
 import * as util from 'util'
 import * as ebnf from 'ebnf'
 import * as R from 'ramda'
-import { errors } from './errorsAndAsserters';
 
 export function inspect(o: any): string{
     return util.inspect(o, {depth: 16, colors: true, breakLength: 100})
@@ -13,12 +12,12 @@ type BaseNode = {
     compiledType?: string,
     compiledValue?: any,  // TODO
     lineI?: number,
+    env?: any,  // used for defs
 }
 export type NodeMultiple = BaseNode & {value: Array<Node>}
 export type NodeSingle = BaseNode & {value: string}
 export type Node = NodeMultiple | NodeSingle
-// todo: flesh these out a bit more
-// multiple
+// TODO: flesh these out a bit more
 export type Section = NodeMultiple
 export type Let = BaseNode & {
     type: 'let',
@@ -26,7 +25,7 @@ export type Let = BaseNode & {
 }
 export type Def = NodeMultiple & {
     type: 'def',
-    value: [Operator, Relation | Var, Relation | Var, Section],
+    value: [Operator, Relation | Var, Section],  // can actually be multiple (Relation | Var)s
 }
 export type Line = {
     type: 'line',

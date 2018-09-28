@@ -5,18 +5,14 @@ import * as express from 'express'
 import * as bodyParser from 'body-parser'
 import * as stripAnsi from 'strip-ansi'
 
-import { CommentData, ServerBlock, ServerState, TestCaseMap, ServerError } from './shared'
+import {
+    DawdleModule, FileBlock, FileState, CommentData,
+    ServerBlock, ServerState, TestCaseMap, ServerError } from './shared'
 import { Section, deMunge, parser } from './parser'
 import { compiler, emptyEnv } from './compiler'
 import { astToString, jsonifyAndIndent } from './astToString'
 
 const PATH = path.resolve(__dirname, '../examples/example_3.dawdle.ts')
-
-type PreBlock = {
-    language: string,
-    source: string,
-    commentData?: CommentData,
-}
 
 const DAWDLE_COMMENT = '// {"dawdle":'
 const DAWDLE_COMMENT_OPENER = '// {"dawdle": "header", "originalLanguage": "typescript", "command": "venv/python $FILE --dawdle"}'
@@ -40,13 +36,13 @@ const fakeTestCases: TestCaseMap = {
     'another test case': emptyEnv,
 }
 
-function readFile(p: string): Array<PreBlock>{
+function readFile(p: string): FileState {
     let header: CommentData = null
     let isInDawdleBlock = false
     let thisOriginalBlock: Array<string> = []
     let thisDawdleBlock: Array<string> = []
     let thisDawleBeginCommentData: CommentData = null
-    const serverBlocks: Array<PreBlock> = []
+    const serverBlocks: Array<FileBlock> = []
 
     const fileString = fs.readFileSync(p, 'utf8')
     for(let line of fileString.split('\n')){
@@ -86,10 +82,13 @@ function readFile(p: string): Array<PreBlock>{
         language: header.originalLanguage,
         source: thisOriginalBlock.join('\n'),
     })
-    return serverBlocks
+    const module_ = require(PATH) as DawdleModule
+    return {header: header, blocks: serverBlocks, defaultEnv: module_.defaultEnv}
 }
-function firstTimeCompileBlocks(blocks: PreBlock[]): ServerBlock[] {
-    return blocks.map((block, i)=>{
+
+
+function firstTimeCompileBlocks(fileState: FileState): ServerState {
+    const compiledBlocks = fileState.blocks.map((block, i)=>{
         if(block.language !== 'dawdle'){
             return {
                 id: `block-${i}`,
@@ -104,7 +103,7 @@ function firstTimeCompileBlocks(blocks: PreBlock[]): ServerBlock[] {
         const astMinimal = JSON.parse(block.source)
         const dawdleSource = astToString(astMinimal)
         const ast = deMunge(astMinimal)
-        const astWithHeaders = compiler(emptyEnv, ast as Section, false)
+        const astWithHeaders = compiler(fileState.defaultEnv, ast as Section, false)
         return {
             id: `block-${i}`,
             language: block.language,
@@ -116,9 +115,10 @@ function firstTimeCompileBlocks(blocks: PreBlock[]): ServerBlock[] {
             commentData: block.commentData,
         }
     })
+    return {defaultEnv: fileState.defaultEnv, blocks: compiledBlocks}
 }
-function compileBlocks(editedBlocks: ServerBlock[]): ServerBlock[] {
-    return editedBlocks.map(block=>{
+function compileBlocks(state: ServerState): ServerState {
+    const compiledBlocks = state.blocks.map(block=>{
         if(block.language !== 'dawdle') return block
         // else is a dawdle block
         let dawdleSource = null
@@ -129,7 +129,7 @@ function compileBlocks(editedBlocks: ServerBlock[]): ServerBlock[] {
             const astMinimal = parser(editedDawdleSource)
             dawdleSource = astToString(astMinimal)
             const ast = deMunge(astMinimal)
-            astWithHeaders = compiler(emptyEnv, ast as Section, false)
+            astWithHeaders = compiler(state.defaultEnv, ast as Section, false)
         }
         catch(error){
             console.log('Compilation error: ', error.message)
@@ -146,6 +146,7 @@ function compileBlocks(editedBlocks: ServerBlock[]): ServerBlock[] {
             commentData: block.commentData,
         }
     })
+    return {defaultEnv: state.defaultEnv, blocks: compiledBlocks}
 }
 function writeBlocksToFile(editedBlocks: ServerBlock[]): string {
     let fileString = DAWDLE_COMMENT_OPENER + '\n'
@@ -168,19 +169,13 @@ function writeBlocksToFile(editedBlocks: ServerBlock[]): string {
 
 // read from the file
 function get(req: express.Request): ServerState {
-    const fileBlocks = readFile(PATH)
-    return {
-        defaultEnv: emptyEnv,
-        blocks: firstTimeCompileBlocks(fileBlocks)
-    }
+    const fileState = readFile(PATH)
+    return firstTimeCompileBlocks(fileState)
 }
 // validate and parse edited state
 function put(req: express.Request): ServerState {
     const editedState = req.body as ServerState
-    return {
-        defaultEnv: emptyEnv,
-        blocks: compileBlocks(editedState.blocks),
-    }
+    return compileBlocks(editedState)
 }
 // write edited state to file
 function post(req: express.Request): boolean {

@@ -23,11 +23,24 @@ const myFirstTable =
     {"line":[{"relation":"user:"}]},
     {"line":[{"operator":"J"},{"relation":"example-line-break:"}]}]}
 // {"dawdle": "end"}
+export const defaultEnv = { lets:
+   { lt:
+      { type: 'let',
+        value:
+         [ { type: 'var', value: 'lt' },
+           { type: 'section',
+             value:
+              [ { type: 'relation_literal',
+                  value: [ { type: 'rl_headers', value: [] } ],
+                  compiledType: 'relation',
+                  compiledValue: { headers: [], rows: [] } } ],
+             compiledType: 'relation',
+             compiledValue: { headers: [], rows: [] } } ] } },
+  defs: {} }
+
 const myFirstOperations =
 // {"dawdle": "begin", "indentLevel":0}
-{"section":[{"let":[{"var":"lt"},
 {"section":[{"relation_literal":[
-    {"rl_headers":[]}]}]}]},{"relation_literal":[
     {"rl_headers":[{"header":":a"},{"header":":b"},{"header":":c"}]},
     {"rl_row":[{"number":"1"},{"number":"14"},{"number":"435"}]},
     {"rl_row":[{"number":"6"},{"number":"10"},{"number":"756"}]},

@@ -34,8 +34,11 @@ export const emptyEnv: Env = {lets: {}, defs: {}}
  * TODO: what does this really return?
  */
 function resolveValue(env: Env, o: Node): any {
-    if(is.var(o)) return env.lets[o.value].value[1] || (()=>{throw new errors.ScopeError(o, env)})()
-    if(is.relation(o)) return env.lets[o.value].value[1] || (()=>{throw new errors.ScopeError(o, env)})()
+    if(is.var(o) || is.relation(o)){
+        const let_ = env.lets[o.value]
+        if(R.isNil(let_)) throw new errors.ScopeError(o, env)
+        return env.lets[o.value].value[1]  // just gets the section value (see the shape of the Let type)
+    }
     if(is.operator(o)) return env.defs[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
     if(is.all_headers(o)) return {
         compiledType: types.set,
@@ -76,7 +79,7 @@ const getValue = {
     [types.headers]: getHeaders,
     [types.relation]: getRelation,
 }
-type Registration = any
+type Registration = Let | Def
 function addRegistration(env: Env, registration: Registration){
     const [first, ..._] = registration.value
     if(is.let(registration))return R.assocPath(['lets', first.value], registration, env)
@@ -109,8 +112,9 @@ function expandAndRegisterMacro(env: Env, line: Line){
             {type: types.operator, value: operatorName},
             {type: types.relation, value: 'relation:'},
             {type: types.section, value: section},
-        ]
-    }
+        ],
+        env: env,
+    } as Def
     return {line: operatorLine, registration: registration}
 }
 
@@ -140,15 +144,16 @@ export function compiler(env: Env, section: Section, justHeaders=true): Section 
         let registration
         if(is.def(definition)){
             withCompiled.push(definition)
-            registration = definition
+            registration = {env, ...definition}
         }
         else{  // is.let(definition)
             const [first, section] = definition.value
-            const compiledSection = compiler(env, section, justHeaders)
-            const letWithCompiledSection = R.assocPath(
-                ['value', definition.value.length - 1], compiledSection, definition)
+            const letWithCompiledSection = {
+                type: types.let,
+                value: [first, compiler(env, section, justHeaders)]
+            }
             withCompiled.push(letWithCompiledSection)
-            registration = {type: types.let, value: [first, compiledSection]}
+            registration = letWithCompiledSection
         }
         env = addRegistration(env, registration)
     }
@@ -204,20 +209,20 @@ export function compiler(env: Env, section: Section, justHeaders=true): Section 
             compiledValue = (operations as {[s: string]: any})[compiledType][operatorName](...args)
         } else {
             const operator_ = resolveValue(env, operator)
-            const [op_first, ...op_argsAndSection] = operator_.value
-            const op_section = <Section>op_argsAndSection.pop()
-            const op_args = op_argsAndSection
-            asserters.assertOperatorArgsMatch(op_args, args)
+            const [_, ...opArgsAndSection] = operator_.value
+            const opSection = <Section>opArgsAndSection.pop()
+            const opArgs = opArgsAndSection
+            asserters.assertOperatorArgsMatch(opArgs, args)
             // contruct env for operator, then compile its section with it
-            let operatorEnv = env  // TODO: the operator env is not this...
-            for(let [operatorArg, arg] of R.zip(op_args, args)){
+            let opEnv = operator_.env
+            for(let [operatorArg, arg] of R.zip(opArgs, args)){
                 const registration = {
                     type: types.let,
                     value: [{value: (operatorArg as Node).value as string}, arg as Node]
-                }
-                operatorEnv = addRegistration(operatorEnv, registration)
+                } as Let
+                opEnv = addRegistration(opEnv, registration)
             }
-            compiledValue = compiler(operatorEnv, op_section, justHeaders).compiledValue
+            compiledValue = compiler(opEnv, opSection, justHeaders).compiledValue
         }
         withCompiled.push(R.merge(lineWithCompiledSection || line, {compiledType, compiledValue}))
     }

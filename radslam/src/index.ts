@@ -37,8 +37,10 @@ function makeSetters(s: State): Setters {
         defaultEnv: function(env){s.defaultEnv = env},
         blocks: function(blocks){s.blocks = blocks},
         editedSource: async function(i, editedSource){
-            const oldNewLineMap = mapOldLineToNew(s.blocks[i].source, editedSource)
-            s.ui.folded[i] = (s.ui.folded[i] || []).map(lineI=>oldNewLineMap[lineI]).filter(x=>x)
+            if(s.blocks[i].source.split('\n').length !== editedSource.split('\n').length){
+                const oldNewLineMap = mapOldLineToNew(s.blocks[i].source, editedSource)
+                s.ui.folded[i] = (s.ui.folded[i] || []).map(lineI=>oldNewLineMap[lineI]).filter(x=>x)
+            }
             s.blocks[i].source = editedSource
         },
         httpError: function (errorMessage){s.ui.HTTPError = errorMessage},
