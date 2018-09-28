@@ -113,19 +113,24 @@ U [2 3 4]
         assert.deepEqual(expected as Node, compiler.compiler(env, ast))
     })
     xit('should handle the let keyword with a set', ()=>{
-      const env = compiler.emptyEnv
-      const in_ = `let set
+        const env = compiler.emptyEnv
+        const in_ = `let set
     [1 2]
 
 set
 - [1]`
-      const ast = parser.fullParser(in_)
-      const expected = {}
-      console.log(parser.inspect(compiler.compiler(env, ast)))
-      assert.deepEqual(expected as Node, compiler.compiler(env, ast))
+        const ast = parser.fullParser(in_)
+        const expected = {}
+        console.log(parser.inspect(compiler.compiler(env, ast)))
+        assert.deepEqual(expected as Node, compiler.compiler(env, ast))
     })
     it('should handle base operators at each step on a relation', ()=>{
-        const env = {lets: {fake_function: {type: 'function', value: nullFunction}}, defs: {}}
+        const env = {
+            lets: {
+              fake_function: {type: 'function', value: nullFunction}
+            },
+            defs: {}
+        }
         const in_ = `| :a | :b | :c |
 J
     | :d | :a |
@@ -299,7 +304,12 @@ JoinClone
         assert.deepEqual(expected as Node, compiler.compiler(env, ast))
     })
     it('should expand map macros', ()=>{
-        const env = {lets: {fake_function: {type: 'function', value: nullFunction}}, defs: {}}
+        const env = {
+            lets: {
+                fake_function: {type: 'function', value: nullFunction}
+            },
+            defs: {}
+        }
         const in_ = `| :a |
 (map [:foo :bar]) \`^ {{_}} fake_function\`
 `
