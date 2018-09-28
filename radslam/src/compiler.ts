@@ -34,8 +34,8 @@ export const emptyEnv: Env = {lets: {}, defs: {}}
  * TODO: what does this really return?
  */
 function resolveValue(env: Env, o: Node): any {
-    if(is.var(o)) return env.lets[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
-    if(is.relation(o)) return env.lets[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
+    if(is.var(o)) return env.lets[o.value].value[1] || (()=>{throw new errors.ScopeError(o, env)})()
+    if(is.relation(o)) return env.lets[o.value].value[1] || (()=>{throw new errors.ScopeError(o, env)})()
     if(is.operator(o)) return env.defs[o.value] || (()=>{throw new errors.ScopeError(o, env)})()
     if(is.all_headers(o)) return {
         compiledType: types.set,
@@ -76,11 +76,10 @@ const getValue = {
     [types.headers]: getHeaders,
     [types.relation]: getRelation,
 }
-type Registration = any  // TODO: sort out the mess of this with defs
+type Registration = any
 function addRegistration(env: Env, registration: Registration){
-    const [first, ...section_] = registration.value
-    const section = section_.pop()
-    if(is.let(registration))return R.assocPath(['lets', first.value], section, env)
+    const [first, ..._] = registration.value
+    if(is.let(registration))return R.assocPath(['lets', first.value], registration, env)
     if(is.def(registration))return R.assocPath(['defs', first.value], registration, env)
 }
 /**
@@ -92,7 +91,7 @@ function expandAndRegisterMacro(env: Env, line: Line){
     const [headers, template] = line.value
     const setValues = getSetValues(env, resolveValue(env, headers))
     const resolved = setValues
-        .map(value=>R.merge(env, {lets: {_: value}}))
+        .map(value=>R.merge(env, {lets: {_: {value: [null, value]}}}))
         .map(envWithValue=>resolveValue(envWithValue, template))
     const lines = resolved
         .map(fullParser)

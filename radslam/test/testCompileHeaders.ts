@@ -127,7 +127,7 @@ set
     it('should handle base operators at each step on a relation', ()=>{
         const env = {
             lets: {
-              fake_function: {type: 'function', value: nullFunction}
+              fake_function: {value: [null, {type: 'function', value: nullFunction}]}
             },
             defs: {}
         }
@@ -306,7 +306,7 @@ JoinClone
     it('should expand map macros', ()=>{
         const env = {
             lets: {
-                fake_function: {type: 'function', value: nullFunction}
+                fake_function: {value: [null, {type: 'function', value: nullFunction}]}
             },
             defs: {}
         }
@@ -381,9 +381,9 @@ J
         const env = {
             lets: {
                 // TODO: what is going on here..
-                make_null: {type: 'function', value: (row: Node, relation: Node, ..._: any[])=>({type: 'null', value: 'null'})},
-                first: {type: 'function', value: (row: Node, relation: any, ..._: any[])=>relation.rows[0]},
-                value: {type: 'function', value: (row: Node, relation: Node, value: Node)=>value},
+                make_null: {value: [null, {type: 'function', value: (row: Node, relation: Node, ..._: any[])=>({type: 'null', value: 'null'})}]},
+                first: {value: [null, {type: 'function', value: (row: Node, relation: any, ..._: any[])=>relation.rows[0]}]},
+                value: {value: [null, {type: 'function', value: (row: Node, relation: Node, value: Node)=>value}]},
             },
             defs: {},
         }
