@@ -37,7 +37,12 @@ function resolveValue(env: Env, o: Node): any {
     if(is.var(o) || is.relation(o) || is.operator(o)){
         const resolved = env[o.value]
         if(R.isNil(resolved)) throw new errors.ScopeError(o, env)
-        if(is.operator(o)) return resolved
+        if(is.operator(o)){
+            const [_, ...argsAndSection] = resolved.value
+            const section = <Section>argsAndSection.pop()
+            const args = argsAndSection
+            return {args, section, env: resolved.env}
+        }
         const [_, section] = resolved.value
         return section
     }
@@ -67,7 +72,7 @@ function getRelation(env: Env, o: Node){ // TODO: :RelationAPI {
     if(is.relation_literal(o)){
         const [headers, ...rows] = o.value as Array<NodeMultiple>
         const headerStrings = headers.value.map(o=>(o.value as string).slice(1))
-        const rowValues = rows.map(row=>row.value.map(toString)) // TODO: handle JSON+ types here
+        const rowValues = rows.map(row=>row.value.map(toJSONValue)) // TODO: handle JSON+ types here
         return {
             headers: headerStrings,
             rows: rowValues,
@@ -83,8 +88,7 @@ const getValue = {
 type Registration = Let | Def
 function addRegistration(env: Env, registration: Registration){
     const [first, ..._] = registration.value
-    if(is.let(registration))return R.assocPath([first.value], registration, env)
-    if(is.def(registration))return R.assocPath([first.value], registration, env)
+    return R.assoc(first.value, registration, env)
 }
 /**
  * Create a `registration`as above for a macro that is
@@ -129,7 +133,7 @@ function populateTemplate(env: Env, o: Template): string{
         const varName = match.slice(2, -2)
         const index = string.search(match)
         out += string.slice(0, index)  // the head
-        out += toString(resolveValue(env, {type: types.var, value: varName}))
+        out += toJSONValue(resolveValue(env, {type: types.var, value: varName})).toString()
         string = string.slice(index + match.length)  // the tail
     }
     return out + string
@@ -209,21 +213,18 @@ export function compiler(env: Env, section: Section, justHeaders=true): Section 
             asserters.assertArgs[compiledType][operatorName](...args)
             compiledValue = (operations as {[s: string]: any})[compiledType][operatorName](...args)
         } else {
-            const operator_ = resolveValue(env, operator)
-            const [_, ...opArgsAndSection] = operator_.value
-            const opSection = <Section>opArgsAndSection.pop()
-            const opArgs = opArgsAndSection
-            asserters.assertOperatorArgsMatch(opArgs, args)
+            const op = resolveValue(env, operator)
+            asserters.assertOperatorArgsMatch(op.args, args)
             // contruct env for operator, then compile its section with it
-            let opEnv = operator_.env
-            for(let [operatorArg, arg] of R.zip(opArgs, args)){
+            let opEnv = op.env
+            for(let [operatorArg, arg] of R.zip(op.args, args)){
                 const registration = {
                     type: types.let,
                     value: [{value: (operatorArg as Node).value as string}, arg as Node]
                 } as Let
                 opEnv = addRegistration(opEnv, registration)
             }
-            compiledValue = compiler(opEnv, opSection, justHeaders).compiledValue
+            compiledValue = compiler(opEnv, op.section, justHeaders).compiledValue
         }
         withCompiled.push(R.merge(lineWithCompiledSection || line, {compiledType, compiledValue}))
     }
@@ -244,6 +245,6 @@ const astToValue: {[typeName: string]: (o: NodeSingle)=>string} = {
 
 }
 // TODO: see above comment
-function toString(o: NodeSingle){
+export function toJSONValue(o: NodeSingle){
     return astToValue[o.type](o)
 }
