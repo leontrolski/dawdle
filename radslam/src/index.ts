@@ -6,7 +6,7 @@ import * as diff from 'diff'
 ace.config.set('basePath', './modes/')
 
 import { emptyEnv } from './compiler';
-import { DAWDLE_URL, Setters, ServerState, State, DerivedState, UIState } from './shared'
+import { DAWDLE_URL, Setters, ServerState, State, DerivedState, UIState, emptyDawdleServerBlock } from './shared'
 import { View, SVG_OFFSET } from './components'
 
 
@@ -47,6 +47,15 @@ function makeSetters(s: State): Setters {
         mouseovered: function(blockI, lineI){s.ui.mouseovered = {blockI, lineI}},
         fold: function(blockI, lineI){s.ui.folded[blockI] = uniq((s.ui.folded[blockI] || []).concat([lineI]))},
         unfold: function(blockI, lineI){s.ui.folded[blockI] = difference(s.ui.folded[blockI] || [], [lineI])},
+        insertBlock: function(blockI, lineI){
+            const block = s.blocks[blockI]
+            const sourceLines = block.source.split('\n')
+            const pre = sourceLines.slice(0, lineI + 1)
+            const post = sourceLines.slice(lineI + 1)
+            s.blocks[blockI] = {...block, ...{source: pre.join('\n')}}
+            s.blocks.splice(blockI + 1, 0, emptyDawdleServerBlock)
+            s.blocks.splice(blockI + 2, 0, {...block, ...{source: post.join('\n')}})
+        },
         emptyUI: function(){s.ui = makeEmptyUi()},
         // functions that interact with server
         fromServerState: async function(){
@@ -100,6 +109,7 @@ function deriveInfoIds(s: State): Array<string> {
 function deriveState(s: State): DerivedState {
     const blocks = s.blocks.map((block, i)=>merge(block, {
         blockI: i,
+        id: `block-${i}`,
         editorId: `editor-${i}`,
         infoId: `info-${i}`,
         selectedTestCaseName: Object.keys(block.testCases)[0],

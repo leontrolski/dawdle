@@ -17,14 +17,14 @@ const myFirstTable =
     {"rl_headers":[{"header":":user_id"},{"header":":username"},{"header":":dob"}]},
     {"rl_row":[{"number":"1"},{"string":"\"Oliver\""},{"datetime":"~1985-01-20"}]},
     {"rl_row":[{"number":"2"},{"string":"\"Tom\""},{"datetime":"~1950-02-20"}]},
-    {"rl_row":[{"number":"3"},{"string":"\"Jackie\""},{"null":"null"}]}]}]}]},{"let":[{"relation":"example-line-break:"},
+    {"rl_row":[{"number":"3"},{"string":"\"Jackie\""},{"null":"null"}]}]}]}]},{"let":[{"relation":"user_towns:"},
 {"section":[{"relation_literal":[
     {"rl_headers":[{"header":":user_id"},{"header":":town"}]},
     {"rl_row":[{"number":"1"},{"string":"\"Slough\""}]},
     {"rl_row":[{"number":"2"},{"string":"\"Chicago\""}]},
     {"rl_row":[{"number":"3"},{"string":"\"The North\""}]}]}]}]},
     {"line":[{"relation":"user:"}]},
-    {"line":[{"operator":"J"},{"relation":"example-line-break:"}]},
+    {"line":[{"operator":"J"},{"relation":"user_towns:"}]},
     {"line":[{"operator":">"},{"var":"like"},{"header":":town"},{"string":"\"%g%\""}]}]}
 // {"dawdle": "end"}
 const myFirstOperations =
@@ -43,6 +43,7 @@ const myFirstOperations =
     {"rl_row":[{"number":"4"},{"number":"2"}]},
     {"rl_row":[{"number":"9"},{"number":"6"}]},
     {"rl_row":[{"number":"0"},{"number":"4"}]}]}]}]},
-    {"line":[{"operator":"v"},{"header":":d"},{"header":":c"}]}]}
+    {"line":[{"operator":"v"},{"header":":d"},{"header":":c"}]},
+    {"line":[{"operator":">"},{"var":"eq"},{"header":":d"},{"number":"7"}]}]}
 // {"dawdle": "end"}
 const foo = 'bar'

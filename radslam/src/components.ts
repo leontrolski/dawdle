@@ -57,8 +57,8 @@ const Line = (setters: Setters, ui: UIState, o: CompiledLineNode, blockI: number
         {'to-line': toLineI, onmouseover: ()=>setters.mouseovered(blockI, lineI), class: isFolded? 'folded' : ''},
         isFolded? null : CompiledValue(o, isFocused),
         isFolded?
-            m('.button.button-fold', {onclick: ()=>setters.unfold(blockI, toLineI)}, '+')
-            : m('.button.button-fold', {onclick: ()=>setters.fold(blockI, toLineI)}, '-'),
+            m('.button.button-fold[title=Unfold]', {onclick: ()=>setters.unfold(blockI, toLineI)}, '+')
+            : m('.button.button-fold[title=Fold]', {onclick: ()=>setters.fold(blockI, toLineI)}, '-'),
         ConnectingLine(isFocused, isFolded),
     )
 }
@@ -75,10 +75,20 @@ const Info = (setters: Setters, ui: UIState, block: Block)=>
             .filter(o=>o.compiledType)
             .map((o, lineI)=>Line(setters, ui, o, block.blockI, lineI)),
     )
-const Original = (block: Block)=>m(
+const Original = (setters: Setters, block: Block)=>m(
     '.source.right',
     {class: `language-${block.language}`},
     m('', {id: block.editorId, language: block.language}, block.source),
+    block.language === 'dawdle'?
+        null
+        : m('.add-new-section.pre',
+            block.source.split('\n').slice(1).map((_, lineI)=>m(
+                '.button-add-new-section[title="Insert dawdle section after this line"]',
+                {onclick: ()=>setters.insertBlock(block.blockI, lineI)},
+                '+d')
+            ),
+            m('.dummy-add-new-section')
+        ),
 )
 const SaveButton = (setters: Setters, areAnyErrors: boolean)=>m(
     '.button.button-editor.button-save',
@@ -94,7 +104,7 @@ export const View = (setters: Setters, s: DerivedState)=>m('.root',
     s.blocks.map((block)=>
         m('.block',
             isEmpty(block.errors)? Info(setters, s.ui, block) : Errors(block),
-            Original(block))),
+            Original(setters, block))),
     m('.editor-buttons',
         SaveButton(setters, s.areAnyErrors),
         m('.button.button-editor.button-reload', {

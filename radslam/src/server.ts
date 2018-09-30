@@ -92,7 +92,6 @@ function firstTimeCompileBlocks(fileState: FileState): ServerState {
     const compiledBlocks = fileState.blocks.map((block, i)=>{
         if(block.language !== 'dawdle'){
             return {
-                id: `block-${i}`,
                 language: block.language,
                 source: block.source,
                 astWithHeaders: null,
@@ -106,7 +105,6 @@ function firstTimeCompileBlocks(fileState: FileState): ServerState {
         const ast = deMunge(astMinimal)
         const astWithHeaders = compiler(fileState.defaultEnv, ast as Section, false)
         return {
-            id: `block-${i}`,
             language: block.language,
             source: dawdleSource,
             astWithHeaders: astWithHeaders,
@@ -138,7 +136,6 @@ function compileBlocks(state: ServerState): ServerState {
             errors = [{message: stripAnsi(error.message), lineNumber: null}]
         }
         return {
-            id: block.id,
             language: block.language,
             source: dawdleSource,
             astWithHeaders: astWithHeaders,

@@ -50,7 +50,6 @@ export type TestCaseMap = {
     [name: string]: Env
 }
 export type ServerBlock = {
-    id: string
     language: string
     source: string
     astWithHeaders: Section | null
@@ -62,6 +61,13 @@ export type ServerState = {
     defaultEnv: Env
     blocks: ServerBlock[]
 }
+export const emptyDawdleServerBlock: ServerBlock = {
+    language: 'dawdle',
+    source: '[]\n',
+    astWithHeaders: null,
+    testCases: {},
+    errors: [],
+}
 // UI types
 export type UIState = {
     HTTPError: string | null
@@ -72,6 +78,7 @@ export type State = ServerState & {
     ui: UIState
 }
 export type Block = ServerBlock & {
+    id: string
     blockI: number
     editorId: string
     infoId: string
@@ -91,6 +98,7 @@ export type Setters = {
     mouseovered: (blockI: number, lineI: number)=>void
     fold: (blockI: number, lineI: number)=>void
     unfold: (blockI: number, lineI: number)=>void
+    insertBlock: (blockI: number, lineI: number)=>void
     emptyUI: ()=>void
     fromServerState: ()=>Promise<void>
     fromWriteServerState: ()=>Promise<void>
