@@ -31,6 +31,8 @@ function parseComment(line: string): CommentData {
     return {type: data.dawdle, ...data} as CommentData
 }
 function getDawdleModule(): DawdleModuleAPI {
+    try{delete require.cache[require.resolve(PATH)]}
+    catch{}
     return require(PATH) as DawdleModuleAPI
 }
 
@@ -114,7 +116,7 @@ function firstTimeCompileBlocks(fileState: FileState): ServerState {
             commentData: block.commentData,
         }
     })
-    return {defaultEnv: fileState.defaultEnv, blocks: compiledBlocks}
+    return {path: PATH, defaultEnv: fileState.defaultEnv, blocks: compiledBlocks}
 }
 function compileBlocks(state: ServerState): ServerState {
     const defaultEnv = getDawdleModule().defaultEnv
@@ -145,7 +147,7 @@ function compileBlocks(state: ServerState): ServerState {
             commentData: block.commentData,
         }
     })
-    return {defaultEnv: defaultEnv, blocks: compiledBlocks}
+    return {path: PATH, defaultEnv: defaultEnv, blocks: compiledBlocks}
 }
 function writeBlocksToFile(editedBlocks: ServerBlock[]): string {
     let fileString = DAWDLE_COMMENT_OPENER + '\n'

@@ -21,7 +21,7 @@ const ConnectingLine = (isFocused: boolean, isFolded: boolean)=>{
             x2: INFO_ORIGINAL_GAP,
             y2: SVG_OFFSET,
             'marker-end': isFocused? `url(#${markerId})` : '',
-            style: {stroke: isFocused? 'black' : isFolded? '#7193a5' : 'gray'}
+            style: {stroke: isFocused? 'black' : isFolded? '#7193a5' : 'white'}
         }))
 }
 
@@ -36,9 +36,15 @@ const Table = (o: RelationAPI, isFocused: boolean)=>m('table.table',
         : o.headers.map(header=>m('th.cell.cell-header', HeaderEl(header)))),
     m('tbody', o.rows.map(row=>m('tr', row.map(Cell))))
 )
+const Set = (o: any)=> m('.set',
+    '[',
+    isEmpty(o)?
+        m('em', 'empty set')
+        : intersperse(', ', o.map((v: Value)=>is.header(v)? HeaderEl(v.value) : v.value)),
+    ']'
+)
 const CompiledValue = (o: Node, isFocused: boolean)=>{
-    if(o.compiledType === 'set') return [
-        '[', intersperse(', ', o.compiledValue.map((v: Value)=>is.header(v)? HeaderEl(v.value) : v.value)), ']']
+    if(o.compiledType === 'set') return Set(o.compiledValue)
     if(o.compiledType === 'relation') return Table(o.compiledValue as RelationAPI, isFocused)
     if(o.compiledType === 'headers') return o.compiledValue.map(header=>HeaderEl(header.value))  // TODO: deprecate
     return null
@@ -78,7 +84,7 @@ const Info = (setters: Setters, ui: UIState, block: Block)=>
 const Original = (setters: Setters, block: Block)=>m(
     '.source.right',
     {class: `language-${block.language}`},
-    m('', {id: block.editorId, language: block.language}, block.source),
+    m('', {id: block.editorId, language: block.language}, ''),
     block.language === 'dawdle'?
         null
         : m('.add-new-section.pre',

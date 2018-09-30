@@ -3,6 +3,16 @@ import * as stdlib from '../src/stdlib'
 
 export const defaultEnv = stdlib.env  // see DawdleModuleAPI
 
+const env =
+// {"dawdle": "begin"}
+{"section":[{"let":[{"relation":"user:"},
+{"section":[{"relation_literal":[
+    {"rl_headers":[{"header":":user_id"},{"header":":username"},{"header":":dob"}]},
+    {"rl_row":[{"number":"1"},{"string":"\"Oliver\""},{"datetime":"~1985-01-20"}]},
+    {"rl_row":[{"number":"2"},{"string":"\"Tom\""},{"datetime":"~1950-02-20"}]},
+    {"rl_row":[{"number":"3"},{"string":"\"Jackie\""},{"null":"null"}]}]}]}]},
+    {"line":[{"set":[]}]}]}
+// {"dawdle": "end"}
 const setExample =
 // {"dawdle": "begin", "indentLevel":0}
 {"section":[

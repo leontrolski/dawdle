@@ -8,6 +8,7 @@ ace.config.set('basePath', './modes/')
 import { emptyEnv } from './compiler';
 import { DAWDLE_URL, Setters, ServerState, State, DerivedState, UIState, emptyDawdleServerBlock } from './shared'
 import { View, SVG_OFFSET } from './components'
+import { networkInterfaces } from 'os';
 
 
 export function mapOldLineToNew(old: string, new_: string): {[n: number]: number} {
@@ -34,6 +35,7 @@ export function mapOldLineToNew(old: string, new_: string): {[n: number]: number
 // big closure to make functions that mutate state
 function makeSetters(s: State): Setters {
     const setters: Setters = {
+        path: function(path){s.path = path},
         defaultEnv: function(env){s.defaultEnv = env},
         blocks: function(blocks){s.blocks = blocks},
         editedSource: async function(i, editedSource){
@@ -55,14 +57,31 @@ function makeSetters(s: State): Setters {
             s.blocks[blockI] = {...block, ...{source: pre.join('\n')}}
             s.blocks.splice(blockI + 1, 0, emptyDawdleServerBlock)
             s.blocks.splice(blockI + 2, 0, {...block, ...{source: post.join('\n')}})
+            // ensure folded lines remain folded
+            const newFolded = {}
+            for(let i in s.ui.folded){
+                if(parseInt(i) > blockI) newFolded[parseInt(i) + 2] = s.ui.folded[i]
+                else newFolded[i] = s.ui.folded[i]
+            }
+            s.ui.folded = newFolded
+            // redraw, then reload the editors, then realign the lines
+            m.redraw()
+            loadEditors(setters, s)
+            requestAnimationFrame(()=>alignLines(s))
         },
         emptyUI: function(){s.ui = makeEmptyUi()},
+        storedUI: function(){
+            const stored = localStorage.getItem(s.path)
+            if(stored) s.ui = JSON.parse(stored).ui
+        },
         // functions that interact with server
         fromServerState: async function(){
             const serverState = await setters.readServerState() as ServerState
+            setters.path(serverState.path)
             setters.defaultEnv(serverState.defaultEnv)
             setters.blocks(serverState.blocks)
-            if(!isEmpty(editors)) setEditorsContent(s)  // yughh
+            setters.storedUI()
+            if(!isEmpty(editors)) loadEditors(setters, s)
         },
         fromWriteServerState: async function(){
             const serverState = await setters.writeServerState() as ServerState
@@ -77,7 +96,7 @@ function makeSetters(s: State): Setters {
             setters.defaultEnv(serverState.defaultEnv)
             setters.blocks(mergedBlocks)
         },
-        // these don't actually mutate state as of yet
+        // these don't actually mutate state
         readServerState: async function(){
             console.log('Reading file from server')
             const response = await catchHTTPErrors(setters, ()=>axios.get(DAWDLE_URL))
@@ -132,9 +151,10 @@ function makeEmptyUi(): UIState {
 async function init(){
     // empty to start with
     let state: State = {
+        path: '',
         defaultEnv: emptyEnv,
         blocks: [],
-        ui: JSON.parse(localStorage.getItem('state.ui')) || makeEmptyUi()
+        ui: makeEmptyUi()
     }
     const setters = makeSetters(state)
     // mount the root component
@@ -142,21 +162,15 @@ async function init(){
         view: ()=>View(setters, deriveState(state)),
         onupdate: ()=>{
             alignLines(state)
-            // TODO: make this file specific, maybe it should even live in the file itself
-            localStorage.setItem('state.ui', JSON.stringify(state.ui))
+            localStorage.setItem(state.path, JSON.stringify({ui: state.ui}))
         },
     })
     // fetch data and redraw
     await setters.fromServerState()
     m.redraw()
     // load editors and align lines for the first time
-    const ids = deriveEditorIds(state)
-    requestAnimationFrame(()=>loadEditors(setters, ids))
-    let editorsLoaded = false
-    let id: NodeJS.Timer = setInterval(function(){
-        if(editorsLoaded) return clearInterval(id)
-        editorsLoaded = alignLines(state)
-    }, 100)
+    loadEditors(setters, state)
+    requestAnimationFrame(()=>alignLines(state))
     // inspecting tool and realign lines on resize
     const _window = window as any
     _window._state = state
@@ -167,7 +181,10 @@ async function init(){
 // stuff below operates outside of mithril rendering, scary stuff
 type Ace = AceAjax.Editor & {renderer: {$cursorLayer: any}}
 let editors: Ace[] = []
-function loadEditors(setters: Setters, ids: Array<string>){
+function loadEditors(setters: Setters, s: State){
+    const ids = deriveEditorIds(s)
+    editors.forEach(editor=>editor.destroy())
+    editors = []
     editors = ids.map(id=>{
         const editorElement = document.getElementById(id)
         const language = editorElement.getAttribute('language')
@@ -181,6 +198,8 @@ function loadEditors(setters: Setters, ids: Array<string>){
         })
     })
     editors.forEach((editor, i)=>{
+        editor.setValue(s.blocks[i].source)
+        editor.clearSelection()
         const debouncedWrite = debounce(async function(){
             setters.editedSource(i, editor.getValue())
             await setters.fromWriteServerState()
@@ -201,10 +220,6 @@ function loadEditors(setters: Setters, ids: Array<string>){
         }
         (editor.container.children[0] as HTMLElement).onfocus = setHighlight
     })
-}
-function setEditorsContent(s: State){
-    console.log('Setting editor content')
-    zip(s.blocks, editors).forEach(([block, editor])=>editor.setValue(block.source))
 }
 function alignLines(s: State){
     try{

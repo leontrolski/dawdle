@@ -58,13 +58,23 @@ export type ServerBlock = {
     commentData?: CommentData
 }
 export type ServerState = {
+    path: string
     defaultEnv: Env
     blocks: ServerBlock[]
 }
 export const emptyDawdleServerBlock: ServerBlock = {
     language: 'dawdle',
-    source: '[]\n',
-    astWithHeaders: null,
+    source: '[]',
+    astWithHeaders: {
+        type: 'section',
+        value:[{
+            type: 'line',
+            value:[{type: 'set' , value:[]}],
+            compiledType: 'set',
+            compiledValue:[]
+        }],
+        compiledType: 'set',
+        compiledValue:[]},
     testCases: {},
     errors: [],
 }
@@ -91,6 +101,7 @@ export type DerivedState = {
     areAnyErrors: boolean
 }
 export type Setters = {
+    path: (relativePath: string)=>void
     defaultEnv: (env: Env)=>void
     blocks: (blocks: ServerBlock[])=>void
     editedSource: (i: number, editedSource: string)=>Promise<void>
@@ -100,6 +111,7 @@ export type Setters = {
     unfold: (blockI: number, lineI: number)=>void
     insertBlock: (blockI: number, lineI: number)=>void
     emptyUI: ()=>void
+    storedUI: ()=>void
     fromServerState: ()=>Promise<void>
     fromWriteServerState: ()=>Promise<void>
     readServerState: ()=>Promise<State>
