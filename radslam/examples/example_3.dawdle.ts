@@ -1,5 +1,6 @@
 // {"dawdle": "header", "originalLanguage": "typescript", "command": "venv/python $FILE --dawdle"}
-import { Map } from 'immutable'
+import { assert } from 'chai'
+
 import * as stdlib from '../src/stdlib'
 import * as compiler from '../src/compiler'
 
@@ -26,7 +27,7 @@ const setExample =
 // {"dawdle": "begin", "indentLevel":0}
 {"section":[
     {"line":[{"set":[{"number":"1"},{"number":"2"},{"string":"\"foo\""}]}]},
-    {"line":[{"operator":"U"},{"set":[{"number":"2"},{"string":"\"foo\""},{"number":"4"},{"number":"5"}]}]},
+    {"line":[{"operator":"U"},{"set":[{"number":"2"},{"string":"\"foo\""},{"number":"4"},{"number":"56"}]}]},
     {"line":[{"operator":"-"},{"set":[{"number":"2"},{"number":"4"}]}]}]}
 // {"dawdle": "end"}
 const myFirstTable =
@@ -36,7 +37,7 @@ const myFirstTable =
     {"line":[{"operator":"J"},{"relation":"user_towns:"}]},
     {"line":[{"operator":">"},{"var":"like"},{"header":":town"},{"string":"\"%g%\""}]}]}
 // {"dawdle": "end"}
-const myFirstOperations =
+const actual = compiler.compileAST(defaultEnv,
 // {"dawdle": "begin", "indentLevel":0}
 {"section":[{"relation_literal":[
     {"rl_headers":[{"header":":a"},{"header":":b"},{"header":":c"}]},
@@ -53,6 +54,20 @@ const myFirstOperations =
     {"rl_row":[{"number":"9"},{"number":"6"}]},
     {"rl_row":[{"number":"0"},{"number":"4"}]}]}]}]},
     {"line":[{"operator":"v"},{"header":":d"},{"header":":c"}]},
-    {"line":[{"operator":">"},{"var":"eq"},{"header":":d"},{"number":"7"}]}]}
+    {"line":[{"operator":">"},{"var":"eq"},{"header":":d"},{"number":"7"}]},
+    {"line":[{"operator":"U"},
+{"section":[{"relation_literal":[
+    {"rl_headers":[{"header":":d"},{"header":":c"}]},
+    {"rl_row":[{"number":"7"},{"number":"480"}]}]}]}]}]}
 // {"dawdle": "end"}
-const foo = 'bar'
+)
+
+const expected = compiler.compileAST(defaultEnv,
+// {"dawdle": "begin"}
+{"section":[{"relation_literal":[
+    {"rl_headers":[{"header":":d"},{"header":":c"}]},
+    {"rl_row":[{"number":"7"},{"number":"435"}]}]}]}
+// {"dawdle": "end"}
+)
+
+assert.deepEqual(actual, expected)

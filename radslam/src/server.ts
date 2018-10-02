@@ -31,8 +31,8 @@ function parseComment(line: string): CommentData {
     return {type: data.dawdle, ...data} as CommentData
 }
 function getDawdleModule(): DawdleModuleAPI {
-    try{delete require.cache[require.resolve(PATH)]}
-    catch{}
+    // try{delete require.cache[require.resolve(PATH)]}
+    // catch{}
     return require(PATH) as DawdleModuleAPI
 }
 

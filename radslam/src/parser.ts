@@ -74,7 +74,7 @@ to_one               ::= "]-" NAME
 header               ::= ":" NAME
 named_value          ::= var "=" Value
 var                  ::= NAME
-operator             ::= CAPITALISED_NAME | "-[multirelation]-" | ">" | "v" | "^" | "X" | "U" | "-" | "J" | "G"
+operator             ::= CAPITALISED_NAME | "-[]-" | ">" | "v" | "^" | "X" | "U" | "-" | "J" | "G"
 set                  ::= "[" (Value (SPACE Value)*)* "]"
 
 relation_literal     ::= rl_headers (SPACE* RULE END rl_row+)?

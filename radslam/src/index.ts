@@ -33,6 +33,8 @@ export function mapOldLineToNew(old: string, new_: string): {[n: number]: number
 }
 
 // big closure to make functions that mutate state
+// was considering a `mutator: ((State)=>State)=>void` argument
+// and making everything immutable, but it makes everything pretty ugly in js
 function makeSetters(s: State): Setters {
     const setters: Setters = {
         path: function(path){s.path = path},

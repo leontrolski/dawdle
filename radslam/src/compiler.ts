@@ -5,9 +5,10 @@ import {
 } from './parser'
 import * as operations from './operations'
 import {errors, asserters, log} from './errorsAndAsserters'
+import { RelationAPI } from './shared'
 
 import * as R from 'ramda'
-import { Map } from 'immutable'  // only bothered converting Env to an immutable type so far
+import { Map } from 'immutable'
 
 /**
  * Given a list of values, return the list, but with the
@@ -25,7 +26,7 @@ function splatSets(list: Node[]){
     return listOut
 }
 
-// functions to register and resolve from an env
+// env is immutable as there is lots of copying and sharing
 export type Env = Map<string, (Let | Def)>
 export const emptyEnv: Env = Map({})
 
@@ -255,4 +256,7 @@ export function letsToEnv(env: Env, sectionAst: NodeMinimal): Env {
     const compiledSection = compiler(env, deMunge(sectionAst) as Section, false)
     const lets = compiledSection.value.filter(is.let)
     return R.mergeAll(lets.map(let_=>({[let_.value[0].value]: let_})))
+}
+export function compileAST(env: Env, ast: NodeMinimal): RelationAPI {
+    return compiler(env, deMunge(ast) as Section, false).compiledValue
 }

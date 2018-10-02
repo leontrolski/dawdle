@@ -237,7 +237,7 @@ foo`
 
 def AllUserJoins relation:
     relation:
-    -[multirelation]-
+    -[]-
         -[basket basket_discount:
             ]-join basket__discount:
                 -[discount discount:
@@ -253,7 +253,7 @@ AllUserJoins`
                     {line: [{operator: '>'}, {var: 'one'}]}]}]},
                 {def: [{operator: 'AllUserJoins' }, {relation: 'relation:'}, {section: [
                     {line: [{relation: 'relation:'}]},
-                    {line: [{operator: '-[multirelation]-'}, {section: [
+                    {line: [{operator: '-[]-'}, {section: [
                         {line: [{to_many: "-[basket"}, {relation: 'basket_discount:'}, {section: [
                             {line: [{to_one: "]-join"}, {relation: 'basket__discount:'}, {section: [
                                 {line: [{to_many: "-[discount"}, {relation: "discount:"}]}]}]},
