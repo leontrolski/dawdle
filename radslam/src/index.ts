@@ -149,15 +149,11 @@ function makeEmptyUi(): UIState {
         folded: {},
     }
 }
-
+import { Record } from 'immutable'
 async function init(){
     // empty to start with
-    let state: State = {
-        path: '',
-        defaultEnv: emptyEnv,
-        blocks: [],
-        ui: makeEmptyUi()
-    }
+    let state = State()
+
     const setters = makeSetters(state)
     // mount the root component
     await m.mount(document.body, {

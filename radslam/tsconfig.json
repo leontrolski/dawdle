@@ -7,7 +7,7 @@
         "lib": ["es2018", "dom"],
         "module": "commonjs",
         "target": "es6",
-        "allowJs": true
+        "allowJs": true,
     },
     "include": [
         "./src/**/*"

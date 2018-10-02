@@ -6,11 +6,22 @@ import { Env, emptyEnv } from './compiler'
 export const DAWDLE_URL = 'http://localhost:3000/dawdle'
 
 // API types
-export type FileBlock = {
-    language: string
-    source: string
-    commentData?: CommentData
-}
+export const CommentData = Record({
+    dawdle: Map() as Map<string, any>,
+    type: 'header' as string,
+    originalLanguage: null as string,
+    command: null as string | null,
+})
+export const FileBlock = Record({
+    language: '' as string,
+    source: '' as string,
+    commentData: CommentData(),
+})
+const f = FileBlock({
+    language: '5',
+    source: '',
+})
+
 export type FileState = {
     header: any
     blocks: FileBlock[]
@@ -19,12 +30,6 @@ export type FileState = {
 export type DawdleModuleAPI = {
     defaultEnv: Env
 }
-export type CommentData = {
-    dawdle?: any
-    type: 'header'
-    originalLanguage: string
-    command: string
-} | null
 export type RelationAPI = {
     headers: string[]
     rows: Array<(number | string | boolean | null | Decimal | Datetime)[]>  // TODO: make this Iterable
@@ -80,11 +85,21 @@ export const emptyDawdleServerBlock: ServerBlock = {
     errors: [],
 }
 // UI types
-export type UIState = {
-    HTTPError: string | null
-    mouseovered: {blockI: number | null, lineI: number | null}
-    folded: {[blockI: number]: number[]}
-}
+const Mouseovered = Record({
+    blockI: null as string | null,
+    lineI: null as string | null,
+})
+export const UIState = Record({
+    HTTPError: null as string | null,
+    mouseovered: Mouseovered(),
+    folded: Map() as Map<number, List<number>>,
+})
+export const State = Record({
+    path: '',
+    defaultEnv: emptyEnv,
+    blocks: List() as List<Block>,
+    ui: UIState(),
+})
 export type State = ServerState & {
     ui: UIState
 }
