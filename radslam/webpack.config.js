@@ -31,7 +31,7 @@ module.exports = {
     plugins: [
         new CopyWebpackPlugin([
             {
-                from: 'mode*.js',
+                from: '*',
                 to: path.resolve(__dirname, 'dist/modes'),
                 context: path.resolve(__dirname, 'node_modules/ace-builds/src-noconflict/'),
             },

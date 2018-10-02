@@ -15,12 +15,9 @@ import { astToString, jsonifyAndIndent } from './astToString'
 const PATH = path.resolve(__dirname, '../examples/example_3.dawdle.ts')
 
 const DAWDLE_COMMENT = '// {"dawdle":'
-const DAWDLE_COMMENT_OPENER = '// {"dawdle": "header", "originalLanguage": "typescript", "command": "venv/python $FILE --dawdle"}'
+const DAWDLE_COMMENT_OPENER = '// {"dawdle": "header", "originalLanguage": "typescript"}'
 const DAWDLE_COMMENT_BEGIN = '// {"dawdle": "begin"'  // note missing closing bracket
 const DAWDLE_COMMENT_END = '// {"dawdle": "end"}'
-const DAWDLE_PARSABLE_BLOCK = `// {"dawdle": "begin", "indentLevel":0}
-{"section":[{"relation_literal":[{"rl_headers":[]}]}]}
-// {"dawdle": "end"}`
 const comment_types = {
     header: 'header',
     begin: 'begin',
@@ -31,8 +28,8 @@ function parseComment(line: string): CommentData {
     return {type: data.dawdle, ...data} as CommentData
 }
 function getDawdleModule(): DawdleModuleAPI {
-    // try{delete require.cache[require.resolve(PATH)]}
-    // catch{}
+    try{delete require.cache[require.resolve(PATH)]}
+    catch{}
     return require(PATH) as DawdleModuleAPI
 }
 

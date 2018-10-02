@@ -58,7 +58,7 @@ function resolveValue(env: Env, o: Node): any {
 }
 function getSetValues(env: Env, o: Node): Node[] {
     if(o.compiledType === types.set) return o.compiledValue
-    if(is.set(o)) return o.value
+    if(is.set(o)) return o.value.map(value=>resolveValue(env, value))
     if(is.all_headers(o)) return getHeaders(env, {type: types.relation, value: R.init(o.value)})
     // if(is.var(o)) return resolveValue(env, o)  // TODO: is this cool?
     throw new errors.ScopeError(o, env)
@@ -75,10 +75,13 @@ function getRelation(env: Env, o: Node){ // TODO: :RelationAPI {
     if(is.relation_literal(o)){
         const [headers, ...rows] = o.value as Array<NodeMultiple>
         const headerStrings = headers.value.map(o=>(o.value as string).slice(1))
-        const rowValues = rows.map(row=>row.value.map(toJSONValue)) // TODO: handle JSON+ types here
+        const rowValues = rows.map(
+            row=>asserters.assertRowLength(headerStrings, row.value)
+                .map(value=>resolveValue(env, value))
+                .map(toJSONValue)) // TODO: handle JSON+ types here
         return {
-            headers: headerStrings,
-            rows: rowValues,
+            headers: asserters.assertNoDuplicates(headerStrings),
+            rows: asserters.assertNoDuplicates(rowValues),
         }
     }
     throw new errors.ScopeError(o, env)
@@ -245,11 +248,21 @@ const astToValue: {[typeName: string]: (o: NodeSingle)=>string} = {
     // TODO: what is the actual expected usage here? above assumes it is mapping to RelationAPI and back
     [types.header]: node=>node.value,
     [types.relation]: node=>node.value,
-
 }
 // TODO: see above comment
 export function toJSONValue(o: NodeSingle){
     return astToValue[o.type](o)
+}
+export function valueToNode(value: any): Node {
+    if(value.type) return value as Node
+    const type = {
+        bool: types.bool,
+        null: types.null,
+        number: types.number,
+        string: types.string,
+    }[typeof value]
+    if(!type) throw new Error(`Couldn't work out type for ${value}`)
+    return {type: type, value: JSON.stringify(value)}
 }
 
 export function letsToEnv(env: Env, sectionAst: NodeMinimal): Env {

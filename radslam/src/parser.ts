@@ -137,7 +137,7 @@ export function addIndents(s: string){
     })
     return lines.join('\n')
 }
-
+// TODO: remove offset bit
 export function munge(o: ebnf.IToken, offset: number): NodeMinimal {
     if(R.isNil(o)) throw new ParserError('*no text*', ['parser fully failed'])
     if(!R.isEmpty(o.errors)) throw new ParserError(o.text, o.errors)
@@ -287,6 +287,15 @@ export const is = {
     // compound
     multiple: function(o: Node): o is NodeMultiple {return R.contains(o.type, multiple)},
     letOrDef: (o: Node)=>is.let(o) || is.def(o),
+    literal: function(o: Node){
+        if(is.number(o)) return o
+        if(is.string(o)) return o
+        if(is.bool(o)) return o
+        if(is.template(o)) return o
+        if(is.null(o)) return o
+        if(is.decimal(o)) return o
+        if(is.datetime(o)) return o
+    },
     singleRelationOrVarOrSet: (o: Node)=>{
         const isLine = is.line(o)
         const isLength1 = o.value.length === 1

@@ -7,10 +7,11 @@ import {
 import { Env } from './compiler'
 
 import * as R from 'ramda'
+import { RelationAPI } from './shared';
 export const log = (o: any)=>console.log(inspect(o))
 
 class ScopeError extends Error {constructor(node: Node, env: Env) {
-    super(`Scope doesn't contain var, relation or def: ${inspect(node)} \nin: ${inspect([...env.keys()])}`)
+    super(`Scope doesn't contain var, relation or def: ${inspect(node)} \nin: ${[...env.keys()].join(', ')}`)
 }}
 class SectionOrderIncorrect extends Error {constructor(node: Node) {
     super(`The order of defs and lines in the section is incorrect: ${inspect(node)}`)
@@ -23,6 +24,12 @@ class NodeNotValidBodyType extends Error {constructor(node: Node) {
 }}
 class MacroLineNotSingleLine extends Error {constructor(node: Node) {
     super(`The node is not a section with a single operator line: ${inspect(node)}`)
+}}
+class NotUniqueError extends Error {constructor(fromHeaders: Header[]) {
+    super(`Cannot construct relation as there are duplicates in: ${inspect(fromHeaders)}}`)
+}}
+class RowNotSameLengthAsHeaders extends Error {constructor(fromHeaders: Header[], row: any[]) {
+    super(`Cannot construct relation as there are more values in the row: ${inspect(row)}\nthen there are headers in: ${inspect(fromHeaders)}`)
 }}
 class SelectError extends Error {constructor(fromHeaders: Header[], headers: Header[]) {
     super(`Cannot select headers: ${inspect(headers)} \nfrom: ${inspect(fromHeaders)}`)
@@ -80,44 +87,54 @@ function assertMacroShape(section: Section){
     return section
 }
 
-function assertHasHeaders(rel: Node){
-    if(!(rel.compiledType === types.headers) || !rel.compiledValue.length) throw new MissingHeaders(rel)
-    rel.compiledValue.forEach((o: Node)=>assertIs.header(o))
-    return rel
+function getCompiledHeaders(rel: Node): Header[] {
+    if(rel.compiledType === types.headers) return rel.compiledValue.map(assertIs.header)
+    if(rel.compiledType === types.relation) return (rel.compiledValue as RelationAPI).headers.map(
+        headerString=>({type: types.header, value: `:${headerString}`}))
+    throw new MissingHeaders(rel)
+}
+
+function assertNoDuplicates(ns: any[]){
+    if(ns.length !== R.uniq(ns).length) throw new NotUniqueError(ns)
+    return ns
+}
+function assertRowLength(headers: any[], row: any[]){
+    if(headers.length !== row.length) throw new RowNotSameLengthAsHeaders(headers, row)
+    return row
 }
 const assertHeadersArgs = {
     filter: (rel: Relation, func: Function, ...values: Value[])=>{
-        assertHasHeaders(rel)
+        const compiledHeadersLeft = getCompiledHeaders(rel)
         assertIs.var(func)
     },
     select: (rel: Relation, ...headers: Header[])=>{
-        assertHasHeaders(rel)
-        if(!R.equals(R.intersection(rel.compiledValue, headers), headers)) throw new SelectError(rel.compiledValue, headers)
+        const compiledHeadersLeft = getCompiledHeaders(rel)
+        if(!R.equals(R.intersection(compiledHeadersLeft, headers), headers)) throw new SelectError(compiledHeadersLeft, headers)
     },
     extend: (rel: Relation, header: Header, func: Function, ...values: Value[])=>{
-        assertHasHeaders(rel)
+        const compiledHeadersLeft = getCompiledHeaders(rel)
         assertIs.header(header)
         assertIs.var(func)
     },
     cross: (rel: Relation, value: Value)=>{
-        assertHasHeaders(rel)
-        assertHasHeaders(value)
-        if(!R.isEmpty(R.intersection(rel.compiledValue, value.compiledValue))) throw new CrossError(rel.compiledValue, value.compiledValue)
+        const compiledHeadersLeft = getCompiledHeaders(rel)
+        const compiledHeadersRight = getCompiledHeaders(value)
+        if(!R.isEmpty(R.intersection(compiledHeadersLeft, compiledHeadersRight))) throw new CrossError(compiledHeadersLeft, compiledHeadersRight)
     },
     union: (rel: Relation, value: Value)=>{
-        assertHasHeaders(rel)
-        assertHasHeaders(value)
-        if(!R.equals(rel.compiledValue, value.compiledValue)) throw new UnionOrDifferenceError(rel.compiledValue, value.compiledValue)
+        const compiledHeadersLeft = getCompiledHeaders(rel)
+        const compiledHeadersRight = getCompiledHeaders(value)
+        if(!R.equals(compiledHeadersLeft, compiledHeadersRight)) throw new UnionOrDifferenceError(compiledHeadersLeft, compiledHeadersRight)
     },
     difference: (rel: Relation, value: Value)=>{
-        assertHasHeaders(rel)
-        assertHasHeaders(value)
-        if(!R.equals(rel.compiledValue, value.compiledValue)) throw new UnionOrDifferenceError(rel.compiledValue, value.compiledValue)
+        const compiledHeadersLeft = getCompiledHeaders(rel)
+        const compiledHeadersRight = getCompiledHeaders(value)
+        if(!R.equals(compiledHeadersLeft, compiledHeadersRight)) throw new UnionOrDifferenceError(compiledHeadersLeft, compiledHeadersRight)
     },
     join: (rel: Relation, value: Value)=>{
-        assertHasHeaders(rel)
-        assertHasHeaders(value)
-        if(R.isEmpty(R.intersection(rel.compiledValue, value.compiledValue))) throw new JoinError(rel.compiledValue, value.compiledValue)
+        const compiledHeadersLeft = getCompiledHeaders(rel)
+        const compiledHeadersRight = getCompiledHeaders(value)
+        if(R.isEmpty(R.intersection(compiledHeadersLeft, compiledHeadersRight))) throw new JoinError(compiledHeadersLeft, compiledHeadersRight)
     },
     group: (rel: Relation, ...headers_allAggregator: (Header | Section)[]): void=>null, // assert none of the aggregator headers are in the headers
 }
@@ -127,16 +144,6 @@ const assertSetArgs = {
     difference: (rel: Relation, value: Value)=>{},
 }
 // TODO: fill these in
-const assertRelationArgs = {
-    filter: (rel: Relation, func: Function, ...values: Value[])=>{},
-    select: (rel: Relation, ...headers: Header[])=>{},
-    extend: (rel: Relation, header: Header, func: Function, ...values: Value[])=>{},
-    cross: (rel: Relation, value: Value)=>{},
-    union: (rel: Relation, value: Value)=>{},
-    difference: (rel: Relation, value: Value)=>{},
-    join: (rel: Relation, value: Value)=>{},
-    group: (rel: Relation, ...headers_allAggregator: (Header | Section)[])=>{},
-}
 const assertOperatorArgsMatch = (operatorArgs: any, args: any)=>{
     if(operatorArgs.length !== args.length) throw new OperatorArgsError(operatorArgs, args)
     // TODO: do some type checking stuff as well
@@ -160,7 +167,7 @@ export const errors = {
 const assertArgs: {[t: string]: {[_: string]: (...__: any[])=>void}} = {
     [types.set]: assertSetArgs,
     [types.headers]: assertHeadersArgs,
-    [types.relation]: assertRelationArgs,
+    [types.relation]: assertHeadersArgs,
 }
 export const asserters = {
     assertSectionShape,
@@ -168,4 +175,6 @@ export const asserters = {
     assertMacroShape,
     assertArgs,
     assertOperatorArgsMatch,
+    assertNoDuplicates,
+    assertRowLength,
 }

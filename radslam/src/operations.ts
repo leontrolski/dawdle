@@ -36,7 +36,7 @@ export const relation: {[s: string]: (rel: Relation, ...args: any[])=>RelationAP
         const selectHeaders = headers.map(header=>header.value.slice(1))
         const leftKVs = left.rows.map(row=>R.fromPairs(R.zip(left.headers, row)))
         const rows = leftKVs.map(kv=>selectHeaders.map(header=>kv[header]))
-        return {headers: selectHeaders, rows: rows}
+        return {headers: selectHeaders, rows: R.uniq(rows)}
     },
     extend: (rel: Relation, header: Header, func: FunctionAPI, ...values: Value[])=>{
         // assert function.type === 'extend'
@@ -52,7 +52,7 @@ export const relation: {[s: string]: (rel: Relation, ...args: any[])=>RelationAP
                 rows.push(leftRow.concat(rightRow))
             }
         }
-        return {headers: resultingHeaders, rows: rows}
+        return {headers: resultingHeaders, rows: R.uniq(rows)}
     },
     union: (rel: Relation, value: Value)=>{
         const left = rel.compiledValue as RelationAPI
@@ -96,7 +96,7 @@ export const relation: {[s: string]: (rel: Relation, ...args: any[])=>RelationAP
                 joined.push(joinedRow)
             }
         }
-        return {headers: resultingHeaders, rows: joined}
+        return {headers: resultingHeaders, rows: R.uniq(joined)}
     },
     group: (rel: Relation, ...headers_aggregators: (Header | Section)[])=>{
         // assert all function.type === 'aggregate'

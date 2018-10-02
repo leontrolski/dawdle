@@ -198,6 +198,7 @@ function loadEditors(setters: Setters, s: State){
             showGutter: false,
             showPrintMargin: false,
             highlightActiveLine: false,
+            theme: language === 'dawdle'? '' : 'ace/theme/dracula',
         })
     })
     editors.forEach((editor, i)=>{
