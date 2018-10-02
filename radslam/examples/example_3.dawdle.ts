@@ -20,7 +20,7 @@ const customEnv = compiler.letsToEnv(stdlib.env,
 // {"dawdle": "end"}
 )
 // see DawdleModuleAPI
-export const defaultEnv: compiler.Env = Map(stdlib.env).merge(customEnv)
+export const defaultEnv: compiler.Env = stdlib.env.merge(customEnv)
 
 const setExample =
 // {"dawdle": "begin", "indentLevel":0}
