@@ -7,6 +7,7 @@ import * as operations from './operations'
 import {errors, asserters, log} from './errorsAndAsserters'
 
 import * as R from 'ramda'
+import { Map } from 'immutable'  // only bothered converting Env to an immutable type so far
 
 /**
  * Given a list of values, return the list, but with the
@@ -25,8 +26,9 @@ function splatSets(list: Node[]){
 }
 
 // functions to register and resolve from an env
-export type Env = {[key: string]: any} // TODO, change this to Let | Def}
-export const emptyEnv: Env = {}
+export type Env = Map<string, (Let | Def)>
+export const emptyEnv: Env = Map({})
+
 /**
  * Given an resolve a variable in a given scope, else
  * return the object itself.
@@ -35,7 +37,7 @@ export const emptyEnv: Env = {}
  */
 function resolveValue(env: Env, o: Node): any {
     if(is.var(o) || is.relation(o) || is.operator(o)){
-        const resolved = env[o.value]
+        const resolved = env.get(o.value)
         if(R.isNil(resolved)) throw new errors.ScopeError(o, env)
         if(is.operator(o)){
             const [_, ...argsAndSection] = resolved.value
@@ -86,9 +88,9 @@ const getValue = {
     [types.relation]: getRelation,
 }
 type Registration = Let | Def
-function addRegistration(env: Env, registration: Registration){
+function addRegistration(env: Env, registration: Registration): Env {
     const [first, ..._] = registration.value
-    return R.assoc(first.value, registration, env)
+    return env.merge({[first.value]: registration})
 }
 /**
  * Create a `registration`as above for a macro that is
@@ -99,7 +101,7 @@ function expandAndRegisterMacro(env: Env, line: Line){
     const [headers, template] = line.value
     const setValues = getSetValues(env, resolveValue(env, headers))
     const resolved = setValues
-        .map(value=>R.merge(env, {_: {value: [null, value]}}))
+        .map(value=>env.merge({_: {type: types.let, value: [null, value]} as Let}))
         .map(envWithValue=>resolveValue(envWithValue, template))
     const lines = resolved
         .map(fullParser)

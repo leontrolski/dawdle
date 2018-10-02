@@ -1,8 +1,10 @@
 import * as chai from 'chai'
 import { describe, it } from 'mocha'
+import { Map } from 'immutable'
 
 import * as parser from '../src/parser'
 import * as compiler from '../src/compiler'
+import * as stdlib from '../src/stdlib'
 import { Node } from '../src/parser'
 
 const assert = chai.assert
@@ -125,9 +127,7 @@ set
         assert.deepEqual(expected as Node, compiler.compiler(env, ast))
     })
     it('should handle base operators at each step on a relation', ()=>{
-        const env = {
-            fake_function: {value: [null, {type: 'function', value: nullFunction}]}
-        }
+        const env = stdlib.env
         const in_ = `| :a | :b | :c |
 J
     | :d | :a |
@@ -301,9 +301,7 @@ JoinClone
         assert.deepEqual(expected as Node, compiler.compiler(env, ast))
     })
     it('should expand map macros', ()=>{
-        const env = {
-            fake_function: {value: [null, {type: 'function', value: nullFunction}]}
-        }
+        const env = stdlib.env
         const in_ = `| :a |
 (map [:foo :bar]) \`^ {{_}} fake_function\`
 `
@@ -372,12 +370,7 @@ J
         assert.deepEqual(expected as Node, compiler.compiler(env, ast))
     })
     it('should do a load of nested stuff', ()=>{
-        const env = {
-            // TODO: what is going on here..
-            make_null: {value: [null, {type: 'function', value: (row: Node, relation: Node, ..._: any[])=>({type: 'null', value: 'null'})}]},
-            first: {value: [null, {type: 'function', value: (row: Node, relation: any, ..._: any[])=>relation.rows[0]}]},
-            value: {value: [null, {type: 'function', value: (row: Node, relation: Node, value: Node)=>value}]},
-        }
+        const env: compiler.Env = stdlib.env
         const in_ = `def Outer relation: right:
     let joined:
         relation:

@@ -1,4 +1,5 @@
 // {"dawdle": "header", "originalLanguage": "typescript", "command": "venv/python $FILE --dawdle"}
+import { Map } from 'immutable'
 import * as stdlib from '../src/stdlib'
 import * as compiler from '../src/compiler'
 
@@ -19,7 +20,7 @@ const customEnv = compiler.letsToEnv(stdlib.env,
 // {"dawdle": "end"}
 )
 // see DawdleModuleAPI
-export const defaultEnv = {...stdlib.env, ...customEnv}
+export const defaultEnv: compiler.Env = Map(stdlib.env).merge(customEnv)
 
 const setExample =
 // {"dawdle": "begin", "indentLevel":0}

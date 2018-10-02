@@ -1,17 +1,20 @@
-import { FunctionAPI, DawdleModuleAPI } from "./shared"
-import { Header, Value, types, NodeSingle } from "./parser"
-import { Env, toJSONValue } from "./compiler"
+import { Map } from 'immutable'
 import * as R from "ramda"
 
-function wrapFunctionAPI(name, functionAPI: FunctionAPI){
-    return {
-        [name]: {
-            type: 'let',
-            value: [{type: 'var', value: name}, functionAPI]
+import { FunctionAPI, DawdleModuleAPI } from "./shared"
+import { Header, Value, Let, Def, types, NodeSingle } from "./parser"
+import { Env, toJSONValue } from "./compiler"
+
+function wrapFunctionAPI(name, functionAPI: FunctionAPI): [string, any] {
+    return [
+        name,
+        {
+            type: types.let,
+            value: [{type: types.var, value: name}, functionAPI]
         }
-    }
+    ]
 }
-function makeRowFilterFunction(name: string, f: (a: any, ...bs: any[])=>any){  // TODO: maybe improve the type of `f`
+function makeRowFilterFunction(name: string, f: (a: any, ...bs: any[])=>any): [string, any] {  // TODO: maybe improve the type of `f`
     return wrapFunctionAPI(
         name,
         {
@@ -33,7 +36,7 @@ function sqlLikeToRegex(str: string): RegExp {
     const replaceSQL = escaped.replace(/%/g, '.+').replace(/_/g, '.')
     return new RegExp(`^${replaceSQL}$`)
 }
-export const env: Env = R.mergeAll([
+export const env: Env = Map([
     makeRowFilterFunction('eq', (a, b)=>a === b),
     makeRowFilterFunction('lt', (a, b)=>a < b),
     makeRowFilterFunction('gt', (a, b)=>a > b),
@@ -42,4 +45,9 @@ export const env: Env = R.mergeAll([
     makeRowFilterFunction('like', (a, b)=>sqlLikeToRegex(b).test(a)),
     makeRowFilterFunction('isnull', (a)=>R.isNil(a)),
     makeRowFilterFunction('isnotnull', (a)=>!R.isNil(a)),
+    // TODO: remove these
+    makeRowFilterFunction('fake_function', (a)=>!R.isNil(a)),
+    makeRowFilterFunction('make_null', (a)=>!R.isNil(a)),
+    makeRowFilterFunction('first', (a)=>!R.isNil(a)),
+    makeRowFilterFunction('value', (a)=>!R.isNil(a)),
 ])
