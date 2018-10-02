@@ -82,6 +82,7 @@ function makeSetters(s: State): Setters {
             setters.blocks(serverState.blocks)
             setters.storedUI()
             if(!isEmpty(editors)) loadEditors(setters, s)
+            m.redraw()
         },
         fromWriteServerState: async function(){
             const serverState = await setters.writeServerState() as ServerState
@@ -95,6 +96,7 @@ function makeSetters(s: State): Setters {
                     }))
             setters.defaultEnv(serverState.defaultEnv)
             setters.blocks(mergedBlocks)
+            m.redraw()
         },
         // these don't actually mutate state
         readServerState: async function(){
@@ -167,7 +169,6 @@ async function init(){
     })
     // fetch data and redraw
     await setters.fromServerState()
-    m.redraw()
     // load editors and align lines for the first time
     loadEditors(setters, state)
     requestAnimationFrame(()=>alignLines(state))
@@ -203,7 +204,6 @@ function loadEditors(setters: Setters, s: State){
         const debouncedWrite = debounce(async function(){
             setters.editedSource(i, editor.getValue())
             await setters.fromWriteServerState()
-            m.redraw()
         }, 500)
         editor.on('change', ()=>debouncedWrite())
         // only highlight lines of the focused editor

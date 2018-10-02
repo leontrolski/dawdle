@@ -1,27 +1,9 @@
 // {"dawdle": "header", "originalLanguage": "typescript", "command": "venv/python $FILE --dawdle"}
 import * as stdlib from '../src/stdlib'
+import * as compiler from '../src/compiler'
 
-export const defaultEnv = stdlib.env  // see DawdleModuleAPI
-
-const env =
+const customEnv = compiler.letsToEnv(stdlib.env,
 // {"dawdle": "begin"}
-{"section":[{"let":[{"relation":"user:"},
-{"section":[{"relation_literal":[
-    {"rl_headers":[{"header":":user_id"},{"header":":username"},{"header":":dob"}]},
-    {"rl_row":[{"number":"1"},{"string":"\"Oliver\""},{"datetime":"~1985-01-20"}]},
-    {"rl_row":[{"number":"2"},{"string":"\"Tom\""},{"datetime":"~1950-02-20"}]},
-    {"rl_row":[{"number":"3"},{"string":"\"Jackie\""},{"null":"null"}]}]}]}]},
-    {"line":[{"set":[]}]}]}
-// {"dawdle": "end"}
-const setExample =
-// {"dawdle": "begin", "indentLevel":0}
-{"section":[
-    {"line":[{"set":[{"number":"1"},{"number":"2"},{"string":"\"foo\""}]}]},
-    {"line":[{"operator":"U"},{"set":[{"number":"2"},{"string":"\"foo\""},{"number":"4"},{"number":"5"}]}]},
-    {"line":[{"operator":"-"},{"set":[{"number":"2"},{"number":"4"}]}]}]}
-// {"dawdle": "end"}
-const myFirstTable =
-// {"dawdle": "begin", "indentLevel":0}
 {"section":[{"let":[{"relation":"user:"},
 {"section":[{"relation_literal":[
     {"rl_headers":[{"header":":user_id"},{"header":":username"},{"header":":dob"}]},
@@ -33,6 +15,22 @@ const myFirstTable =
     {"rl_row":[{"number":"1"},{"string":"\"Slough\""}]},
     {"rl_row":[{"number":"2"},{"string":"\"Chicago\""}]},
     {"rl_row":[{"number":"3"},{"string":"\"The North\""}]}]}]}]},
+    {"line":[{"set":[]}]}]}
+// {"dawdle": "end"}
+)
+// see DawdleModuleAPI
+export const defaultEnv = {...stdlib.env, ...customEnv}
+
+const setExample =
+// {"dawdle": "begin", "indentLevel":0}
+{"section":[
+    {"line":[{"set":[{"number":"1"},{"number":"2"},{"string":"\"foo\""}]}]},
+    {"line":[{"operator":"U"},{"set":[{"number":"2"},{"string":"\"foo\""},{"number":"4"},{"number":"5"}]}]},
+    {"line":[{"operator":"-"},{"set":[{"number":"2"},{"number":"4"}]}]}]}
+// {"dawdle": "end"}
+const myFirstTable =
+// {"dawdle": "begin", "indentLevel":0}
+{"section":[
     {"line":[{"relation":"user:"}]},
     {"line":[{"operator":"J"},{"relation":"user_towns:"}]},
     {"line":[{"operator":">"},{"var":"like"},{"header":":town"},{"string":"\"%g%\""}]}]}

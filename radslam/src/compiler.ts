@@ -1,7 +1,7 @@
 import {
     Node, NodeMultiple, NodeSingle,
-    Section, Let, Def, Line, Operator, Template, Value,
-    fullParser, types, is, baseOperatorInverseMap, Datetime, Decimal
+    Section, Let, Def, Line, Operator, Template, Value, Datetime, Decimal,
+    fullParser, types, is, baseOperatorInverseMap, deMunge, NodeMinimal
 } from './parser'
 import * as operations from './operations'
 import {errors, asserters, log} from './errorsAndAsserters'
@@ -247,4 +247,10 @@ const astToValue: {[typeName: string]: (o: NodeSingle)=>string} = {
 // TODO: see above comment
 export function toJSONValue(o: NodeSingle){
     return astToValue[o.type](o)
+}
+
+export function letsToEnv(env: Env, sectionAst: NodeMinimal): Env {
+    const compiledSection = compiler(env, deMunge(sectionAst) as Section, false)
+    const lets = compiledSection.value.filter(is.let)
+    return R.mergeAll(lets.map(let_=>({[let_.value[0].value]: let_})))
 }
