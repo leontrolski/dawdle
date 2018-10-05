@@ -3,7 +3,11 @@ import { Record, Map, List } from 'immutable'
 import { Node, NodeMultiple, Section, Decimal, Datetime, is } from './parser'
 import { Env, emptyEnv } from './compiler'
 
-export const DAWDLE_URL = 'http://localhost:3000/dawdle'
+export const DAWDLE_URLS = {
+    read: 'http://localhost:3000/read',
+    write: 'http://localhost:3000/write',
+    save: 'http://localhost:3000/save',
+}
 
 // API types
 export type FileBlock = {
@@ -96,6 +100,7 @@ export type Block = ServerBlock & {
     selectedTestCaseName: string
 }
 export type DerivedState = {
+    path: string
     defaultEnv: Env
     blocks: Block[]
     ui: UIState

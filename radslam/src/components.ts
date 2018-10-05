@@ -106,7 +106,7 @@ const SaveButton = (setters: Setters, areAnyErrors: boolean)=>m(
     'save'
 )
 export const View = (setters: Setters, s: DerivedState)=>m('.root',
-    m('.options', ''),
+    m('.options.pre', s.path),
     s.blocks.map((block)=>
         m('.block',
             isEmpty(block.errors)? Info(setters, s.ui, block) : Errors(block),

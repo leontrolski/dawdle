@@ -1,6 +1,6 @@
 import * as fs from 'fs'
-import * as path from 'path'
-import { zip, dissoc, pipe, isEmpty } from 'ramda'
+import { resolve as joinPath } from 'path'
+import { dissoc, pipe, isEmpty } from 'ramda'
 import * as express from 'express'
 import * as bodyParser from 'body-parser'
 import * as stripAnsi from 'strip-ansi'
@@ -11,8 +11,6 @@ import {
 import { Section, deMunge, parser } from './parser'
 import { compiler, emptyEnv } from './compiler'
 import { astToString, jsonifyAndIndent } from './astToString'
-
-const PATH = path.resolve(__dirname, '../examples/example_3.dawdle.ts')
 
 const DAWDLE_COMMENT = '// {"dawdle":'
 const DAWDLE_COMMENT_OPENER = '// {"dawdle": "header", "originalLanguage": "typescript"}'
@@ -27,10 +25,10 @@ function parseComment(line: string): CommentData {
     const data = JSON.parse(line.slice(3))
     return {type: data.dawdle, ...data} as CommentData
 }
-function getDawdleModule(): DawdleModuleAPI {
-    try{delete require.cache[require.resolve(PATH)]}
+function getDawdleModule(path: string): DawdleModuleAPI {
+    try{delete require.cache[require.resolve(path)]}
     catch{}
-    return require(PATH) as DawdleModuleAPI
+    return require(path) as DawdleModuleAPI
 }
 
 const fakeTestCases: TestCaseMap = {
@@ -38,7 +36,7 @@ const fakeTestCases: TestCaseMap = {
     'another test case': emptyEnv,
 }
 
-function readFile(p: string): FileState {
+function readFile(path: string): FileState {
     let header: CommentData = null
     let isInDawdleBlock = false
     let thisOriginalBlock: Array<string> = []
@@ -46,7 +44,7 @@ function readFile(p: string): FileState {
     let thisDawleBeginCommentData: CommentData = null
     const serverBlocks: Array<FileBlock> = []
 
-    const fileString = fs.readFileSync(p, 'utf8')
+    const fileString = fs.readFileSync(path, 'utf8')
     for(let line of fileString.split('\n')){
         if(line.startsWith(DAWDLE_COMMENT)){
             const data = parseComment(line)
@@ -84,10 +82,10 @@ function readFile(p: string): FileState {
         language: header.originalLanguage,
         source: thisOriginalBlock.join('\n'),
     })
-    return {header: header, blocks: serverBlocks, defaultEnv: getDawdleModule().defaultEnv}
+    return {header: header, blocks: serverBlocks, defaultEnv: getDawdleModule(path).defaultEnv}
 }
 
-function firstTimeCompileBlocks(fileState: FileState): ServerState {
+function firstTimeCompileBlocks(path: string, fileState: FileState): ServerState {
     const compiledBlocks = fileState.blocks.map((block, i)=>{
         if(block.language !== 'dawdle'){
             return {
@@ -113,10 +111,10 @@ function firstTimeCompileBlocks(fileState: FileState): ServerState {
             commentData: block.commentData,
         }
     })
-    return {path: PATH, defaultEnv: fileState.defaultEnv, blocks: compiledBlocks}
+    return {path, defaultEnv: fileState.defaultEnv, blocks: compiledBlocks}
 }
 function compileBlocks(state: ServerState): ServerState {
-    const defaultEnv = getDawdleModule().defaultEnv
+    const defaultEnv = getDawdleModule(state.path).defaultEnv
     const compiledBlocks = state.blocks.map(block=>{
         if(block.language !== 'dawdle') return block
         // else is a dawdle block
@@ -144,7 +142,7 @@ function compileBlocks(state: ServerState): ServerState {
             commentData: block.commentData,
         }
     })
-    return {path: PATH, defaultEnv: defaultEnv, blocks: compiledBlocks}
+    return {path: state.path, defaultEnv, blocks: compiledBlocks}
 }
 function writeBlocksToFile(editedBlocks: ServerBlock[]): string {
     let fileString = DAWDLE_COMMENT_OPENER + '\n'
@@ -166,20 +164,21 @@ function writeBlocksToFile(editedBlocks: ServerBlock[]): string {
 }
 
 // read from the file
-function get(req: express.Request): ServerState {
-    const fileState = readFile(PATH)
-    return firstTimeCompileBlocks(fileState)
+function read(req: express.Request): ServerState {
+    const path = joinPath(__dirname, '..', req.body.path)
+    const fileState = readFile(path)
+    return firstTimeCompileBlocks(path, fileState)
 }
 // validate and parse edited state
-function put(req: express.Request): ServerState {
+function write(req: express.Request): ServerState {
     const editedState = req.body as ServerState
     return compileBlocks(editedState)
 }
 // write edited state to file
-function post(req: express.Request): boolean {
+function save(req: express.Request): boolean {
     const editedState = req.body as ServerState
     const editedSource = writeBlocksToFile(editedState.blocks)
-    fs.writeFileSync(PATH, editedSource)
+    fs.writeFileSync(editedState.path, editedSource)
     return true
 }
 
@@ -188,10 +187,10 @@ const app = express()
 app.use(bodyParser.json()) // for parsing application/json
 const port = 3000
 
-app.use(express.static(path.resolve(__dirname, '../dist')))
-app.get('/dawdle', (req, res)=>res.json(get(req)))
-app.put('/dawdle', (req, res)=>res.json(put(req)))
-app.post('/dawdle', (req, res)=>res.json(post(req)))
+app.use(express.static(joinPath(__dirname, '../dist')))
+app.post('/read', (req, res)=>res.json(read(req)))
+app.post('/write', (req, res)=>res.json(write(req)))
+app.post('/save', (req, res)=>res.json(save(req)))
 
 // run app when not under test
 declare const underTest: any

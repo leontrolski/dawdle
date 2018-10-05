@@ -6,7 +6,7 @@ import * as diff from 'diff'
 ace.config.set('basePath', './modes/')
 
 import { emptyEnv } from './compiler';
-import { DAWDLE_URL, Setters, ServerState, State, DerivedState, UIState, emptyDawdleServerBlock } from './shared'
+import { DAWDLE_URLS, Setters, ServerState, State, DerivedState, UIState, emptyDawdleServerBlock } from './shared'
 import { View, SVG_OFFSET } from './components'
 import { networkInterfaces } from 'os';
 
@@ -103,17 +103,20 @@ function makeSetters(s: State): Setters {
         // these don't actually mutate state
         readServerState: async function(){
             console.log('Reading file from server')
-            const response = await catchHTTPErrors(setters, ()=>axios.get(DAWDLE_URL))
+            const response = await catchHTTPErrors(setters, ()=>axios.post(
+                DAWDLE_URLS.read,
+                {path: (new URLSearchParams(window.location.search)).get('path')}
+            ))
             return response.data
         },
         writeServerState: async function(){
             console.log('Getting server to compile')
-            const response = await catchHTTPErrors(setters, ()=>axios.put(DAWDLE_URL, s))
+            const response = await catchHTTPErrors(setters, ()=>axios.post(DAWDLE_URLS.write, s))
             return response.data
         },
         saveStateToFile: async function(){
             console.log('Writing file to server')
-            const response = await catchHTTPErrors(setters, ()=>axios.post(DAWDLE_URL, s))
+            const response = await catchHTTPErrors(setters, ()=>axios.post(DAWDLE_URLS.save, s))
             m.redraw()
         },
     }
@@ -138,6 +141,7 @@ function deriveState(s: State): DerivedState {
         selectedTestCaseName: Object.keys(block.testCases)[0],
     }))
     return {
+        path: s.path,
         defaultEnv: s.defaultEnv,
         ui: s.ui,
         blocks,
