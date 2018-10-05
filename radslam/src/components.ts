@@ -21,7 +21,7 @@ const ConnectingLine = (isFocused: boolean, isFolded: boolean)=>{
             x2: INFO_ORIGINAL_GAP,
             y2: SVG_OFFSET,
             'marker-end': isFocused? `url(#${markerId})` : '',
-            style: {stroke: isFocused? 'black' : isFolded? '#7193a5' : 'white'}
+            style: {stroke: isFocused? 'black' : isFolded? '#7193a5' : 'white'},
         }))
 }
 

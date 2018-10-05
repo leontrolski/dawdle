@@ -1,4 +1,4 @@
-import { Node, Header, Relation, Function, Value, Section, Set } from './parser'
+import { Node, Header, Relation, Function, Value, Section, Set, Aggregator, inspect } from './parser'
 import { RelationAPI, FunctionAPI } from './shared'
 
 import * as R from 'ramda'
@@ -18,7 +18,7 @@ export const headers: {[s: string]: any} = {
     join: (rel: Relation, value: Value)=>R.union(rel.compiledValue, value.compiledValue),
     group: (rel: Relation, ...headers_aggregators: (Header | Section)[])=>{
         const [aggregators, ...headers] = headers_aggregators.reverse()
-        return headers.reverse().concat(aggregators.compiledValue)
+        return headers.reverse().concat((aggregators as any).map(o=>o[0]))
     }
 }
 /**
@@ -98,11 +98,25 @@ export const relation: {[s: string]: (rel: Relation, ...args: any[])=>RelationAP
         }
         return {headers: resultingHeaders, rows: R.uniq(joined)}
     },
-    group: (rel: Relation, ...headers_aggregators: (Header | Section)[])=>{
-        // assert all function.type === 'aggregate'
-        // const [aggregators, ...headers] = headers_aggregators.reverse()
-        // return headers.reverse().concat(aggregators.compiledValue)
-        return {headers: [], rows: []}
+    group: (rel: Relation, ...headers_aggregators: (Header | [Header, FunctionAPI, Value, Value][])[])=>{
+        const aggregators = headers_aggregators.pop() as [Header, FunctionAPI, Value, Value][]
+        const headers = headers_aggregators as Header[]
+        let allAggregated = {}
+        let aggregatedHeaderStrings = []
+        for(let aggregator of aggregators){
+            const [header, aggregateFunction, ...args] = aggregator
+            const aggregated = aggregateFunction.func(rel.compiledValue as RelationAPI, headers, ...args)
+            allAggregated = R.mergeWith(R.concat, allAggregated, R.mapObjIndexed((v, _)=>[v], aggregated))
+            aggregatedHeaderStrings.push(header.value.slice(1))
+        }
+        let rows = []
+        for(let k in allAggregated){
+            rows.push(JSON.parse(k).concat(allAggregated[k]))
+        }
+        return {
+            headers: headers.map(header=>header.value.slice(1)).concat(aggregatedHeaderStrings),
+            rows: rows
+        }
     }
 }
 /**

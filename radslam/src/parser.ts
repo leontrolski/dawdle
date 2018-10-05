@@ -240,6 +240,7 @@ export const types = {
     // types used outside of parser
     function: 'function',
     headers: 'headers',
+    aggregators: 'aggregators',
 }
 export const multiple = [
     types.section,

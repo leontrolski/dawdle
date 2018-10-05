@@ -1,7 +1,7 @@
 import {
     Node, NodeMultiple, NodeSingle,
     Section, Let, Def, Line, Operator, Template, Value, Datetime, Decimal,
-    fullParser, types, is, baseOperatorInverseMap, deMunge, NodeMinimal
+    fullParser, types, is, baseOperatorInverseMap, deMunge, NodeMinimal, inspect, baseOperators
 } from './parser'
 import * as operations from './operations'
 import {errors, asserters, log} from './errorsAndAsserters'
@@ -171,18 +171,12 @@ export function compiler(env: Env, section: Section, justHeaders=true): Section 
 
     const [firstLine, ...lines] = body
     const first = is.line(firstLine)? firstLine.value[0] : firstLine
-
-    // TODO: handle aggregators consistently with everything else
-    if(is.aggregator(first)) return {
-        type: types.section,
-        value: body,
-        compiledType: types.headers,
-        compiledValue: body.map(o=>o.value[0]),
-    }
+    if(is.aggregator(first)) return section
 
     const isSet = is.var(first) || is.set(first) || is.all_headers(first)
     const compiledType = isSet? types.set : justHeaders? types.headers : types.relation
     let compiledValue
+
 
     compiledValue = getValue[compiledType](env, first)
     withCompiled.push(R.merge(firstLine, {compiledType, compiledValue}))
@@ -216,6 +210,8 @@ export function compiler(env: Env, section: Section, justHeaders=true): Section 
 
         if(is.baseOperator(operator)){
             const operatorName = baseOperatorInverseMap[operator.value]
+            // following line is pretty dutty, but we have to resolve the functions at some point
+            if(operatorName === baseOperators.group) args.push(args.pop().value.map(o=>(o.value as any).map(n=>resolveValue(env, n))))
             asserters.assertArgs[compiledType][operatorName](...args)
             compiledValue = (operations as {[s: string]: any})[compiledType][operatorName](...args)
         } else {
@@ -234,8 +230,7 @@ export function compiler(env: Env, section: Section, justHeaders=true): Section 
         }
         withCompiled.push(R.merge(lineWithCompiledSection || line, {compiledType, compiledValue}))
     }
-    const sectionWith = {type: types.section, value: withCompiled}
-    return R.merge(sectionWith, {compiledType, compiledValue})
+    return {type: types.section, value: withCompiled, compiledType, compiledValue}
 }
 
 const astToValue: {[typeName: string]: (o: NodeSingle)=>string} = {

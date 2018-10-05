@@ -22,7 +22,6 @@ describe('compiler.compiler relation', ()=>{
       const expected = { }
 
       assert.deepEqual(expected as Node, compiler.compiler(env, ast, false))
-      // console.log(parser.inspect(compiler.compiler(env, ast, false)))
     })
     it('should resolve a value in a table literal', ()=>{
         const env = compiler.emptyEnv.merge([stdlib.makeValue('two', 2)])
@@ -109,6 +108,63 @@ v :b :c
              compiledValue: { headers: [ 'b', 'c' ], rows: [ [ 2, 5 ], [ 2, 6 ] ] } } ],
         compiledType: 'relation',
         compiledValue: { headers: [ 'b', 'c' ], rows: [ [ 2, 5 ], [ 2, 6 ] ] } }
+
+        assert.deepEqual(expected as Node, compiler.compiler(env, ast, false))
+    })
+    it('should do group bys', ()=>{
+        const env = compiler.emptyEnv.merge([
+            stdlib.makeAggregator('sum', xs=>xs.reduce((a, b)=>a + b, 0))
+        ])
+        const in_ = `| :a | :b | :c |
+-----------
+| 1 | 1 | 2 |
+| 1 | 2 | 3 |
+| 2 | 1 | 5 |
+| 2 | 1 | 6 |
+| 1 | 1 | 7 |
+| 3 | 1 | 8 |
+G :a :b
+    :sum_of_c sum :c
+`
+        const ast = parser.fullParser(in_)
+        const expected = { type: 'section',
+        value:
+         [ { type: 'relation_literal',
+             value:
+              [ { type: 'rl_headers',
+                  value: [ { type: 'header', value: ':a' }, { type: 'header', value: ':b' }, { type: 'header', value: ':c' } ] },
+                { type: 'rl_row',
+                  value: [ { type: 'number', value: '1' }, { type: 'number', value: '1' }, { type: 'number', value: '2' } ] },
+                { type: 'rl_row',
+                  value: [ { type: 'number', value: '1' }, { type: 'number', value: '2' }, { type: 'number', value: '3' } ] },
+                { type: 'rl_row',
+                  value: [ { type: 'number', value: '2' }, { type: 'number', value: '1' }, { type: 'number', value: '5' } ] },
+                { type: 'rl_row',
+                  value: [ { type: 'number', value: '2' }, { type: 'number', value: '1' }, { type: 'number', value: '6' } ] },
+                { type: 'rl_row',
+                  value: [ { type: 'number', value: '1' }, { type: 'number', value: '1' }, { type: 'number', value: '7' } ] },
+                { type: 'rl_row',
+                  value: [ { type: 'number', value: '3' }, { type: 'number', value: '1' }, { type: 'number', value: '8' } ] } ],
+             compiledType: 'relation',
+             compiledValue:
+              { headers: [ 'a', 'b', 'c' ],
+                rows: [ [ 1, 1, 2 ], [ 1, 2, 3 ], [ 2, 1, 5 ], [ 2, 1, 6 ], [ 1, 1, 7 ], [ 3, 1, 8 ] ] } },
+           { type: 'line',
+             value:
+              [ { type: 'operator', value: 'G' },
+                { type: 'header', value: ':a' },
+                { type: 'header', value: ':b' },
+                { type: 'section',
+                  value:
+                   [ { type: 'aggregator',
+                       value:
+                        [ { type: 'header', value: ':sum_of_c' },
+                          { type: 'var', value: 'sum' },
+                          { type: 'header', value: ':c' } ] } ] } ],
+             compiledType: 'relation',
+             compiledValue: { headers: [ 'a', 'b', 'sum_of_c' ], rows: [ [ 1, 1, 9 ], [ 1, 2, 3 ], [ 2, 1, 11 ], [ 3, 1, 8 ] ] } } ],
+        compiledType: 'relation',
+        compiledValue: { headers: [ 'a', 'b', 'sum_of_c' ], rows: [ [ 1, 1, 9 ], [ 1, 2, 3 ], [ 2, 1, 11 ], [ 3, 1, 8 ] ] } }
 
         assert.deepEqual(expected as Node, compiler.compiler(env, ast, false))
     })

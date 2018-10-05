@@ -136,8 +136,8 @@ v :a :e
 X
     | :f |
 G :a
-    :g some_function
-    :h some_function
+    :g fake_function
+    :h fake_function
 -
     | :a | :g | :h |
 U
@@ -213,11 +213,9 @@ U
                 { type: 'section',
                   value: [
                     { type: 'aggregator',
-                      value: [ { type: 'header', value: ':g' }, { type: 'var', value: 'some_function' } ]},
+                      value: [ { type: 'header', value: ':g' }, { type: 'var', value: 'fake_function' } ]},
                     { type: 'aggregator',
-                      value: [ { type: 'header', value: ':h' }, { type: 'var', value: 'some_function' } ]}],
-                  compiledType: 'headers',
-                  compiledValue: [ { type: 'header', value: ':g' }, { type: 'header', value: ':h' } ] } ],
+                      value: [ { type: 'header', value: ':h' }, { type: 'var', value: 'fake_function' } ]} ] } ],
              compiledType: 'headers',
              compiledValue: [ { type: 'header', value: ':a' }, { type: 'header', value: ':g' }, { type: 'header', value: ':h' } ] },
            { type: 'line',
@@ -253,7 +251,7 @@ U
         compiledType: 'headers',
         compiledValue: [ { type: 'header', value: ':a' }, { type: 'header', value: ':g' }, { type: 'header', value: ':h' } ] }
 
-        assert.deepEqual(expected as Node, compiler.compiler(env, ast))
+        assert.deepEqual(expected as Node, JSON.parse(JSON.stringify(compiler.compiler(env, ast)))) // strip out aggregator functions
     })
     it('should handle a simple composite operator', ()=>{
         const env = compiler.emptyEnv

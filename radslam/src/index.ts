@@ -79,6 +79,7 @@ function makeSetters(s: State): Setters {
         // functions that interact with server
         fromServerState: async function(){
             const serverState = await setters.readServerState() as ServerState
+            document.title = serverState.path.split('/').pop()
             setters.path(serverState.path)
             setters.defaultEnv(serverState.defaultEnv)
             setters.blocks(serverState.blocks)
