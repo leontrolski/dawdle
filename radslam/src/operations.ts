@@ -40,7 +40,7 @@ export const relation: {[s: string]: (rel: Relation, ...args: any[])=>RelationAP
     },
     extend: (rel: Relation, header: Header, func: FunctionAPI, ...values: Value[])=>{
         // assert function.type === 'extend'
-        return rel.compiledValue// TODO: func.function(rel.compiledValue, header, ...values)
+        return func.func(rel.compiledValue, header, ...values)
     },
     cross: (rel: Relation, value: Value)=>{
         const left = rel.compiledValue as RelationAPI
@@ -91,7 +91,7 @@ export const relation: {[s: string]: (rel: Relation, ...args: any[])=>RelationAP
             for(let rightKV of l){
                 const joinedRow = []
                 for(let header of resultingHeaders){
-                    joinedRow.push(rightKV[header] || R.fromPairs(sortedPairs)[header])
+                    joinedRow.push(Object.keys(rightKV).includes(header)? rightKV[header] : R.fromPairs(sortedPairs)[header])
                 }
                 joined.push(joinedRow)
             }
@@ -99,6 +99,8 @@ export const relation: {[s: string]: (rel: Relation, ...args: any[])=>RelationAP
         return {headers: resultingHeaders, rows: R.uniq(joined)}
     },
     group: (rel: Relation, ...headers_aggregators: (Header | [Header, FunctionAPI, Value, Value][])[])=>{
+        // TODO: this isn't the neatest implementation
+        // assert function.type === 'aggregate'
         const aggregators = headers_aggregators.pop() as [Header, FunctionAPI, Value, Value][]
         const headers = headers_aggregators as Header[]
         let allAggregated = {}

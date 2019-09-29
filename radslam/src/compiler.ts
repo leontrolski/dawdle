@@ -65,7 +65,12 @@ function getSetValues(env: Env, o: Node): Node[] {
 }
 function getHeaders(env: Env, o: Node){
     if(o.compiledType === types.headers) return o.compiledValue
-    if(is.relation(o)) return resolveValue(env, o).compiledValue
+    if(is.relation(o)){
+        // TODO: this is pretty dutty, look around for other abuses of `.compiledValue`
+        const compiled = resolveValue(env, o)
+        if(compiled.compiledType === 'relation') return compiled.compiledValue.headers.map(header=>({type: types.header, value: `:${header}`}))
+        return compiled.compiledValue
+    }
     if(is.relation_literal(o)) return o.value[0].value
     throw new errors.ScopeError(o, env)
 }
@@ -233,11 +238,11 @@ export function compiler(env: Env, section: Section, justHeaders=true): Section 
     return {type: types.section, value: withCompiled, compiledType, compiledValue}
 }
 
-const astToValue: {[typeName: string]: (o: NodeSingle)=>string} = {
-    [types.bool]: node=>JSON.parse(node.value),
-    [types.null]: node=>JSON.parse(node.value),
-    [types.number]: node=>JSON.parse(node.value),
-    [types.string]: node=>JSON.parse(node.value),
+const astToValue: {[typeName: string]: (o: NodeSingle)=>number | boolean | string | null} = {
+    [types.bool]: node=>JSON.parse(node.value) as boolean,
+    [types.null]: node=>null,
+    [types.number]: node=>JSON.parse(node.value) as number,
+    [types.string]: node=>JSON.parse(node.value) as string,
     [types.decimal]: node=>node,
     [types.datetime]: node=>node,
     // TODO: what is the actual expected usage here? above assumes it is mapping to RelationAPI and back

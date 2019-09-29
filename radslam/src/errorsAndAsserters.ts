@@ -46,6 +46,9 @@ class JoinError extends Error {constructor(fromHeaders: Header[], headers: Heade
 class MissingHeaders extends Error {constructor(node: Node) {
     super(`Object has no headers: ${inspect(node)}`)
 }}
+export class MissingArgs extends Error {constructor(args: any[]) {
+    super(`Function was missing args: ${inspect(args)}`)
+}}
 class OperatorArgsError extends Error {constructor(operatorArgs: any[], args: any[]) {
     super(`Provided args: ${inspect(args)} \ndo not match types of operator args: ${inspect(operatorArgs)}`)
 }}

@@ -240,7 +240,7 @@ function alignLines(s: State){
                 const toElement = toEditorElement.getElementsByClassName('ace_line')[lineI]  as HTMLElement
                 lineElement.setAttribute('y1', (SVG_OFFSET + (fromElement.offsetHeight / 2)).toString())
                 lineElement.setAttribute('y2', (
-                    + 13
+                    + 7
                     + SVG_OFFSET
                     - infoElement.offsetTop
                     - fromElement.offsetTop

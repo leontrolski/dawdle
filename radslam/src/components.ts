@@ -27,8 +27,16 @@ const ConnectingLine = (isFocused: boolean, isFolded: boolean)=>{
 
 const HeaderEl = (headerValue: string)=>m('.button.button-outline.header.pre', headerValue)
 // TODO: convert these to {type: value:} and make a component for each type
-const Null = ()=>m('em.null', 'null')
-const Cell = (cellValue)=>m('td.cell', isNil(cellValue)? Null() : cellValue.type? cellValue.value : cellValue)
+const Null = ()=>m('em.null-value', 'null')
+const Datetime = (v)=>m('span.datetime-value', v.value.slice(1))
+const Number_ = (v: number)=>m('span.number-value', Number.isInteger(v)? v : v.toFixed(2))
+const Cell = (v)=>m('td.cell',
+    isNil(v)? Null()
+    : typeof v === 'number'? Number_(v)
+    : v.type?
+        is.datetime(v)? Datetime(v)
+        : v.value
+    : v)
 const Table = (o: RelationAPI, isFocused: boolean)=>m('table.table',
     {class: isFocused? 'table-focused' : ''},
     m('thead', isEmpty(o.headers)?
@@ -49,10 +57,6 @@ const CompiledValue = (o: Node, isFocused: boolean)=>{
     if(o.compiledType === 'headers') return o.compiledValue.map(header=>HeaderEl(header.value))  // TODO: deprecate
     return null
 }
-const Errors = (block: Block)=>m(
-    '.source',
-    block.errors.map(error=>m('.pre.error', error.message))
-)
 const Line = (setters: Setters, ui: UIState, o: CompiledLineNode, blockI: number, lineI: number)=>{
     if(isSpacer(o)) return m('.spacer')
     const toLineI = o.lineI
@@ -80,6 +84,7 @@ const Info = (setters: Setters, ui: UIState, block: Block)=>
         nodesPerLine(block.astWithHeaders)
             .filter(o=>o.compiledType)
             .map((o, lineI)=>Line(setters, ui, o, block.blockI, lineI)),
+        block.errors.map(error=>m('.pre.error', error.message)),
     )
 const Original = (setters: Setters, block: Block)=>m(
     '.source.right',
@@ -109,7 +114,7 @@ export const View = (setters: Setters, s: DerivedState)=>m('.root',
     m('.options.pre', s.path),
     s.blocks.map((block)=>
         m('.block',
-            isEmpty(block.errors)? Info(setters, s.ui, block) : Errors(block),
+            Info(setters, s.ui, block),
             Original(setters, block))),
     m('.editor-buttons',
         SaveButton(setters, s.areAnyErrors),

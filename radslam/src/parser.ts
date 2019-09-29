@@ -1,6 +1,7 @@
 import * as util from 'util'
 import * as ebnf from 'ebnf'
 import * as R from 'ramda'
+import { CompiledLineNode } from './shared';
 
 export function inspect(o: any): string{
     return util.inspect(o, {depth: 16, colors: true, breakLength: 100})
@@ -33,7 +34,10 @@ export type Line = {
 }
 export type Aggregator = NodeMultiple
 export type MapMacro = NodeMultiple
-export type NamedValue = NodeMultiple
+export type NamedValue = {
+    type: 'line',
+    value: [Var, Value],
+}
 export type RelationLiteral = NodeMultiple
 export type RlHeaders = NodeMultiple
 export type RlRow = NodeMultiple
@@ -53,7 +57,7 @@ export type Datetime = NodeSingle
 export type Function = NodeSingle
 
 export type Literal = Number | String | Bool | Template | Null | Decimal | Datetime
-export type Value = Literal | AllHeaders | Relation | Header | NamedValue | Var | Set
+export type Value = any //Literal | AllHeaders | Relation | Header | NamedValue | Var | Set
 
 // Capital words are kept but passed through, must resolve to one named token
 const grammar = `

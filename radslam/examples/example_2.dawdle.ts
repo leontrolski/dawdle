@@ -89,7 +89,7 @@ const myFirstLet =
 // Composite operators allow parametrised grouping of the 8 operators listed
 // above. Let's make a namespace composite operator:
 
-// TODO: why can't we access the `namespace` var in the function, 
+// TODO: why can't we access the `namespace` var in the function,
 // or inline the new headers
 
 const myFirstDef =
