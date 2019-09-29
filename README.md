@@ -9,13 +9,13 @@ npm run ts -- src/server.ts
 google-chrome http://localhost:3000/?path=examples/example_3.dawdle.ts
 ```
 
-A screenshot from the editor:
+## A screenshot from the editor:
 
 ![example-3](screenshots/example_3.dawdle.png)
 
 Some random notes copy-pasta-ed from the code:
 
-# Syntax
+## Syntax
 
 - `header`s are in the form `:some_header`
 - the types supported are the JSON types, plus:
@@ -25,21 +25,21 @@ Some random notes copy-pasta-ed from the code:
   to enforce.
 
 Now some relational operations, we have:
-`>` filter
-`v` select
-`^` extend
-`X` cross
-`U` union
-`-` difference
-`J` join
-`G` group
+- `>` filter
+- `v` select
+- `^` extend
+- `X` cross
+- `U` union
+- `-` difference
+- `J` join
+- `G` group
 
 `> v ^` are pictographic
 
 Also, notice the indented relation literal after the joins. Indented sections
 are appended to the args of the operation above them.
 
-# An example with definitions and things
+## An example with definitions and things
 
 ```
 def Outer relation: right:
