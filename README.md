@@ -12,3 +12,27 @@ google-chrome http://localhost:3000/?path=examples/example_3.dawdle.ts
 A screenshot from the editor:
 
 ![example-3](screenshots/example_3.dawdle.png)
+
+Some random notes copy-pasta-ed from the code:
+
+- `header`s are in the form `:some_header`
+- the types supported are the JSON types, plus:
+  - datetime in the form `~some-ISO-8601`
+  - decimals in the form `$1.05`
+- the columns themselves are not typed, it is up to the host language
+  to enforce.
+
+Now some relational operations, we have:
+`>` filter
+`v` select
+`^` extend
+`X` cross
+`U` union
+`-` difference
+`J` join
+`G` group
+
+`> v ^` are pictographic
+
+Also, notice the indented relation literal after the join. Indented sections
+are appended to the args of the operation above them.

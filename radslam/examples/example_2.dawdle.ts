@@ -1,4 +1,8 @@
 // {"dawdle": "header", "originalLanguage": "typescript", "command": "venv/python $FILE --dawdle"}
+import * as stdlib from '../src/stdlib'
+import * as compiler from '../src/compiler'
+// see DawdleModuleAPI
+export const defaultEnv: compiler.Env = stdlib.env
 // `dawdle` is a DSL for working with relational data inside of an existing
 // language.
 

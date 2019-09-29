@@ -38,6 +38,7 @@ export const emptyEnv: Env = Map({})
  */
 function resolveValue(env: Env, o: Node): any {
     if(is.var(o) || is.relation(o) || is.operator(o)){
+        console.log(env)
         const resolved = env.get(o.value)
         if(R.isNil(resolved)) throw new errors.ScopeError(o, env)
         if(is.operator(o)){
@@ -99,7 +100,7 @@ const getValue = {
 type Registration = Let | Def
 function addRegistration(env: Env, registration: Registration): Env {
     const [first, ..._] = registration.value
-    return env.merge({[first.value]: registration})
+    return R.merge(env, {[first.value]: registration})
 }
 /**
  * Create a `registration`as above for a macro that is
@@ -110,7 +111,7 @@ function expandAndRegisterMacro(env: Env, line: Line){
     const [headers, template] = line.value
     const setValues = getSetValues(env, resolveValue(env, headers))
     const resolved = setValues
-        .map(value=>env.merge({_: {type: types.let, value: [null, value]} as Let}))
+        .map(value=>R.merge(env, {_: {type: types.let, value: [null, value]} as Let}))
         .map(envWithValue=>resolveValue(envWithValue, template))
     const lines = resolved
         .map(fullParser)
