@@ -17,10 +17,13 @@ google-chrome http://localhost:3000/?path=examples/example_3.dawdle.ts
 
 ## Syntax
 
+- `relation`s are in the form `some_relation:`
 - `header`s are in the form `:some_header`
+- plain ol' sets are in the form `["a-str" 5 :some_header]`
 - the literal types supported are the JSON types, plus:
-  - datetime in the form `~some-ISO-8601`
+  - datetimes in the form `~some-ISO-8601`
   - decimals in the form `$1.05`
+  - templates in backticks with `{{}}` interpolation
 - the columns themselves are not typed, it is up to the host language
   to enforce.
 
@@ -34,7 +37,7 @@ Now some relational operations, we have:
 - `J` join
 - `G` group
 
-`> v ^` are pictographic
+`> v ^` are pictographic, `X U -` also operate on sets
 
 Also, notice the indented relation literal after the joins. Indented sections
 are appended to the args of the operation above them.
@@ -65,9 +68,10 @@ def Rename relation: old new
     let final_headers
         relation:*
         - old
+        U new
 
     relation:
-    ^ old identity new
+    ^ new identity old
     v final_headers
 
 
@@ -99,6 +103,8 @@ let counts_seen:
  ```
 
 ## An example with definitions used
+
+_Not sure this outer join definitition is even correct looking at it now.._
 
 ```
 def Outer relation: right:
