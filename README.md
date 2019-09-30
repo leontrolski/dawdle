@@ -9,16 +9,16 @@ npm run ts -- src/server.ts
 google-chrome http://localhost:3000/?path=examples/example_3.dawdle.ts
 ```
 
-## A screenshot from the editor:
+## A screenshot from the editor 
+
+(what self-respecting DSL project _doesn't_ come with an IDE...)
 
 ![example-3](screenshots/example_3.dawdle.png)
-
-Some random notes copy-pasta-ed from the code:
 
 ## Syntax
 
 - `header`s are in the form `:some_header`
-- the types supported are the JSON types, plus:
+- the literal types supported are the JSON types, plus:
   - datetime in the form `~some-ISO-8601`
   - decimals in the form `$1.05`
 - the columns themselves are not typed, it is up to the host language
@@ -39,7 +39,66 @@ Now some relational operations, we have:
 Also, notice the indented relation literal after the joins. Indented sections
 are appended to the args of the operation above them.
 
-## An example with definitions and things
+## Design choices:
+
+- Each line of dawdle should map deterministically both ways to the JSON AST
+- Given an environment, it should always be possible to determine the schema (ie. the headers) at any line
+- Operation lines are ordered, but don't *have* to be executed in a ordered way, it's up to the host language (which could for example compile the query to SQL)
+- Given test values, it should always be possible to determine the value at any line of a top level let or section
+- Composite operators can only be composed of the base operators and other composite operators
+- Sets are splatted in place when called with relation operators
+
+## Basic query snippet
+
+```
+jira_ticket:
+> like :ticket "INTEG%"
+> equals :issuetype "Task"
+> ilike :summary `%{{oem}}%{{release}}%tracking ticket%`
+^ :rank order :created
+```
+
+## Defining composite operators
+
+```
+def Rename relation: old new
+    let final_headers
+        relation:*
+        - old
+
+    relation:
+    ^ old identity new
+    v final_headers
+
+
+def Namespace relation: namespace ignore
+    let to_rename
+        relation:*
+        - ignore
+
+    relation:
+    (map to_rename) `Rename {{_}} {{namespace}}.{{_}}`
+```
+
+## Example snippet with a group by
+
+```
+let counts_seen:
+    run:
+    v :run_id groups
+    > in :run_id
+        reverse_indexed_in_groups:
+        > lte :n max_n_runs
+        v :run_id
+    J
+        result:
+        v :run_id :result_id :duration
+    G :run_id
+        :number_of_results count :result_id
+        :total_duration sum :duration
+ ```
+
+## An example with definitions used
 
 ```
 def Outer relation: right:
@@ -59,7 +118,7 @@ def Outer relation: right:
         right:
         > first
         v just_right_headers
-        (map just_right_headers) \`^ {{_}} make_null\`
+        (map just_right_headers) `^ {{_}} make_null`
     U joined:
 
 let not_foo
@@ -96,3 +155,20 @@ should give:
 | 2        | 20 | 3         | 23   | 9           |
 | 3        | 30 | null      | null | 9           |
 ```
+
+## multi-relation syntax
+
+I had _some_ thoughts about how one might return nested relationship-y results:
+
+```
+
+relation:
+-[]-
+    -[basket basket_discount:
+        ]-join basket__discount:
+            -[discount discount:
+        -[purchase purchase:
+            -[product product:
+```
+
+_I can't fully remember what this was meant to do, but `-[` and `]-` represent one-to-many and many-to-one._
